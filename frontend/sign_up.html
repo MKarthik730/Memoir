@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memoir - Your Story Begins Here</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #8b6f47;
+            --secondary: #d4a574;
+            --accent: #2c2416;
+            --light: #f5f1eb;
+            --lighter: #faf8f4;
+            --text: #2c2416;
+            --text-light: #6b6559;
+            --success: #7cb342;
+            --error: #c62828;
+            --border: #e8dfd4;
+        }
+
+        body {
+            font-family: 'Crimson Text', serif;
+            background: linear-gradient(135deg, var(--lighter) 0%, var(--light) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Vintage paper texture background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.01) 50%, transparent 100%),
+                linear-gradient(0deg, transparent 0%, rgba(0,0,0,0.01) 50%, transparent 100%);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Page transition animation */
+        body.page-transition {
+            animation: pageTransition 0.8s ease-in-out;
+        }
+
+        @keyframes pageTransition {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.02);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Decorative elements */
+        .decoration {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .feather-top {
+            top: 5%;
+            right: 10%;
+            opacity: 0.15;
+            font-size: 100px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .feather-bottom {
+            bottom: 10%;
+            left: 5%;
+            opacity: 0.12;
+            font-size: 80px;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(5deg); }
+        }
+
+        /* Main card */
+        .memoir-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(245,241,235,0.95) 100%);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 
+                0 20px 60px rgba(0,0,0,0.08),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+            width: 100%;
+            max-width: 500px;
+            padding: 60px 50px;
+            animation: slideIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Decorative corner elements */
+        .memoir-card::before,
+        .memoir-card::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 2px solid var(--secondary);
+            opacity: 0.4;
+        }
+
+        .memoir-card::before {
+            top: 20px;
+            left: 20px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .memoir-card::after {
+            bottom: 20px;
+            right: 20px;
+            border-left: none;
+            border-top: none;
+        }
+
+        .memoir-header {
+            text-align: center;
+            margin-bottom: 45px;
+        }
+
+        .memoir-title {
+            font-size: 48px;
+            font-weight: 400;
+            color: var(--primary);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            font-style: italic;
+        }
+
+        .memoir-subtitle {
+            font-size: 16px;
+            color: var(--text-light);
+            font-weight: 400;
+            letter-spacing: 1px;
+            font-family: 'Montserrat', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .divider {
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--secondary), transparent);
+            margin: 20px auto 0;
+        }
+
+        /* Tabs */
+        .memoir-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--border);
+            position: relative;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            font-size: 14px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: color 0.3s;
+            position: relative;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+        }
+
+        .tab-indicator {
+            position: absolute;
+            bottom: -2px;
+            height: 2px;
+            background: var(--secondary);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            width: 50%;
+        }
+
+        /* Forms */
+        .memoir-form {
+            display: none;
+            animation: fadeInForm 0.4s ease-out;
+        }
+
+        .memoir-form.active {
+            display: block;
+        }
+
+        @keyframes fadeInForm {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: var(--text);
+            margin-bottom: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            font-size: 15px;
+            font-family: 'Crimson Text', serif;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--text-light);
+            opacity: 0.7;
+        }
+
+        /* Password strength meter */
+        .strength-meter {
+            margin-top: 12px;
+            display: none;
+        }
+
+        .strength-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s;
+            border-radius: 2px;
+        }
+
+        .strength-text {
+            font-size: 12px;
+            color: var(--text-light);
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+        }
+
+        .strength-weak .strength-fill {
+            background: var(--error);
+            width: 33%;
+        }
+
+        .strength-fair .strength-fill {
+            background: #f57c00;
+            width: 66%;
+        }
+
+        .strength-strong .strength-fill {
+            background: var(--success);
+            width: 100%;
+        }
+
+        /* Requirements checklist */
+        .requirements {
+            background: rgba(139, 111, 71, 0.05);
+            padding: 16px;
+            border-left: 3px solid var(--secondary);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .requirements.show {
+            display: block;
+        }
+
+        .requirement {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 5px;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .requirement:last-child {
+            margin-bottom: 0;
+        }
+
+        .requirement-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .requirement.met .requirement-icon {
+            background: var(--success);
+        }
+
+        /* Checkbox */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .checkbox-custom {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        input[type="checkbox"]:checked + .checkbox-custom {
+            background: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            color: var(--text-light);
+            font-family: 'Montserrat', sans-serif;
+            cursor: pointer;
+        }
+
+        /* Submit button */
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: 'Montserrat', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(139, 111, 71, 0.2);
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 111, 71, 0.3);
+        }
+
+        .btn-submit:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-submit.loading {
+            color: transparent;
+        }
+
+        .btn-submit.loading::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            top: 50%;
+            left: 50%;
+            margin-left: -7px;
+            margin-top: -7px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Message */
+        .message {
+            padding: 14px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+            border-left: 4px solid;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(124, 179, 66, 0.1);
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .message.error {
+            background: rgba(198, 40, 40, 0.1);
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        /* Footer */
+        .memoir-footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 14px;
+            color: var(--text-light);
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .memoir-footer a {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+
+        .memoir-footer a:hover {
+            color: var(--primary);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(44, 36, 22, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(245,241,235,0.95) 100%);
+            padding: 50px;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            max-width: 400px;
+            text-align: center;
+            animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: bounce 0.6s ease-out;
+        }
+
+        @keyframes bounce {
+            0% {
+                transform: scale(0) rotate(-180deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+        }
+
+        .modal-title {
+            font-size: 32px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+
+        .modal-text {
+            color: var(--text-light);
+            margin-bottom: 30px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .modal-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(139, 111, 71, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .memoir-card {
+                padding: 40px 30px;
+            }
+
+            .memoir-title {
+                font-size: 36px;
+            }
+
+            .modal-content {
+                padding: 35px 25px;
+                margin: 20px;
+            }
+
+            .feather-top {
+                font-size: 60px;
+            }
+
+            .feather-bottom {
+                font-size: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Decorative elements -->
+    <div class="decoration feather-top">✒️</div>
+    <div class="decoration feather-bottom">📖</div>
+
+    <!-- Main container -->
+    <div class="container">
+        <div class="memoir-card">
+            <!-- Header -->
+            <div class="memoir-header">
+                <div class="memoir-title">Memoir</div>
+                <div class="memoir-subtitle">Your Digital Story</div>
+                <div class="divider"></div>
+            </div>
+
+            <!-- Message -->
+            <div id="message" class="message"></div>
+
+            <!-- Tabs -->
+            <div class="memoir-tabs">
+                <button class="tab-btn active" data-tab="signin">Sign In</button>
+                <button class="tab-btn" data-tab="register">Register</button>
+                <div class="tab-indicator" style="left: 0;"></div>
+            </div>
+
+            <!-- Sign In Form -->
+            <form id="signinForm" class="memoir-form active">
+                <div class="form-group">
+                    <label for="signinUsername">Username</label>
+                    <input type="text" id="signinUsername" placeholder="Your username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signinPassword">Password</label>
+                    <input type="password" id="signinPassword" placeholder="••••••••" required>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="rememberMe">
+                    <div class="checkbox-custom"></div>
+                    <label class="checkbox-label" for="rememberMe">Remember me</label>
+                </div>
+
+                <button type="submit" class="btn-submit">Sign In</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="memoir-form">
+                <div class="form-group">
+                    <label for="registerUsername">Choose a Username</label>
+                    <input type="text" id="registerUsername" placeholder="Your unique username" minlength="3" maxlength="50" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="registerPassword">Create a Password</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" minlength="8" required>
+                    <div class="strength-meter" id="strengthMeter">
+                        <div class="strength-bar">
+                            <div class="strength-fill"></div>
+                        </div>
+                        <div class="strength-text"></div>
+                    </div>
+                    <div class="requirements" id="requirements">
+                        <div class="requirement" id="req-length">
+                            <span class="requirement-icon">✓</span>
+                            <span>At least 8 characters</span>
+                        </div>
+                        <div class="requirement" id="req-upper">
+                            <span class="requirement-icon">✓</span>
+                            <span>One uppercase letter</span>
+                        </div>
+                        <div class="requirement" id="req-lower">
+                            <span class="requirement-icon">✓</span>
+                            <span>One lowercase letter</span>
+                        </div>
+                        <div class="requirement" id="req-number">
+                            <span class="requirement-icon">✓</span>
+                            <span>One number</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="registerConfirm">Confirm Password</label>
+                    <input type="password" id="registerConfirm" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn-submit">Create Account</button>
+            </form>
+
+            <!-- Footer -->
+            <div class="memoir-footer">
+                <p id="toggleText">New to Memoir? <a href="#register">Create an account</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-icon">📝</div>
+            <div class="modal-title">Welcome</div>
+            <div class="modal-text" id="modalText">Your story has been written. Let the journey begin.</div>
+            <button class="modal-btn" onclick="closeModal()">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tab = this.dataset.tab;
+                const isSignin = tab === 'signin';
+                
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const indicator = document.querySelector('.tab-indicator');
+                indicator.style.left = isSignin ? '0%' : '50%';
+                
+                document.querySelectorAll('.memoir-form').forEach(f => f.classList.remove('active'));
+                if (isSignin) {
+                    document.getElementById('signinForm').classList.add('active');
+                    document.getElementById('toggleText').innerHTML = 'New to Memoir? <a href="#register">Create an account</a>';
+                } else {
+                    document.getElementById('registerForm').classList.add('active');
+                    document.getElementById('toggleText').innerHTML = 'Already have an account? <a href="#signin">Sign in</a>';
+                }
+            });
+        });
+
+        // Footer links
+        document.getElementById('toggleText').addEventListener('click', function(e) {
+            if (e.target.tagName === 'A') {
+                e.preventDefault();
+                const tab = e.target.href.split('#')[1];
+                document.querySelector(`[data-tab="${tab}"]`).click();
+            }
+        });
+
+        // Password strength checker
+        const passwordInput = document.getElementById('registerPassword');
+        const strengthMeter = document.getElementById('strengthMeter');
+        const requirements = {
+            length: document.getElementById('req-length'),
+            upper: document.getElementById('req-upper'),
+            lower: document.getElementById('req-lower'),
+            number: document.getElementById('req-number')
+        };
+
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            strengthMeter.style.display = password.length > 0 ? 'block' : 'none';
+            document.getElementById('requirements').classList.toggle('show', password.length > 0);
+
+            const checks = {
+                length: password.length >= 8,
+                upper: /[A-Z]/.test(password),
+                lower: /[a-z]/.test(password),
+                number: /[0-9]/.test(password)
+            };
+
+            Object.keys(checks).forEach(key => {
+                if (checks[key]) {
+                    requirements[key].classList.add('met');
+                } else {
+                    requirements[key].classList.remove('met');
+                }
+            });
+
+            const metCount = Object.values(checks).filter(v => v).length;
+            const strengthDiv = strengthMeter;
+            const strengthText = strengthDiv.querySelector('.strength-text');
+            
+            strengthDiv.classList.remove('strength-weak', 'strength-fair', 'strength-strong');
+            
+            if (metCount <= 2) {
+                strengthDiv.classList.add('strength-weak');
+                strengthText.textContent = 'Weak';
+            } else if (metCount === 3) {
+                strengthDiv.classList.add('strength-fair');
+                strengthText.textContent = 'Fair';
+            } else {
+                strengthDiv.classList.add('strength-strong');
+                strengthText.textContent = 'Strong';
+            }
+        });
+
+        // Message handler
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = `message show ${type}`;
+            setTimeout(() => msgDiv.classList.remove('show'), 4000);
+        }
+
+        // Sign in handler
+        document.getElementById('signinForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('signinUsername').value.trim();
+            const password = document.getElementById('signinPassword').value;
+            const btn = e.target.querySelector('.btn-submit');
+
+            btn.disabled = true;
+            btn.classList.add('loading');
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('user_id', data.user_id);
+                    localStorage.setItem('username', data.username);
+                    showMessage('Welcome back. Your story continues...', 'success');
+                    setTimeout(() => {
+                        document.body.classList.add('page-transition');
+                        setTimeout(() => window.location.href = '/memoir_dashboard.html', 400);
+                    }, 1500);
+                } else {
+                    showMessage(data.detail || 'Sign in failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+            }
+        });
+
+        // Register handler
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirm').value;
+            const btn = e.target.querySelector('.btn-submit');
+
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.classList.add('loading');
+
+            try {
+                const response = await fetch(`${API_URL}/sign_up`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('user_id', data.id);
+                    localStorage.setItem('username', data.name);
+                    document.getElementById('modalText').textContent = `Chapter One begins, ${username}. Welcome to your memoir.`;
+                    document.getElementById('successModal').classList.add('show');
+                    document.getElementById('registerForm').reset();
+                    passwordInput.dispatchEvent(new Event('input'));
+                } else {
+                    showMessage(data.detail || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+            }
+        });
+
+        function closeModal() {
+            document.getElementById('successModal').classList.remove('show');
+            setTimeout(() => {
+                document.body.classList.add('page-transition');
+                setTimeout(() => window.location.href = '/memoir_dashboard.html', 400);
+            }, 300);
+        }
+    </script>
+</body>
+</html>
