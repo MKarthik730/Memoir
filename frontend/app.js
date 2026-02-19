@@ -124,12 +124,28 @@ if (document.body.classList.contains('page-dashboard')){
     categoryView: document.getElementById('categoryView'),
     personView: document.getElementById('personView'),
     fileView: document.getElementById('fileView'),
+    galleryView: document.getElementById('galleryView'),
+    galleryContainer: document.getElementById('galleryContainer'),
+    imageModal: document.getElementById('imageModal'),
+    imageModalImg: document.getElementById('imageModalImg'),
+    imageModalTitle: document.getElementById('imageModalTitle'),
+    imageModalMeta: document.getElementById('imageModalMeta'),
+    imageModalDesc: document.getElementById('imageModalDesc'),
+    imageModalClose: document.getElementById('imageModalClose'),
+    imageModalOverlay: document.getElementById('imageModalOverlay'),
     categoryModal: document.getElementById('categoryModal'),
     personModal: document.getElementById('personModal'),
     categoryForm: document.getElementById('categoryForm'),
     personForm: document.getElementById('personForm'),
     categoryNameInput: document.getElementById('categoryNameInput'),
     personNameInput: document.getElementById('personNameInput'),
+    memoryTextInput: document.getElementById('memoryTextInput'),
+    addMemoryBtn: document.getElementById('addMemoryBtn'),
+    viewBtn: document.getElementById('viewBtn'),
+    downloadPdfBtn: document.getElementById('downloadPdfBtn'),
+    downloadGalleryPdfBtn: document.getElementById('downloadGalleryPdfBtn'),
+    galleryMemoryTextInput: document.getElementById('galleryMemoryTextInput'),
+    galleryAddMemoryBtn: document.getElementById('galleryAddMemoryBtn'),
   };
 
   console.log('✅ Elements loaded:', Object.keys(elements).filter(k=>!!elements[k]).length, '/', Object.keys(elements).length);
@@ -146,6 +162,11 @@ if (document.body.classList.contains('page-dashboard')){
     elements.categoryNameInput.value = '';
   });
 
+  document.getElementById('cancelCategoryBtn')?.addEventListener('click', ()=>{
+    elements.categoryModal.classList.add('hidden');
+    elements.categoryNameInput.value = '';
+  });
+
   document.getElementById('addPersonBtn')?.addEventListener('click', ()=>{
     console.log('➕ Opening person modal');
     elements.personModal.classList.remove('hidden');
@@ -153,6 +174,11 @@ if (document.body.classList.contains('page-dashboard')){
   });
 
   document.getElementById('closePersonModal')?.addEventListener('click', ()=>{
+    elements.personModal.classList.add('hidden');
+    elements.personNameInput.value = '';
+  });
+
+  document.getElementById('cancelPersonBtn')?.addEventListener('click', ()=>{
     elements.personModal.classList.add('hidden');
     elements.personNameInput.value = '';
   });
@@ -374,7 +400,7 @@ if (document.body.classList.contains('page-dashboard')){
 
   // SHOW PERSON FILES
   async function showPersonFiles(person){
-    console.log('📄 Loading files for:', person.person_name);
+    console.log('📄 Loading files and memories for:', person.person_name);
     currentPerson = person;
     
     elements.categoryView.classList.add('hidden');
@@ -385,59 +411,114 @@ if (document.body.classList.contains('page-dashboard')){
     document.getElementById('breadcrumbCategory').textContent = currentCategory.cat_name;
 
     try{
-      const files = await getJSON(`/home/person/${person.id}/files`);
-      console.log(`✅ Loaded ${files.length} files`);
-      renderFiles(files);
+      const [files, memories] = await Promise.all([
+        getJSON(`/home/person/${person.id}/files`),
+        getJSON(`/home/person/${person.id}/memories`)
+      ]);
+      console.log(`✅ Loaded ${files.length} files and ${memories.length} memories`);
+      renderFilesAndMemories(files, memories);
     }catch(e){
-      console.error('❌ Load files error:', e);
-      showToast('Failed to load files', false);
+      console.error('❌ Load files/memories error:', e);
+      showToast('Failed to load files and memories', false);
     }
   }
 
-  function renderFiles(files){
+  function renderFilesAndMemories(files, memories){
     const container = elements.filesContainer;
     if (!container) return;
     
     container.innerHTML = '';
     
-    if (!files.length){
+    // Combine and sort by creation date (newest first)
+    const allItems = [
+      ...files.map(f => ({...f, type: 'file'})),
+      ...memories.map(m => ({...m, type: 'memory'}))
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    if (!allItems.length){
       container.innerHTML = `
         <div class="empty-state-small">
-          <p>No files yet for ${escapeHtml(currentPerson.person_name)}.</p>
-          <p class="muted">Use the upload section above.</p>
+          <p>No memories or photos yet for ${escapeHtml(currentPerson.person_name)}.</p>
+          <p class="muted">Use the sections above to add memories or upload photos.</p>
         </div>
       `;
       return;
     }
 
-    files.forEach(f=>{
+    allItems.forEach(item=>{
       const el = document.createElement('div');
-      el.className = 'file-card';
-      el.innerHTML = `
-        <div class="file-meta">
-          <div class="file-thumb">${getFileIcon(f.file_type)}</div>
-          <div class="file-info">
-            <div class="fname">${escapeHtml(f.file_name)}</div>
-            <div class="muted small">${f.file_type}</div>
-            ${f.description ? `<div class="file-desc">${escapeHtml(f.description)}</div>` : ''}
-          </div>
-        </div>
-        <button class="btn-icon btn-delete-file" title="Delete">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-        </button>
-      `;
+      el.className = item.type === 'file' ? 'file-card' : 'memory-card';
       
-      el.querySelector('.btn-delete-file').addEventListener('click', async ()=>{
-        if (!confirm('Delete file?')) return;
-        try{
-          await deleteJSON(`/home/person/${currentPerson.id}/files/${f.id}`);
-          showToast('File deleted');
-          showPersonFiles(currentPerson);
-        }catch(err){ showToast('Delete failed', false); }
-      });
+      if (item.type === 'file') {
+        const isImage = item.file_type && item.file_type.startsWith('image/');
+        const imageSrc = `/home/person/${currentPerson.id}/files/${item.id}/download`;
+        
+        el.innerHTML = `
+          <div class="file-meta">
+            <div class="file-thumb ${isImage ? 'clickable' : ''}" ${isImage ? `data-image-src="${imageSrc}" data-image-title="${escapeHtml(item.file_name)}" data-image-meta="${escapeHtml(currentCategory.cat_name)} • ${escapeHtml(currentPerson.person_name)} • ${formatDate(item.created_at)}" data-image-desc="${escapeHtml(item.description || '')}"` : ''}>
+              ${isImage ? 
+                `<img src="${imageSrc}" alt="${escapeHtml(item.file_name)}" class="file-image-thumb" />` :
+                getFileIcon(item.file_type)
+              }
+            </div>
+            <div class="file-info">
+              <div class="fname">${escapeHtml(item.file_name)}</div>
+              <div class="muted small">${item.file_type} • ${formatDate(item.created_at)}</div>
+              ${item.description ? `<div class="file-desc">${escapeHtml(item.description)}</div>` : ''}
+            </div>
+          </div>
+          <button class="btn-icon btn-delete-file" title="Delete">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        `;
+
+        // Add click handler for images
+        if (isImage) {
+          el.querySelector('.file-thumb').addEventListener('click', function() {
+            const src = this.dataset.imageSrc;
+            const title = this.dataset.imageTitle;
+            const meta = this.dataset.imageMeta;
+            const desc = this.dataset.imageDesc;
+            openImageModal(src, title, meta, desc);
+          });
+        }
+        
+        el.querySelector('.btn-delete-file').addEventListener('click', async ()=>{
+          if (!confirm('Delete file?')) return;
+          try{
+            await deleteJSON(`/home/person/${currentPerson.id}/files/${item.id}`);
+            showToast('File deleted');
+            showPersonFiles(currentPerson);
+          }catch(err){ showToast('Delete failed', false); }
+        });
+      } else {
+        el.innerHTML = `
+          <div class="memory-content">
+            <div class="memory-text">${escapeHtml(item.content)}</div>
+            <div class="memory-meta">
+              <span class="muted small">${formatDate(item.created_at)}</span>
+              <button class="btn-icon btn-delete-memory" title="Delete memory">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+        
+        el.querySelector('.btn-delete-memory').addEventListener('click', async ()=>{
+          if (!confirm('Delete memory?')) return;
+          try{
+            await deleteJSON(`/home/person/${currentPerson.id}/memories/${item.id}`);
+            showToast('Memory deleted');
+            showPersonFiles(currentPerson);
+          }catch(err){ showToast('Delete failed', false); }
+        });
+      }
       
       container.appendChild(el);
     });
@@ -527,6 +608,167 @@ if (document.body.classList.contains('page-dashboard')){
     return (s||'').replace(/[&<>"']/g, c=>({ 
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" 
     })[c]); 
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+
+  // MEMORY HANDLING
+  elements.addMemoryBtn?.addEventListener('click', async ()=>{
+    if (!currentPerson) return showToast('Select a person first', false);
+    const content = elements.memoryTextInput.value.trim();
+    if (!content) return showToast('Enter some text for your memory', false);
+    
+    try{
+      await postJSON(`/home/person/${currentPerson.id}/memory`, {content});
+      showToast('Memory added!');
+      elements.memoryTextInput.value = '';
+      showPersonFiles(currentPerson);
+    }catch(e){
+      showToast('Failed to add memory', false);
+    }
+  });
+
+  // VIEW BUTTON - show all content in gallery
+  elements.viewBtn?.addEventListener('click', ()=>{
+    showGalleryView();
+  });
+
+  // PDF DOWNLOAD
+  elements.downloadPdfBtn?.addEventListener('click', ()=>{
+    if (currentPerson) {
+      downloadMemoriesPdf();
+    }
+  });
+
+  elements.downloadGalleryPdfBtn?.addEventListener('click', ()=>{
+    downloadMemoriesPdf();
+  });
+
+  // GALLERY FILTERS - removed
+
+  // GALLERY ADD MEMORY
+  elements.galleryAddMemoryBtn?.addEventListener('click', async ()=>{
+    const content = elements.galleryMemoryTextInput.value.trim();
+    if (!content) {
+      showToast('Please enter a memory', false);
+      return;
+    }
+    showToast('Please go to a specific person to add memories', false);
+  });
+
+  // Close modal on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !elements.imageModal?.classList.contains('hidden')) {
+      closeImageModal();
+    }
+  });
+
+  let allContent = [];
+
+  async function showGalleryView() {
+    console.log('🖼️ Loading gallery view');
+    
+    elements.categoryView.classList.add('hidden');
+    elements.personView.classList.add('hidden');
+    elements.fileView.classList.add('hidden');
+    elements.galleryView.classList.remove('hidden');
+
+    try {
+      const response = await getJSON('/home/user/all-content');
+      allContent = response.content;
+      console.log(`✅ Loaded ${allContent.length} items`);
+      renderGallery(allContent);
+    } catch(e) {
+      console.error('❌ Load gallery error:', e);
+      showToast('Failed to load gallery', false);
+    }
+  }
+
+  function renderGallery(content) {
+    const container = elements.galleryContainer;
+    if (!container) return;
+
+    // Only show memories
+    const filteredContent = content.filter(item => item.type === 'memory');
+
+    container.innerHTML = '';
+
+    if (!filteredContent.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>No memories found.</p>
+          <p class="muted">Add some memories to see them here.</p>
+        </div>
+      `;
+      return;
+    }
+
+    filteredContent.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'gallery-item gallery-memory';
+
+      el.innerHTML = `
+        <div class="gallery-thumb">
+          <div class="memory-icon">📝</div>
+        </div>
+        <div class="gallery-info">
+          <div class="gallery-title">${escapeHtml(item.content.substring(0, 100))}${item.content.length > 100 ? '...' : ''}</div>
+          <div class="gallery-meta">${escapeHtml(item.category_name)} • ${escapeHtml(item.person_name)}</div>
+          <div class="gallery-date">${formatDate(item.created_at)}</div>
+        </div>
+      `;
+
+      container.appendChild(el);
+    });
+  }
+
+  async function downloadMemoriesPdf() {
+    try {
+      showToast('Generating PDF...');
+      const response = await fetch(`${API_BASE}/home/user/memories/pdf`, {
+        headers: {
+          'Authorization': 'Bearer ' + localStorage.getItem('memoir_token')
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'PDF generation failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'memories.pdf';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('PDF downloaded!');
+    } catch(e) {
+      console.error('PDF download error:', e);
+      showToast(e.message || 'Failed to download PDF', false);
+    }
+  }
+
+  function openImageModal(imageSrc, title, meta, description) {
+    elements.imageModalImg.src = imageSrc;
+    elements.imageModalImg.alt = title;
+    elements.imageModalTitle.textContent = title;
+    elements.imageModalMeta.textContent = meta;
+    elements.imageModalDesc.textContent = description || '';
+    elements.imageModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+  }
+
+  function closeImageModal() {
+    elements.imageModal.classList.add('hidden');
+    document.body.style.overflow = ''; // Restore scrolling
   }
 
   // INITIALIZE

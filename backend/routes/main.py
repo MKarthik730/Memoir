@@ -20,10 +20,11 @@ from typing import Optional, List
 from database.models import (
     User, UserData, UserResponse, Base, FileStore, FileResponse, 
     LoginResponse, CategoryResponse, FileUploadResponse, Category, 
-    Person, CategoryData, PersonData, PersonResponse
+    Person, CategoryData, PersonData, PersonResponse, Memory, MemoryData, MemoryResponse
 )
 from fastapi.middleware.cors import CORSMiddleware
 from database.config import SessionLocal, engine
+from fastapi.staticfiles import StaticFiles
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 app = FastAPI()
@@ -43,6 +44,10 @@ app.add_middleware(
     expose_headers=["X-Process-Time"],
     max_age=3600,
 )
+
+# Mount static files
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend")
+app.mount("/frontend", StaticFiles(directory=frontend_path), name="frontend")
 
 def get_db():
     db = SessionLocal()
@@ -516,6 +521,363 @@ async def delete_person_file(
 
 
 
+# Memory endpoints
+@app.post("/home/person/{person_id}/memory", response_model=MemoryResponse)
+async def create_memory(
+    person_id: int,
+    memory_data: MemoryData,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    """Create a new memory for a person"""
+    user_id = token_data["user_id"]
+    
+    # Verify the person belongs to the user
+    person = db.query(Person).join(Category).filter(
+        Person.id == person_id,
+        Category.user_id == user_id
+    ).first()
+    
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Create the memory
+    memory = Memory(
+        content=memory_data.content,
+        person_id=person_id
+    )
+    
+    db.add(memory)
+    db.commit()
+    db.refresh(memory)
+    
+    return MemoryResponse.from_orm(memory)
+
+
+@app.get("/home/person/{person_id}/memories", response_model=List[MemoryResponse])
+async def get_memories(
+    person_id: int,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    """Get all memories for a person"""
+    user_id = token_data["user_id"]
+    
+    # Verify the person belongs to the user
+    person = db.query(Person).join(Category).filter(
+        Person.id == person_id,
+        Category.user_id == user_id
+    ).first()
+    
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    memories = db.query(Memory).filter(Memory.person_id == person_id).order_by(Memory.created_at.desc()).all()
+    
+    return [MemoryResponse.from_orm(memory) for memory in memories]
+
+
+@app.delete("/home/person/{person_id}/memories/{memory_id}")
+async def delete_memory(
+    person_id: int,
+    memory_id: int,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    """Delete a memory from a person"""
+    user_id = token_data["user_id"]
+    
+    # Verify the person belongs to the user
+    person = db.query(Person).join(Category).filter(
+        Person.id == person_id,
+        Category.user_id == user_id
+    ).first()
+    
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Find and delete the memory
+    memory = db.query(Memory).filter(
+        Memory.id == memory_id,
+        Memory.person_id == person_id
+    ).first()
+    
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    
+    db.delete(memory)
+    db.commit()
+    
+    return {"message": "Memory deleted successfully"}
+
+@app.get("/home/person/{person_id}/files/{file_id}/download")
+async def download_file(
+    person_id: int,
+    file_id: int,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    """Download a file"""
+    user_id = token_data["user_id"]
+    
+    # Verify the person belongs to the user
+    person = db.query(Person).join(Category).filter(
+        Person.id == person_id,
+        Category.user_id == user_id
+    ).first()
+    
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Get the file
+    db_file = db.query(FileStore).filter(
+        FileStore.id == file_id,
+        FileStore.person_id == person_id
+    ).first()
+    
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Return file data
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    file_data = io.BytesIO(db_file.file_data)
+    
+    # For images, serve inline; for other files, force download
+    if db_file.file_type.startswith('image/'):
+        return StreamingResponse(
+            file_data,
+            media_type=db_file.file_type
+        )
+    else:
+        return StreamingResponse(
+            file_data,
+            media_type=db_file.file_type,
+            headers={"Content-Disposition": f"attachment; filename={db_file.file_name}"}
+        )
+
+@app.get("/home/user/all-content")
+async def get_all_user_content(
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    """Get all files and memories for the user across all categories and people"""
+    user_id = token_data["user_id"]
+    
+    # Get all files
+    files = db.query(FileStore).join(Person).join(Category).filter(
+        Category.user_id == user_id
+    ).order_by(FileStore.created_at.desc()).all()
+    
+    # Get all memories
+    memories = db.query(Memory).join(Person).join(Category).filter(
+        Category.user_id == user_id
+    ).order_by(Memory.created_at.desc()).all()
+    
+    # Combine and sort by date
+    all_content = []
+    
+    for file in files:
+        all_content.append({
+            "id": file.id,
+            "type": "file",
+            "file_name": file.file_name,
+            "file_type": file.file_type,
+            "description": file.description,
+            "person_name": file.person.person_name,
+            "category_name": file.person.category.cat_name,
+            "created_at": file.created_at.isoformat() if file.created_at else None,
+            "person_id": file.person_id
+        })
+    
+    for memory in memories:
+        all_content.append({
+            "id": memory.id,
+            "type": "memory",
+            "content": memory.content,
+            "person_name": memory.person.person_name,
+            "category_name": memory.person.category.cat_name,
+            "created_at": memory.created_at.isoformat() if memory.created_at else None,
+            "person_id": memory.person_id
+        })
+    
+    # Sort by creation date (newest first)
+    all_content.sort(key=lambda x: x["created_at"] or "", reverse=True)
+    
+    return {
+        "user_id": user_id,
+        "total_items": len(all_content),
+        "content": all_content
+    }
+
+
+@app.get("/home/user/memories/pdf")
+async def generate_memories_pdf(
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    """Generate a PDF containing all user memories and images"""
+    user_id = token_data["user_id"]
+    
+    # Get all files
+    files = db.query(FileStore).join(Person).join(Category).filter(
+        Category.user_id == user_id
+    ).order_by(FileStore.created_at.asc()).all()
+    
+    # Get all memories
+    memories = db.query(Memory).join(Person).join(Category).filter(
+        Category.user_id == user_id
+    ).order_by(Memory.created_at.asc()).all()
+    
+    # Combine and sort by date
+    all_content = []
+    
+    for file in files:
+        all_content.append({
+            "id": file.id,
+            "type": "file",
+            "file_name": file.file_name,
+            "file_type": file.file_type,
+            "file_data": file.file_data,
+            "description": file.description,
+            "person_name": file.person.person_name,
+            "category_name": file.person.category.cat_name,
+            "created_at": file.created_at,
+            "person_id": file.person_id
+        })
+    
+    for memory in memories:
+        all_content.append({
+            "id": memory.id,
+            "type": "memory",
+            "content": memory.content,
+            "person_name": memory.person.person_name,
+            "category_name": memory.person.category.cat_name,
+            "created_at": memory.created_at,
+            "person_id": memory.person_id
+        })
+    
+    # Sort by creation date (oldest first for PDF)
+    all_content.sort(key=lambda x: x["created_at"] or datetime.min)
+    
+    if not all_content:
+        raise HTTPException(status_code=404, detail="No content found")
+    
+    # Generate PDF
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image
+        from reportlab.lib.units import inch
+        from io import BytesIO
+        from PIL import Image
+        
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+        )
+        
+        memory_title_style = ParagraphStyle(
+            'MemoryTitle',
+            parent=styles['Heading2'],
+            fontSize=16,
+            spaceAfter=10,
+        )
+        
+        date_style = ParagraphStyle(
+            'DateStyle',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor='gray',
+            spaceAfter=15,
+        )
+        
+        content_style = ParagraphStyle(
+            'ContentStyle',
+            parent=styles['Normal'],
+            fontSize=12,
+            spaceAfter=20,
+        )
+        
+        story = []
+        
+        # Title
+        story.append(Paragraph("My Memoir Collection", title_style))
+        story.append(Spacer(1, 0.5*inch))
+        
+        for item in all_content:
+            # Item header
+            person_info = f"{item['category_name']} - {item['person_name']}"
+            story.append(Paragraph(person_info, memory_title_style))
+            
+            # Date
+            date_str = item['created_at'].strftime("%B %d, %Y at %I:%M %p") if item['created_at'] else "Unknown date"
+            story.append(Paragraph(date_str, date_style))
+            
+            if item['type'] == 'memory':
+                # Content
+                story.append(Paragraph(item['content'].replace('\n', '<br/>'), content_style))
+            elif item['type'] == 'file' and item['file_type'].startswith('image/'):
+                # Image
+                try:
+                    img_buffer = BytesIO(item['file_data'])
+                    pil_img = Image.open(img_buffer)
+                    # Resize if too large
+                    max_width = 6 * inch
+                    max_height = 4 * inch
+                    width, height = pil_img.size
+                    if width > max_width or height > max_height:
+                        ratio = min(max_width / width, max_height / height)
+                        new_width = width * ratio
+                        new_height = height * ratio
+                        pil_img = pil_img.resize((int(new_width), int(new_height)), Image.Resampling.LANCZOS)
+                    
+                    img_buffer = BytesIO()
+                    pil_img.save(img_buffer, format='PNG')
+                    img_buffer.seek(0)
+                    
+                    rl_img = Image(img_buffer)
+                    rl_img.hAlign = 'CENTER'
+                    story.append(rl_img)
+                    story.append(Spacer(1, 0.2*inch))
+                    
+                    if item.get('description'):
+                        story.append(Paragraph(f"Description: {item['description']}", content_style))
+                except Exception as e:
+                    logger.error(f"Failed to add image {item['id']}: {str(e)}")
+                    story.append(Paragraph(f"[Image: {item['file_name']}]", content_style))
+            
+            # Separator
+            story.append(Spacer(1, 0.3*inch))
+        
+        doc.build(story)
+        buffer.seek(0)
+        
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(
+            buffer,
+            media_type='application/pdf',
+            headers={"Content-Disposition": "attachment; filename=memories.pdf"}
+        )
+        
+    except ImportError:
+        raise HTTPException(
+            status_code=500, 
+            detail="PDF generation not available. Please install reportlab and pillow: pip install reportlab pillow"
+        )
+    except Exception as e:
+        logger.error(f"PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+
+
 @app.get("/home/user/structure")
 async def get_user_structure(
     token_data: dict = Depends(verify_token),
@@ -533,10 +895,12 @@ async def get_user_structure(
         people_data = []
         for person in people:
             files = db.query(FileStore).filter(FileStore.person_id == person.id).all()
+            memories = db.query(Memory).filter(Memory.person_id == person.id).all()
             people_data.append({
                 "id": person.id,
                 "name": person.person_name,
                 "file_count": len(files),
+                "memory_count": len(memories),
                 "files": [
                     {
                         "id": f.id,
@@ -546,6 +910,14 @@ async def get_user_structure(
                         "created_at": f.created_at.isoformat() if f.created_at else None
                     }
                     for f in files
+                ],
+                "memories": [
+                    {
+                        "id": m.id,
+                        "content": m.content,
+                        "created_at": m.created_at.isoformat() if m.created_at else None
+                    }
+                    for m in memories
                 ]
             })
         

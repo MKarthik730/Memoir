@@ -47,6 +47,7 @@ class Person(Base):
     
     category = relationship("Category", back_populates="people")
     files = relationship("FileStore", back_populates="person", cascade="all, delete-orphan")
+    memories = relationship("Memory", back_populates="person", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Person(id={self.id}, person_name='{self.person_name}', category_id={self.category_id})>"
@@ -69,6 +70,22 @@ class FileStore(Base):
     
     def __repr__(self):
         return f"<FileStore(id={self.id}, file_name='{self.file_name}', person_id={self.person_id})>"
+
+
+class Memory(Base):
+    """Fourth level - Text memories belong to persons"""
+    __tablename__ = "memories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    person_id = Column(Integer, ForeignKey("persons.id"), nullable=False, index=True)
+    
+    person = relationship("Person", back_populates="memories")
+    
+    def __repr__(self):
+        return f"<Memory(id={self.id}, person_id={self.person_id}, created_at={self.created_at})>"
 
 
 # Pydantic Models
@@ -158,3 +175,23 @@ class FileUploadResponse(BaseModel):
     file_type: str
     person_id: int
     message: str
+
+
+class MemoryData(BaseModel):
+    content: str = Field(..., min_length=1, max_length=1000, description="Memory content")
+    
+    class Config:
+        from_attributes = True
+
+
+class MemoryResponse(BaseModel):
+    id: int
+    content: str
+    created_at: Optional[datetime] = None
+    person_id: int
+    
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }

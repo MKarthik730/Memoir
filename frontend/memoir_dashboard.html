@@ -100,21 +100,33 @@
 
         <!-- Upload Section -->
         <div class="upload-section">
-          <h3>Upload a file</h3>
+          <h3>Add Memory or Upload File</h3>
+          
+          <!-- Memory Input -->
+          <div class="memory-input-section">
+            <textarea id="memoryTextInput" placeholder="Write your memory here..." maxlength="1000" rows="3"></textarea>
+            <button id="addMemoryBtn" class="btn primary">Add Memory</button>
+          </div>
+          
+          <div class="or-divider">
+            <span>OR</span>
+          </div>
+          
+          <!-- File Upload -->
           <div class="drop" id="dropZone">
-            <input id="fileInput" type="file" />
+            <input id="fileInput" type="file" accept="image/*" />
             <div class="drop-inner">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M12 3v12" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M8 7l4-4 4 4" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <p class="muted">Drag & drop or click to choose a file</p>
+              <p class="muted">Drag & drop or click to upload a photo</p>
             </div>
           </div>
           
           <div class="upload-controls">
             <input id="descInput" type="text" maxlength="180" placeholder="Optional description" />
-            <button id="uploadBtn" class="btn primary" type="button">Upload</button>
+            <button id="uploadBtn" class="btn primary" type="button">Upload Photo</button>
           </div>
           
           <div id="progressWrap" class="progress-wrap hidden">
@@ -122,17 +134,104 @@
           </div>
         </div>
 
-        <!-- Files List -->
+        <!-- Files and Memories List -->
         <div class="files-section">
-          <h3>Files</h3>
+          <div class="section-header">
+            <h3>Memories & Photos</h3>
+            <div class="view-actions">
+              <button id="viewBtn" class="btn secondary">View All</button>
+              <button id="downloadPdfBtn" class="btn primary">Download PDF</button>
+            </div>
+          </div>
           <div id="filesContainer" class="files-list">
-            <div class="empty-state">Loading files...</div>
+            <div class="empty-state">Loading memories and photos...</div>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- Gallery View -->
+    <section id="galleryView" class="view-section hidden">
+      <div class="panel panel--glass">
+        <div class="panel-header">
+          <button id="backToPersonBtn" class="btn-back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            Back
+          </button>
+          <div>
+            <h2>🖼️ All Memories & Photos</h2>
+            <p class="muted">Your complete collection</p>
+          </div>
+        </div>
+
+        <div class="gallery-controls">
+          <button id="downloadGalleryPdfBtn" class="btn primary">Download PDF</button>
+        </div>
+
+        <div class="memory-input-section">
+          <textarea id="galleryMemoryTextInput" placeholder="Write your memory here..." maxlength="1000" rows="3"></textarea>
+          <button id="galleryAddMemoryBtn" class="btn primary">Add Memory</button>
+        </div>
+
+        <div id="galleryContainer" class="gallery-grid">
+          <div class="empty-state">Loading your collection...</div>
+        </div>
+      </div>
+    </section>
+
   </main>
+
+  <!-- Image Modal -->
+  <div id="imageModal" class="image-modal hidden">
+    <div class="image-modal-overlay" id="imageModalOverlay"></div>
+    <div class="image-modal-content">
+      <button class="image-modal-close" id="imageModalClose">&times;</button>
+      <img id="imageModalImg" src="" alt="" class="image-modal-image" />
+      <div class="image-modal-info">
+        <h3 id="imageModalTitle"></h3>
+        <p id="imageModalMeta"></p>
+        <p id="imageModalDesc"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Modal -->
+  <div id="categoryModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add New Category</h3>
+        <button id="closeCategoryModal" class="btn-close">&times;</button>
+      </div>
+      <form id="categoryForm">
+        <label for="categoryNameInput">Category Name</label>
+        <input id="categoryNameInput" type="text" placeholder="e.g., Family, Friends, Travel" maxlength="100" required />
+        <div class="modal-actions">
+          <button type="button" id="cancelCategoryBtn" class="btn secondary">Cancel</button>
+          <button type="submit" class="btn primary">Create Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Person Modal -->
+  <div id="personModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add New Person</h3>
+        <button id="closePersonModal" class="btn-close">&times;</button>
+      </div>
+      <form id="personForm">
+        <label for="personNameInput">Person Name</label>
+        <input id="personNameInput" type="text" placeholder="Enter person name" maxlength="100" required />
+        <div class="modal-actions">
+          <button type="button" id="cancelPersonBtn" class="btn secondary">Cancel</button>
+          <button type="submit" class="btn primary">Add Person</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div id="toast" class="toast"></div>
   <script src="app.js"></script>

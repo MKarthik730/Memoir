@@ -1,0 +1,28 @@
+# Memoir API - Python Dependencies
+# Updated: February 2026
+
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Database
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Configuration
+python-dotenv==1.0.0
+
+# PDF Generation
+reportlab==4.0.7
+pillow==10.2.0
+
+# Optional: Development & Testing
+# pytest==7.4.3
+# pytest-asyncio==0.21.1
+# httpx==0.25.2
