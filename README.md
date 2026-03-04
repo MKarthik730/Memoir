@@ -1,4 +1,4 @@
-# Memoir API v2.0
+**# Memoir API v2.0
 
 A secure, production-ready web application for preserving and organizing personal relationships and shared memories.
 
@@ -390,3 +390,4 @@ For production deployment:
 ---
 
 **Built with ❤️ for preserving memories**
+**
