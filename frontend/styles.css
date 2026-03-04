@@ -184,6 +184,20 @@ input[type=text]:focus,input[type=password]:focus{
   margin:4px 0 0 0;
 }
 
+.panel-header-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:20px;
+}
+
+.flex-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
 /* Add Section */
 .add-section{
   display:flex;
@@ -533,6 +547,93 @@ input[type=text]:focus,input[type=password]:focus{
 .view-actions{
   display:flex;
   gap:12px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+
+.pdf-viewer-wrap{
+  margin-top:12px;
+  border:1px solid rgba(11,37,69,0.1);
+  border-radius:12px;
+  overflow:hidden;
+  background:#fff;
+}
+
+.pdf-viewer{
+  width:100%;
+  min-height:520px;
+  border:0;
+}
+
+.query-fab{
+  position:fixed;
+  right:20px;
+  bottom:20px;
+  width:56px;
+  height:56px;
+  border:none;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#007ea7);
+  color:#fff;
+  font-size:24px;
+  font-weight:700;
+  cursor:pointer;
+  z-index:1200;
+  box-shadow:var(--shadow-hover);
+}
+
+.query-drawer{
+  position:fixed;
+  right:20px;
+  bottom:88px;
+  width:min(420px, calc(100vw - 40px));
+  background:#fff;
+  border-radius:14px;
+  box-shadow:var(--shadow-hover);
+  border:1px solid rgba(11,37,69,0.08);
+  padding:14px;
+  z-index:1200;
+}
+
+.query-header{
+  font-weight:700;
+  color:var(--deep);
+  margin-bottom:10px;
+}
+
+.query-drawer textarea{
+  width:100%;
+  min-height:90px;
+  padding:10px;
+  border:1px solid #e6eef6;
+  border-radius:10px;
+  resize:vertical;
+  font-size:14px;
+  font-family:inherit;
+}
+
+.query-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:10px;
+}
+
+.query-result{
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  background:#f8fbff;
+  border:1px solid #e6eef6;
+  color:var(--deep);
+  white-space:pre-wrap;
+  display:none;
+  max-height:220px;
+  overflow:auto;
+}
+
+.query-result.show{
+  display:block;
 }
 
 /* Gallery View */
@@ -763,6 +864,8 @@ input[type=text]:focus,input[type=password]:focus{
 
 @media (max-width:600px){
   .panel-header{flex-direction:column;align-items:flex-start}
+  .panel-header-row{flex-direction:column;align-items:stretch}
+  .flex-row{flex-wrap:wrap}
   .file-card{flex-direction:column;align-items:flex-start;gap:12px}
   .card-actions{opacity:1}
 }

@@ -3,181 +3,34 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Memoir — Dashboard</title>
+  <title>Memoir — Sign in</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="page-dashboard">
-  <header class="topbar">
-    <div class="brand-left">
-      <svg class="logo-small" viewBox="0 0 48 48" aria-hidden>
+<body class="page-auth">
+  <main class="auth-container">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden>
         <rect width="48" height="48" rx="8" fill="#00A8CC"></rect>
         <path d="M12 32 L20 16 L28 32" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span class="app-title">Memoir</span>
+      <h1>Welcome back</h1>
+      <p class="muted">Sign in to your Memoir</p>
     </div>
-    <div class="user-area">
-      <div id="userAvatar" class="avatar">U</div>
-      <div id="username" class="username muted">Guest</div>
-      <button id="logoutBtn" class="btn subtle">Sign out</button>
-    </div>
-  </header>
 
-  <main class="dashboard-container">
-    
-    <!-- Category View -->
-    <section id="categoryView" class="view-section">
-      <div class="panel panel--glass">
-        <div class="panel-header-row">
-          <div>
-            <h2>📁 Your Categories</h2>
-            <p class="muted">Organize your memories by category</p>
-          </div>
-          <button id="addCategoryBtn" class="btn primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            New Category
-          </button>
-        </div>
-
-        <div id="categoriesContainer" class="cards-grid">
-          <div class="empty-state">Loading categories...</div>
-        </div>
+    <form id="loginForm" class="card card--elevated">
+      <label>Username
+        <input id="loginName" name="name" type="text" required minlength="3" autocomplete="username" />
+      </label>
+      <label>Password
+        <input id="loginPassword" name="password" type="password" required minlength="8" autocomplete="current-password" />
+      </label>
+      <button class="btn primary" type="submit">Sign in</button>
+      <div class="row between">
+        <a class="link" href="sign_up.html">Create account</a>
       </div>
-    </section>
-
-    <!-- Person View -->
-    <section id="personView" class="view-section hidden">
-      <div class="panel panel--glass">
-        <div class="panel-header-row">
-          <div class="flex-row">
-            <button id="backToCategoriesBtn" class="btn-back">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 18l-6-6 6-6"/>
-              </svg>
-              Back
-            </button>
-            <div>
-              <h2>👥 <span id="categoryTitle">Category</span></h2>
-              <p class="muted">People in this category</p>
-            </div>
-          </div>
-          <button id="addPersonBtn" class="btn primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Add Person
-          </button>
-        </div>
-
-        <div id="peopleContainer" class="cards-grid">
-          <div class="empty-state">Loading people...</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- File View -->
-    <section id="fileView" class="view-section hidden">
-      <div class="panel panel--glass">
-        <div class="breadcrumb">
-          <button id="backToPeopleBtn" class="btn-back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
-            Back
-          </button>
-          <span class="breadcrumb-text">
-            <span id="breadcrumbCategory" class="muted">Category</span>
-            <span class="muted"> / </span>
-            <span id="personTitle" class="strong">Person</span>
-          </span>
-        </div>
-
-        <!-- Upload Section -->
-        <div class="upload-section">
-          <h3>📤 Upload Files</h3>
-          <div class="drop" id="dropZone">
-            <input id="fileInput" type="file" />
-            <div class="drop-inner">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M12 3v12" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M8 7l4-4 4 4" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <p class="muted">Drag & drop or click to choose a file</p>
-              <p class="muted small">Photos, videos, audio, and documents</p>
-            </div>
-          </div>
-          
-          <div class="upload-controls">
-            <input id="descInput" type="text" maxlength="180" placeholder="Optional description..." />
-            <button id="uploadBtn" class="btn primary" type="button">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              Upload
-            </button>
-          </div>
-          
-          <div id="progressWrap" class="progress-wrap hidden">
-            <div id="progressBar" class="progress-bar" style="width:0%"></div>
-          </div>
-        </div>
-
-        <!-- Files List -->
-        <div class="files-section">
-          <h3>📂 Files</h3>
-          <div id="filesContainer" class="files-list">
-            <div class="empty-state">Loading files...</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
+    </form>
+    <div id="toast" class="toast"></div>
   </main>
-
-  <!-- Category Modal -->
-  <div id="categoryModal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>📁 Create New Category</h3>
-        <button id="closeCategoryModal" class="btn-close">&times;</button>
-      </div>
-      <form id="categoryForm">
-        <label>
-          Category Name
-          <input id="categoryNameInput" type="text" placeholder="e.g., Family, Friends, Travel..." maxlength="100" required />
-        </label>
-        <div class="modal-actions">
-          <button type="submit" class="btn primary">Create Category</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Person Modal -->
-  <div id="personModal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>👤 Add New Person</h3>
-        <button id="closePersonModal" class="btn-close">&times;</button>
-      </div>
-      <form id="personForm">
-        <label>
-          Person Name
-          <input id="personNameInput" type="text" placeholder="Enter name..." maxlength="100" required />
-        </label>
-        <div class="modal-actions">
-          <button type="submit" class="btn primary">Add Person</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div id="toast" class="toast"></div>
   <script src="app.js"></script>
 </body>
 </html>

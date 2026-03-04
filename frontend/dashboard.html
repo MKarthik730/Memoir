@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Memoir — Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-dashboard">
+  <header class="topbar">
+    <div class="brand-left">
+      <svg class="logo-small" viewBox="0 0 48 48" aria-hidden>
+        <rect width="48" height="48" rx="8" fill="#00A8CC"></rect>
+        <path d="M12 32 L20 16 L28 32" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="app-title">Memoir</span>
+    </div>
+    <div class="user-area">
+      <a href="memoir_dashboard.html" class="btn subtle" style="text-decoration:none">✦ Graph</a>
+      <div id="userAvatar" class="avatar">U</div>
+      <div id="username" class="username muted">Guest</div>
+      <button id="logoutBtn" class="btn subtle">Sign out</button>
+    </div>
+  </header>
+
+  <main class="dashboard-container">
+
+    <!-- Category View -->
+    <section id="categoryView" class="view-section">
+      <div class="panel panel--glass">
+        <div class="panel-header-row">
+          <div>
+            <h2>📁 Your Categories</h2>
+            <p class="muted">Organize your memories by category</p>
+          </div>
+          <button id="addCategoryBtn" class="btn primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            New Category
+          </button>
+        </div>
+        <div id="categoriesContainer" class="cards-grid">
+          <div class="empty-state">Loading categories...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Person View -->
+    <section id="personView" class="view-section hidden">
+      <div class="panel panel--glass">
+        <div class="panel-header-row">
+          <div class="flex-row">
+            <button id="backToCategoriesBtn" class="btn-back">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+              Back
+            </button>
+            <div>
+              <h2>👥 <span id="categoryTitle">Category</span></h2>
+              <p class="muted">People in this category</p>
+            </div>
+          </div>
+          <button id="addPersonBtn" class="btn primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add Person
+          </button>
+        </div>
+        <div id="peopleContainer" class="cards-grid">
+          <div class="empty-state">Loading people...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- File View -->
+    <section id="fileView" class="view-section hidden">
+      <div class="panel panel--glass">
+        <div class="breadcrumb">
+          <button id="backToPeopleBtn" class="btn-back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            Back
+          </button>
+          <span class="breadcrumb-text">
+            <span id="breadcrumbCategory" class="muted">Category</span>
+            <span class="muted"> / </span>
+            <span id="personTitle" class="strong">Person</span>
+          </span>
+        </div>
+
+        <div class="upload-section">
+          <h3>📤 Upload Files</h3>
+          <div class="memory-input-section">
+            <label for="memoryTextInput">📝 Add memory text for this person</label>
+            <textarea id="memoryTextInput" placeholder="Write memory text for this person..."></textarea>
+            <button id="addMemoryBtn" class="btn primary" type="button">Save Memory Text</button>
+          </div>
+
+          <div class="view-actions">
+            <button id="viewBtn" class="btn subtle" type="button">Read Memories</button>
+            <button id="downloadPdfBtn" class="btn primary" type="button">Download Person PDF</button>
+            <button id="openPersonPdfBtn" class="btn subtle" type="button">Open Person PDF</button>
+          </div>
+
+          <div class="or-divider"><span>or upload files</span></div>
+
+          <div class="drop" id="dropZone">
+            <input id="fileInput" type="file" />
+            <div class="drop-inner">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M12 3v12" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 7l4-4 4 4" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <p class="muted">Drag & drop or click to choose a file</p>
+              <p class="muted small">Photos, videos, audio, and documents</p>
+            </div>
+          </div>
+          <div class="upload-controls">
+            <input id="descInput" type="text" maxlength="180" placeholder="Optional description..." />
+            <button id="uploadBtn" class="btn primary" type="button">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              Upload
+            </button>
+          </div>
+          <div id="progressWrap" class="progress-wrap hidden">
+            <div id="progressBar" class="progress-bar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="files-section">
+          <h3>📂 Files</h3>
+          <div id="filesContainer" class="files-list">
+            <div class="empty-state">Loading files...</div>
+          </div>
+        </div>
+
+        <div class="files-section">
+          <h3>📖 Person PDF Reader</h3>
+          <div id="personPdfSection" class="pdf-viewer-wrap hidden">
+            <iframe id="personPdfViewer" class="pdf-viewer" title="Person PDF Viewer"></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="galleryView" class="view-section hidden">
+      <div class="panel panel--glass">
+        <div class="panel-header-row">
+          <div class="flex-row">
+            <button id="backToDashboardFromGalleryBtn" class="btn-back">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+              Back
+            </button>
+            <div>
+              <h2>🖼️ Memory Reader</h2>
+              <p class="muted">Read memory text and review media in one place</p>
+            </div>
+          </div>
+          <button id="downloadGalleryPdfBtn" class="btn primary" type="button">Download Full PDF</button>
+        </div>
+        <div id="galleryContainer" class="gallery-grid">
+          <div class="empty-state">Loading content...</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Category Modal -->
+  <div id="categoryModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📁 Create New Category</h3>
+        <button id="closeCategoryModal" class="btn-close">&times;</button>
+      </div>
+      <form id="categoryForm">
+        <label>Category Name
+          <input id="categoryNameInput" type="text" placeholder="e.g., Family, Friends, Travel..." maxlength="100" required />
+        </label>
+        <div class="modal-actions">
+          <button type="submit" class="btn primary">Create Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Person Modal -->
+  <div id="personModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>👤 Add New Person</h3>
+        <button id="closePersonModal" class="btn-close">&times;</button>
+      </div>
+      <form id="personForm">
+        <label>Person Name
+          <input id="personNameInput" type="text" placeholder="Enter name..." maxlength="100" required />
+        </label>
+        <div class="modal-actions">
+          <button type="submit" class="btn primary">Add Person</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="imageModal" class="image-modal hidden">
+    <div id="imageModalOverlay" class="image-modal-overlay"></div>
+    <div class="image-modal-content">
+      <button id="imageModalClose" class="image-modal-close" aria-label="Close image preview">×</button>
+      <img id="imageModalImg" class="image-modal-image" alt="Preview" />
+      <div class="image-modal-info">
+        <h3 id="imageModalTitle"></h3>
+        <p id="imageModalMeta"></p>
+        <p id="imageModalDesc"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

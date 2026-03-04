@@ -16,6 +16,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 import asyncio
 from typing import Optional, List
+from pydantic import BaseModel, Field
+from io import BytesIO
+
+from fastapi.responses import StreamingResponse
 
 from database.models import (
     User, UserData, UserResponse, Base, FileStore, FileResponse, 
@@ -26,7 +30,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from database.config import SessionLocal, engine
 from fastapi.staticfiles import StaticFiles
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+try:
+    from rag.rag_model import RAGModel
+except Exception:
+    RAGModel = None
+
+pwd_context = CryptContext(schemes=['bcrypt_sha256', 'bcrypt'], deprecated='auto')
 app = FastAPI()
 security = HTTPBearer()
 
@@ -131,6 +140,182 @@ ALLOWED_EXTENSIONS = {
 }
 
 MAX_FILE_SIZE = 100 * 1024 * 1024
+
+
+class RAGQueryRequest(BaseModel):
+    question: str = Field(..., min_length=2, max_length=2000)
+    top_k: int = Field(default=5, ge=1, le=15)
+
+
+def build_person_pdf_buffer(person: Person, db) -> BytesIO:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+    from reportlab.lib.units import inch
+    from PIL import Image as PILImage
+
+    files = db.query(FileStore).filter(FileStore.person_id == person.id).order_by(FileStore.created_at.asc()).all()
+    memories = db.query(Memory).filter(Memory.person_id == person.id).order_by(Memory.created_at.asc()).all()
+
+    items = []
+    for file in files:
+        items.append({
+            "type": "file",
+            "file_name": file.file_name,
+            "file_type": file.file_type,
+            "file_data": file.file_data,
+            "description": file.description,
+            "created_at": file.created_at,
+        })
+    for memory in memories:
+        items.append({
+            "type": "memory",
+            "content": memory.content,
+            "created_at": memory.created_at,
+        })
+
+    items.sort(key=lambda x: x.get("created_at") or datetime.min)
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "PersonTitle",
+        parent=styles["Heading1"],
+        fontSize=22,
+        spaceAfter=18,
+    )
+    subtitle_style = ParagraphStyle(
+        "PersonSubTitle",
+        parent=styles["Heading3"],
+        fontSize=12,
+        spaceAfter=16,
+        textColor="gray",
+    )
+    section_title_style = ParagraphStyle(
+        "SectionTitle",
+        parent=styles["Heading2"],
+        fontSize=14,
+        spaceAfter=8,
+    )
+    date_style = ParagraphStyle(
+        "DateStyle",
+        parent=styles["Normal"],
+        fontSize=9,
+        textColor="gray",
+        spaceAfter=8,
+    )
+    content_style = ParagraphStyle(
+        "ContentStyle",
+        parent=styles["Normal"],
+        fontSize=11,
+        spaceAfter=16,
+    )
+
+    story = []
+    story.append(Paragraph(f"Memoir - {person.person_name}", title_style))
+    story.append(Paragraph("Memories and images", subtitle_style))
+    story.append(Spacer(1, 0.2 * inch))
+
+    if not items:
+        story.append(Paragraph("No memories or images added yet.", content_style))
+
+    for item in items:
+        date_str = "Unknown date"
+        if item.get("created_at"):
+            date_str = item["created_at"].strftime("%B %d, %Y at %I:%M %p")
+
+        if item["type"] == "memory":
+            story.append(Paragraph("Memory", section_title_style))
+            story.append(Paragraph(date_str, date_style))
+            story.append(Paragraph(item["content"].replace("\n", "<br/>"), content_style))
+        elif item["type"] == "file" and item["file_type"].startswith("image/"):
+            story.append(Paragraph(f"Image - {item['file_name']}", section_title_style))
+            story.append(Paragraph(date_str, date_style))
+            try:
+                img_buffer = BytesIO(item["file_data"])
+                pil_img = PILImage.open(img_buffer)
+                max_width = 6 * inch
+                max_height = 4 * inch
+                width, height = pil_img.size
+                if width > max_width or height > max_height:
+                    ratio = min(max_width / width, max_height / height)
+                    pil_img = pil_img.resize((int(width * ratio), int(height * ratio)), PILImage.Resampling.LANCZOS)
+
+                png_buffer = BytesIO()
+                pil_img.save(png_buffer, format="PNG")
+                png_buffer.seek(0)
+
+                rl_img = Image(png_buffer)
+                rl_img.hAlign = "CENTER"
+                story.append(rl_img)
+                story.append(Spacer(1, 0.15 * inch))
+                if item.get("description"):
+                    story.append(Paragraph(f"Description: {item['description']}", content_style))
+                else:
+                    story.append(Spacer(1, 0.08 * inch))
+            except Exception as img_err:
+                logger.error(f"Failed to add image '{item['file_name']}' to person PDF: {img_err}")
+                story.append(Paragraph("[Image could not be rendered]", content_style))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+
+def get_user_rag_documents(user_id: int, db) -> List[dict]:
+    docs: List[dict] = []
+
+    memories = db.query(Memory).join(Person).join(Category).filter(Category.user_id == user_id).all()
+    for memory in memories:
+        docs.append({
+            "text": memory.content,
+            "metadata": {
+                "type": "memory",
+                "person_id": memory.person_id,
+                "person_name": memory.person.person_name,
+                "category_name": memory.person.category.cat_name,
+                "created_at": memory.created_at.isoformat() if memory.created_at else None,
+            },
+        })
+
+    files = db.query(FileStore).join(Person).join(Category).filter(Category.user_id == user_id).all()
+    for file in files:
+        if file.description:
+            docs.append({
+                "text": file.description,
+                "metadata": {
+                    "type": "file_description",
+                    "file_name": file.file_name,
+                    "file_type": file.file_type,
+                    "person_id": file.person_id,
+                    "person_name": file.person.person_name,
+                    "category_name": file.person.category.cat_name,
+                    "created_at": file.created_at.isoformat() if file.created_at else None,
+                },
+            })
+
+        if file.file_type in ("text/plain", "application/json"):
+            try:
+                decoded = file.file_data.decode("utf-8", errors="ignore").strip()
+                if decoded:
+                    docs.append({
+                        "text": decoded[:4000],
+                        "metadata": {
+                            "type": "text_file",
+                            "file_name": file.file_name,
+                            "file_type": file.file_type,
+                            "person_id": file.person_id,
+                            "person_name": file.person.person_name,
+                            "category_name": file.person.category.cat_name,
+                            "created_at": file.created_at.isoformat() if file.created_at else None,
+                        },
+                    })
+            except Exception:
+                pass
+
+    return docs
 
 def get_file_category(filename: str) -> Optional[str]:
     ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
@@ -768,10 +953,10 @@ async def generate_memories_pdf(
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image as RLImage
         from reportlab.lib.units import inch
         from io import BytesIO
-        from PIL import Image
+        from PIL import Image as PILImage
         
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -829,7 +1014,7 @@ async def generate_memories_pdf(
                 # Image
                 try:
                     img_buffer = BytesIO(item['file_data'])
-                    pil_img = Image.open(img_buffer)
+                    pil_img = PILImage.open(img_buffer)
                     # Resize if too large
                     max_width = 6 * inch
                     max_height = 4 * inch
@@ -838,13 +1023,13 @@ async def generate_memories_pdf(
                         ratio = min(max_width / width, max_height / height)
                         new_width = width * ratio
                         new_height = height * ratio
-                        pil_img = pil_img.resize((int(new_width), int(new_height)), Image.Resampling.LANCZOS)
+                        pil_img = pil_img.resize((int(new_width), int(new_height)), PILImage.Resampling.LANCZOS)
                     
                     img_buffer = BytesIO()
                     pil_img.save(img_buffer, format='PNG')
                     img_buffer.seek(0)
                     
-                    rl_img = Image(img_buffer)
+                    rl_img = RLImage(img_buffer)
                     rl_img.hAlign = 'CENTER'
                     story.append(rl_img)
                     story.append(Spacer(1, 0.2*inch))
@@ -861,7 +1046,6 @@ async def generate_memories_pdf(
         doc.build(story)
         buffer.seek(0)
         
-        from fastapi.responses import StreamingResponse
         return StreamingResponse(
             buffer,
             media_type='application/pdf',
@@ -876,6 +1060,123 @@ async def generate_memories_pdf(
     except Exception as e:
         logger.error(f"PDF generation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+
+
+@app.get("/home/person/{person_id}/pdf")
+async def generate_person_pdf_download(
+    person_id: int,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    user_id = token_data["user_id"]
+
+    person = db.query(Person).join(Category).filter(
+        Person.id == person_id,
+        Category.user_id == user_id
+    ).first()
+
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    try:
+        pdf_buffer = build_person_pdf_buffer(person, db)
+        safe_name = person.person_name.replace(" ", "_")
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={safe_name}_memoir.pdf"},
+        )
+    except Exception as e:
+        logger.error(f"Person PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Person PDF generation failed: {str(e)}")
+
+
+@app.get("/home/person/{person_id}/pdf/view")
+async def generate_person_pdf_inline(
+    person_id: int,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    user_id = token_data["user_id"]
+
+    person = db.query(Person).join(Category).filter(
+        Person.id == person_id,
+        Category.user_id == user_id
+    ).first()
+
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    try:
+        pdf_buffer = build_person_pdf_buffer(person, db)
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "inline; filename=person_memoir.pdf"},
+        )
+    except Exception as e:
+        logger.error(f"Person inline PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Person inline PDF generation failed: {str(e)}")
+
+
+@app.post("/home/rag/query")
+async def rag_query(
+    payload: RAGQueryRequest,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db)
+):
+    user_id = token_data["user_id"]
+    docs = get_user_rag_documents(user_id, db)
+
+    if not docs:
+        return {
+            "answer": "No memories or document text found yet. Add memories or text files to query your data.",
+            "sources": [],
+            "query": payload.question,
+        }
+
+    question = payload.question.strip()
+    top_k = min(payload.top_k, len(docs))
+
+    if RAGModel is not None:
+        try:
+            rag = RAGModel()
+            rag.add_documents([d["text"] for d in docs], [d["metadata"] for d in docs])
+            result = rag.query(question, top_k=top_k)
+
+            retrieved = result.get("retrieved_documents", [])
+            lines = []
+            for doc in retrieved:
+                txt = (doc.text or "").strip()
+                if txt:
+                    lines.append(txt[:320])
+
+            answer = "\n\n".join(lines) if lines else "No relevant context found for this question."
+            return {
+                "answer": answer,
+                "sources": result.get("sources", []),
+                "query": question,
+            }
+        except Exception as e:
+            logger.warning(f"RAG model unavailable, using fallback retrieval: {str(e)}")
+
+    query_terms = [t for t in question.lower().split() if len(t) > 2]
+    ranked = []
+    for d in docs:
+        text_l = d["text"].lower()
+        score = sum(1 for t in query_terms if t in text_l)
+        ranked.append((score, d))
+
+    ranked.sort(key=lambda x: x[0], reverse=True)
+    selected = [item[1] for item in ranked[:top_k]]
+
+    answer_parts = [s["text"][:320] for s in selected if s.get("text")]
+    answer = "\n\n".join(answer_parts) if answer_parts else "No relevant context found for this question."
+    return {
+        "answer": answer,
+        "sources": [s.get("metadata", {}) for s in selected],
+        "query": question,
+    }
 
 
 @app.get("/home/user/structure")

@@ -1,239 +1,517 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Memoir — Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Memoir — Memory Graph</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+
+:root {
+  --bg:      #05050b;
+  --bg2:     #0b0b14;
+  --panel:   #10101c;
+  --border:  #1e1e30;
+  --text:    #e8e6f4;
+  --muted:   #5a5870;
+  --accent:  #c9a96e;
+  --cat:  #a06ee8;
+  --per:  #e87d6e;
+  --mem:  #5ec99a;
+  --fil:  #5b8dee;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: 'Crimson Pro', serif; overflow: hidden; }
+
+/* HEADER */
+#hdr {
+  position: fixed; top: 0; left: 0; right: 0; height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  background: linear-gradient(180deg, rgba(8,8,18,.98) 0%, rgba(5,5,11,0) 100%);
+  z-index: 50; gap: 14px; flex-wrap: wrap;
+}
+.hdr-left { display: flex; align-items: center; gap: 14px; }
+.brand { font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700; letter-spacing: .18em; color: var(--accent); text-shadow: 0 0 30px rgba(201,169,110,.5); }
+.hdr-back { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); padding: 5px 12px; cursor: pointer; font-size: .78rem; font-family: 'Crimson Pro', serif; text-decoration: none; transition: all .2s; }
+.hdr-back:hover { border-color: rgba(201,169,110,.4); color: var(--accent); background: rgba(201,169,110,.06); }
+.legend { display: flex; gap: 14px; }
+.leg { display: flex; align-items: center; gap: 6px; font-size: .73rem; color: var(--muted); letter-spacing: .06em; }
+.leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.hdr-right { display: flex; align-items: center; gap: 8px; }
+.hdr-input { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 8px; padding: 6px 13px; color: var(--text); font-family: 'Crimson Pro', serif; font-size: .85rem; outline: none; width: 180px; transition: all .2s; }
+.hdr-input:focus { border-color: rgba(201,169,110,.5); background: rgba(201,169,110,.04); box-shadow: 0 0 0 3px rgba(201,169,110,.07); }
+.hdr-input::placeholder { color: var(--muted); }
+.hdr-btn { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); padding: 6px 12px; cursor: pointer; font-size: .78rem; font-family: 'Crimson Pro', serif; transition: all .2s; white-space: nowrap; }
+.hdr-btn:hover { border-color: rgba(201,169,110,.4); color: var(--accent); }
+.hdr-btn.danger { border-color: rgba(232,125,110,.25); color: rgba(232,125,110,.7); }
+.hdr-btn.danger:hover { border-color: var(--per); color: var(--per); background: rgba(232,125,110,.06); }
+
+/* CANVAS */
+#canvas { position: fixed; inset: 0; z-index: 1; }
+svg { width: 100%; height: 100%; cursor: grab; }
+svg:active { cursor: grabbing; }
+
+/* LINKS */
+.link { stroke-opacity: .35; transition: stroke-opacity .3s, stroke-width .3s; }
+.link.hl { stroke-opacity: .9 !important; stroke-width: 2.5 !important; }
+.link.dm { stroke-opacity: .04 !important; }
+
+/* NODES */
+.node { cursor: pointer; }
+.node.dm { opacity: .06; }
+.node.hl .node-core { filter: drop-shadow(0 0 14px var(--nc, #fff)); }
+
+/* SIDE PANEL */
+#panel {
+  position: fixed; top: 64px; right: 16px; width: 280px;
+  background: rgba(8,8,18,.9); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border); border-radius: 16px; padding: 20px;
+  transform: translateX(320px); transition: transform .35s cubic-bezier(.4,0,.2,1);
+  z-index: 40; box-shadow: 0 20px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.04);
+}
+#panel.open { transform: translateX(0); }
+.p-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 20px; font-size: .68rem; letter-spacing: .1em; margin-bottom: 12px; font-family: 'Cinzel', serif; font-weight: 600; }
+#panel-name { font-family: 'Cinzel', serif; font-size: .95rem; font-weight: 600; color: var(--accent); margin-bottom: 8px; line-height: 1.35; }
+#panel-desc { font-size: .85rem; color: var(--muted); line-height: 1.7; margin-bottom: 14px; white-space: pre-wrap; }
+.p-divider { height: 1px; background: var(--border); margin-bottom: 12px; }
+.p-conn-label { font-size: .65rem; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; font-family: 'Cinzel', serif; }
+.p-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.p-chip { padding: 3px 10px; border-radius: 12px; border: 1px solid transparent; font-size: .74rem; cursor: pointer; transition: all .2s; background: rgba(255,255,255,.03); }
+.p-chip:hover { transform: translateY(-1px); background: rgba(255,255,255,.07); }
+#close-panel { position: absolute; top: 14px; right: 14px; width: 24px; height: 24px; background: rgba(255,255,255,.06); border: none; border-radius: 50%; color: var(--muted); font-size: .85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+#close-panel:hover { background: rgba(255,255,255,.12); color: var(--text); }
+
+/* ZOOM */
+#zoom-ctrls { position: fixed; bottom: 28px; left: 22px; display: flex; flex-direction: column; gap: 5px; z-index: 40; }
+.z-btn { width: 36px; height: 36px; background: rgba(8,8,18,.9); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: .95rem; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; }
+.z-btn:hover { border-color: rgba(201,169,110,.5); color: var(--accent); background: rgba(201,169,110,.08); }
+
+/* STATS */
+#stats { position: fixed; bottom: 28px; left: 74px; display: flex; gap: 7px; flex-wrap: wrap; z-index: 40; }
+.stat { display: flex; align-items: center; gap: 6px; background: rgba(8,8,18,.9); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: .72rem; color: var(--muted); }
+.stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* TOOLTIP */
+#tip { position: fixed; background: rgba(8,8,18,.97); border: 1px solid var(--border); border-radius: 9px; padding: 8px 13px; font-size: .8rem; pointer-events: none; opacity: 0; transition: opacity .12s; z-index: 60; max-width: 200px; line-height: 1.5; }
+#tip.show { opacity: 1; }
+
+/* QUERY FAB */
+#q-fab {
+  position: fixed; bottom: 28px; right: 28px;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: conic-gradient(from 180deg, #c9a96e, #a06ee8, #5ec99a, #5b8dee, #c9a96e);
+  border: none; cursor: pointer; z-index: 50;
+  box-shadow: 0 4px 28px rgba(201,169,110,.4);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .25s, box-shadow .25s;
+  animation: fab-idle 4s ease-in-out infinite;
+}
+@keyframes fab-idle { 0%,100%{box-shadow:0 4px 28px rgba(201,169,110,.3)} 50%{box-shadow:0 4px 40px rgba(201,169,110,.6),0 0 0 8px rgba(201,169,110,.06)} }
+#q-fab:hover { transform: scale(1.12) rotate(20deg); animation: none; box-shadow: 0 8px 40px rgba(201,169,110,.7); }
+
+/* QUERY DRAWER */
+#q-drawer {
+  position: fixed; bottom: 96px; right: 28px; width: 360px;
+  background: rgba(6,6,16,.93); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(201,169,110,.18); border-radius: 20px; padding: 22px; z-index: 49;
+  transform: translateY(24px) scale(.93); opacity: 0; pointer-events: none;
+  transition: all .28s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 24px 80px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+}
+#q-drawer.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: all; }
+.drawer-title { font-family: 'Cinzel', serif; font-size: .82rem; letter-spacing: .12em; color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.drawer-title::before { content: ''; display: block; width: 20px; height: 1px; background: linear-gradient(90deg, var(--accent), transparent); }
+#q-input { width: 100%; background: rgba(0,0,0,.4); border: 1px solid var(--border); border-radius: 11px; padding: 11px 14px; color: var(--text); font-family: 'Crimson Pro', serif; font-size: .93rem; outline: none; resize: none; min-height: 84px; line-height: 1.55; transition: border-color .2s, box-shadow .2s; }
+#q-input:focus { border-color: rgba(201,169,110,.45); box-shadow: 0 0 0 3px rgba(201,169,110,.07); }
+#q-input::placeholder { color: var(--muted); }
+.q-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
+.q-btn { padding: 8px 18px; border-radius: 9px; cursor: pointer; font-family: 'Crimson Pro', serif; font-size: .88rem; font-weight: 600; transition: all .2s; border: none; }
+#q-clear { background: transparent; border: 1px solid var(--border) !important; color: var(--muted); }
+#q-clear:hover { border-color: rgba(201,169,110,.4) !important; color: var(--accent); }
+#q-submit { background: linear-gradient(135deg, #c9a96e 0%, #9a6830 100%); color: #05050b; font-weight: 700; }
+#q-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,169,110,.4); }
+#q-submit:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+#q-result { margin-top: 14px; padding: 13px 14px; background: rgba(0,0,0,.4); border-radius: 10px; border-left: 2px solid var(--accent); font-size: .86rem; color: var(--text); line-height: 1.7; display: none; white-space: pre-wrap; max-height: 220px; overflow-y: auto; }
+#q-result.show { display: block; }
+#q-result::-webkit-scrollbar { width: 4px; }
+#q-result::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.dots { display: flex; gap: 5px; align-items: center; }
+.dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .3; animation: dot .9s ease-in-out infinite; }
+.dots span:nth-child(2) { animation-delay: .2s; }
+.dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes dot { 0%,100%{opacity:.2;transform:scale(.7)} 50%{opacity:1;transform:scale(1)} }
+
+/* LOADING */
+#loading { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; gap: 24px; }
+.load-rings { position: relative; width: 64px; height: 64px; }
+.ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; animation: spin linear infinite; }
+.ring:nth-child(1) { border-top-color: var(--accent); animation-duration: .9s; }
+.ring:nth-child(2) { inset: 9px; border-top-color: var(--cat); animation-duration: 1.35s; animation-direction: reverse; }
+.ring:nth-child(3) { inset: 18px; border-top-color: var(--mem); animation-duration: .7s; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.load-label { font-family: 'Cinzel', serif; font-size: .8rem; letter-spacing: .18em; color: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+/* EMPTY */
+#empty { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; gap: 12px; color: var(--muted); }
+#empty h2 { font-family: 'Cinzel', serif; color: var(--accent); font-size: 1.2rem; }
+
+@media (max-width: 700px) {
+  .legend { display: none; }
+  #q-drawer { right: 10px; left: 10px; width: auto; bottom: 86px; }
+  #q-fab { bottom: 18px; right: 18px; }
+  #stats { display: none; }
+  #panel { right: 8px; left: 8px; width: auto; }
+}
+</style>
 </head>
-<body class="page-dashboard">
-  <header class="topbar">
-    <div class="brand-left">
-      <svg class="logo-small" viewBox="0 0 48 48" aria-hidden>
-        <rect width="48" height="48" rx="8" fill="#00A8CC"></rect>
-        <path d="M12 32 L20 16 L28 32" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span class="app-title">Memoir</span>
-    </div>
-    <div class="user-area">
-      <div id="userAvatar" class="avatar">U</div>
-      <div id="username" class="username muted">Guest</div>
-      <button id="logoutBtn" class="btn subtle">Sign out</button>
-    </div>
-  </header>
+<body>
 
-  <main class="dashboard-container">
-    
-    <!-- Category View -->
-    <section id="categoryView" class="view-section">
-      <div class="panel panel--glass">
-        <div class="panel-header">
-          <h2>📁 Categories</h2>
-          <p class="muted">Organize your memories by category</p>
-        </div>
-        
-        <div class="add-section">
-          <input id="categoryNameInput" type="text" placeholder="Enter category name (e.g., Family, Friends, Travel)" maxlength="100" />
-          <button id="addCategoryBtn" class="btn primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Add Category
-          </button>
-        </div>
+<div id="loading">
+  <div class="load-rings"><div class="ring"></div><div class="ring"></div><div class="ring"></div></div>
+  <div class="load-label">WEAVING MEMORIES</div>
+</div>
 
-        <div id="categoriesContainer" class="cards-grid">
-          <div class="empty-state">Loading categories...</div>
-        </div>
-      </div>
-    </section>
+<div id="empty">
+  <h2>✦ No Memories Yet</h2>
+  <p>Add categories and people in the dashboard first.</p>
+  <a href="dashboard.html" class="hdr-back" style="margin-top:14px">← Back to Dashboard</a>
+</div>
 
-    <!-- Person View -->
-    <section id="personView" class="view-section hidden">
-      <div class="panel panel--glass">
-        <div class="panel-header">
-          <button id="backToCategoriesBtn" class="btn-back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
-            Back
-          </button>
-          <div>
-            <h2>👥 <span id="categoryTitle">Category</span></h2>
-            <p class="muted">People in this category</p>
-          </div>
-        </div>
-        
-        <div class="add-section">
-          <input id="personNameInput" type="text" placeholder="Enter person name" maxlength="100" />
-          <button id="addPersonBtn" class="btn primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Add Person
-          </button>
-        </div>
-
-        <div id="peopleContainer" class="cards-grid">
-          <div class="empty-state">Loading people...</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- File View -->
-    <section id="fileView" class="view-section hidden">
-      <div class="panel panel--glass">
-        <div class="panel-header">
-          <button id="backToPeopleBtn" class="btn-back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
-            Back
-          </button>
-          <div>
-            <h2>📸 <span id="personTitle">Person</span></h2>
-            <p class="muted">Files and memories</p>
-          </div>
-        </div>
-
-        <!-- Upload Section -->
-        <div class="upload-section">
-          <h3>Add Memory or Upload File</h3>
-          
-          <!-- Memory Input -->
-          <div class="memory-input-section">
-            <textarea id="memoryTextInput" placeholder="Write your memory here..." maxlength="1000" rows="3"></textarea>
-            <button id="addMemoryBtn" class="btn primary">Add Memory</button>
-          </div>
-          
-          <div class="or-divider">
-            <span>OR</span>
-          </div>
-          
-          <!-- File Upload -->
-          <div class="drop" id="dropZone">
-            <input id="fileInput" type="file" accept="image/*" />
-            <div class="drop-inner">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M12 3v12" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M8 7l4-4 4 4" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <p class="muted">Drag & drop or click to upload a photo</p>
-            </div>
-          </div>
-          
-          <div class="upload-controls">
-            <input id="descInput" type="text" maxlength="180" placeholder="Optional description" />
-            <button id="uploadBtn" class="btn primary" type="button">Upload Photo</button>
-          </div>
-          
-          <div id="progressWrap" class="progress-wrap hidden">
-            <div id="progressBar" class="progress-bar" style="width:0%"></div>
-          </div>
-        </div>
-
-        <!-- Files and Memories List -->
-        <div class="files-section">
-          <div class="section-header">
-            <h3>Memories & Photos</h3>
-            <div class="view-actions">
-              <button id="viewBtn" class="btn secondary">View All</button>
-              <button id="downloadPdfBtn" class="btn primary">Download PDF</button>
-            </div>
-          </div>
-          <div id="filesContainer" class="files-list">
-            <div class="empty-state">Loading memories and photos...</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Gallery View -->
-    <section id="galleryView" class="view-section hidden">
-      <div class="panel panel--glass">
-        <div class="panel-header">
-          <button id="backToPersonBtn" class="btn-back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
-            Back
-          </button>
-          <div>
-            <h2>🖼️ All Memories & Photos</h2>
-            <p class="muted">Your complete collection</p>
-          </div>
-        </div>
-
-        <div class="gallery-controls">
-          <button id="downloadGalleryPdfBtn" class="btn primary">Download PDF</button>
-        </div>
-
-        <div class="memory-input-section">
-          <textarea id="galleryMemoryTextInput" placeholder="Write your memory here..." maxlength="1000" rows="3"></textarea>
-          <button id="galleryAddMemoryBtn" class="btn primary">Add Memory</button>
-        </div>
-
-        <div id="galleryContainer" class="gallery-grid">
-          <div class="empty-state">Loading your collection...</div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Image Modal -->
-  <div id="imageModal" class="image-modal hidden">
-    <div class="image-modal-overlay" id="imageModalOverlay"></div>
-    <div class="image-modal-content">
-      <button class="image-modal-close" id="imageModalClose">&times;</button>
-      <img id="imageModalImg" src="" alt="" class="image-modal-image" />
-      <div class="image-modal-info">
-        <h3 id="imageModalTitle"></h3>
-        <p id="imageModalMeta"></p>
-        <p id="imageModalDesc"></p>
-      </div>
-    </div>
+<header id="hdr">
+  <div class="hdr-left">
+    <a href="dashboard.html" class="hdr-back">← Dashboard</a>
+    <div class="brand">✦ MEMORY GRAPH</div>
   </div>
-
-  <!-- Category Modal -->
-  <div id="categoryModal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Add New Category</h3>
-        <button id="closeCategoryModal" class="btn-close">&times;</button>
-      </div>
-      <form id="categoryForm">
-        <label for="categoryNameInput">Category Name</label>
-        <input id="categoryNameInput" type="text" placeholder="e.g., Family, Friends, Travel" maxlength="100" required />
-        <div class="modal-actions">
-          <button type="button" id="cancelCategoryBtn" class="btn secondary">Cancel</button>
-          <button type="submit" class="btn primary">Create Category</button>
-        </div>
-      </form>
-    </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--cat)"></div>Category</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--per)"></div>Person</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--mem)"></div>Memory</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--fil)"></div>File</div>
   </div>
-
-  <!-- Person Modal -->
-  <div id="personModal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Add New Person</h3>
-        <button id="closePersonModal" class="btn-close">&times;</button>
-      </div>
-      <form id="personForm">
-        <label for="personNameInput">Person Name</label>
-        <input id="personNameInput" type="text" placeholder="Enter person name" maxlength="100" required />
-        <div class="modal-actions">
-          <button type="button" id="cancelPersonBtn" class="btn secondary">Cancel</button>
-          <button type="submit" class="btn primary">Add Person</button>
-        </div>
-      </form>
-    </div>
+  <div class="hdr-right">
+    <input class="hdr-input" id="search" type="text" placeholder="Search nodes…"/>
+    <button class="hdr-btn" id="reset-btn">Reset</button>
+    <button class="hdr-btn danger" id="logout-btn">Sign out</button>
   </div>
+</header>
 
-  <div id="toast" class="toast"></div>
-  <script src="app.js"></script>
+<div id="canvas"><svg id="svg"><g id="root"></g></svg></div>
+
+<div id="panel">
+  <button id="close-panel">✕</button>
+  <div class="p-badge" id="panel-type"></div>
+  <div id="panel-name"></div>
+  <p id="panel-desc"></p>
+  <div class="p-divider"></div>
+  <div class="p-conn-label">CONNECTIONS</div>
+  <div class="p-chips" id="panel-chips"></div>
+</div>
+
+<div id="zoom-ctrls">
+  <button class="z-btn" id="z-in">+</button>
+  <button class="z-btn" id="z-fit">⊙</button>
+  <button class="z-btn" id="z-out">−</button>
+</div>
+
+<div id="stats"></div>
+<div id="tip"></div>
+
+<div id="q-drawer">
+  <div class="drawer-title">QUERY YOUR MEMORIES</div>
+  <textarea id="q-input" placeholder="Ask anything about your memories…&#10;e.g. &quot;Who appears most in my memories?&quot;&#10;&#10;Ctrl+Enter to submit"></textarea>
+  <div class="q-actions">
+    <button class="q-btn" id="q-clear">Clear</button>
+    <button class="q-btn" id="q-submit">Ask ✦</button>
+  </div>
+  <div id="q-result"></div>
+</div>
+
+<button id="q-fab" title="Query your memories">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#05050b" stroke="#05050b" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>
+</button>
+
+<script>
+// ── AUTH GUARD ────────────────────────────────────────────────
+const TOKEN = localStorage.getItem('memoir_token');
+if (!TOKEN) { location.replace('index.html'); }
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  localStorage.clear();
+  sessionStorage.clear();
+  location.replace('index.html');
+});
+
+// ── CONFIG ────────────────────────────────────────────────────
+const API = 'http://127.0.0.1:8000';
+const C = { category:'#a06ee8', person:'#e87d6e', memory:'#5ec99a', file:'#5b8dee' };
+const R = { category:30, person:22, memory:14, file:12 };
+const LABEL = { category:'🗂 Category', person:'👤 Person', memory:'📝 Memory', file:'📎 File' };
+
+// ── FETCH ─────────────────────────────────────────────────────
+async function loadData() {
+  const h = { 'Authorization': 'Bearer ' + TOKEN };
+  const nodes = [], links = [];
+  try {
+    const cats = await fetch(`${API}/home/categories`, { headers: h }).then(r => r.json());
+    if (!Array.isArray(cats)) throw new Error('bad');
+    for (const cat of cats) {
+      nodes.push({ id:`c${cat.id}`, label:cat.cat_name, type:'category', desc:'Category', rawId:cat.id });
+      const people = await fetch(`${API}/home/category/${cat.id}/people`, { headers:h }).then(r=>r.json()).catch(()=>[]);
+      for (const p of people) {
+        nodes.push({ id:`p${p.id}`, label:p.person_name, type:'person', desc:`In "${cat.cat_name}"`, rawId:p.id });
+        links.push({ source:`p${p.id}`, target:`c${cat.id}` });
+        const [files,mems] = await Promise.all([
+          fetch(`${API}/home/person/${p.id}/files`,{headers:h}).then(r=>r.json()).catch(()=>[]),
+          fetch(`${API}/home/person/${p.id}/memories`,{headers:h}).then(r=>r.json()).catch(()=>[])
+        ]);
+        for (const m of mems) {
+          const id=`m${m.id}`;
+          nodes.push({id, label:m.content.length>30?m.content.slice(0,30)+'…':m.content, type:'memory', desc:m.content, rawId:m.id, date:m.created_at});
+          links.push({source:id, target:`p${p.id}`});
+        }
+        for (const f of files) {
+          const id=`f${f.id}`;
+          nodes.push({id, label:f.file_name.length>26?f.file_name.slice(0,26)+'…':f.file_name, type:'file', desc:(f.description||f.file_name)+(f.file_type?'\n'+f.file_type:''), rawId:f.id, date:f.created_at});
+          links.push({source:id, target:`p${p.id}`});
+        }
+      }
+    }
+    return {nodes,links};
+  } catch(e) { console.error(e); return null; }
+}
+
+// ── MAIN ──────────────────────────────────────────────────────
+async function main() {
+  const data = await loadData();
+  document.getElementById('loading').style.display = 'none';
+  if (!data || !data.nodes.length) { document.getElementById('empty').style.display = 'flex'; return; }
+  renderStats(data.nodes);
+  buildGraph(data.nodes, data.links);
+  initQuery(data.nodes);
+}
+
+function renderStats(nodes) {
+  const sb = document.getElementById('stats');
+  const cnt = {};
+  nodes.forEach(n => cnt[n.type] = (cnt[n.type]||0)+1);
+  Object.entries(cnt).forEach(([t,c]) => {
+    sb.innerHTML += `<div class="stat"><div class="stat-dot" style="background:${C[t]}"></div>${c} ${t}${c>1?'s':''}</div>`;
+  });
+}
+
+// ── GRAPH ─────────────────────────────────────────────────────
+function buildGraph(nodes, links) {
+  const svgEl = document.getElementById('svg');
+  const svg = d3.select(svgEl);
+  const root = svg.select('#root');
+  let W = svgEl.clientWidth, H = svgEl.clientHeight;
+
+  // Defs
+  const defs = svg.append('defs');
+  Object.entries(C).forEach(([type,col]) => {
+    const rg = defs.append('radialGradient').attr('id',`rg-${type}`).attr('cx','50%').attr('cy','50%').attr('r','50%');
+    rg.append('stop').attr('offset','0%').attr('stop-color',col).attr('stop-opacity','.45');
+    rg.append('stop').attr('offset','100%').attr('stop-color',col).attr('stop-opacity','0');
+    const fil = defs.append('filter').attr('id',`gf-${type}`).attr('x','-60%').attr('y','-60%').attr('width','220%').attr('height','220%');
+    fil.append('feGaussianBlur').attr('in','SourceGraphic').attr('stdDeviation',type==='category'?'5':'3').attr('result','blur');
+    const mg = fil.append('feMerge');
+    mg.append('feMergeNode').attr('in','blur');
+    mg.append('feMergeNode').attr('in','SourceGraphic');
+  });
+
+  // Zoom
+  const zoom = d3.zoom().scaleExtent([.06,5]).on('zoom',e=>root.attr('transform',e.transform));
+  svg.call(zoom);
+
+  // Simulation
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d=>d.id).distance(d=>{
+      const s=d.source.type||'',t=d.target.type||'';
+      if(s==='memory'||t==='memory'||s==='file'||t==='file') return 72;
+      if(s==='person'||t==='person') return 112;
+      return 160;
+    }).strength(.7))
+    .force('charge', d3.forceManyBody().strength(d=>d.type==='category'?-600:d.type==='person'?-350:-200))
+    .force('center', d3.forceCenter(W/2,H/2))
+    .force('collide', d3.forceCollide(d=>R[d.type]+20));
+
+  // Star layer
+  const starG = root.append('g');
+  for(let i=0;i<120;i++) {
+    const x=(Math.random()-.5)*W*3, y=(Math.random()-.5)*H*3;
+    const r=Math.random()*.8+.2, op=Math.random()*.15+.03, dur=(Math.random()*4+2).toFixed(1);
+    starG.append('circle').attr('cx',x+W/2).attr('cy',y+H/2).attr('r',r).attr('fill','#fff')
+      .style('animation',`star-tw ${dur}s ease-in-out infinite alternate`)
+      .style('opacity',op);
+  }
+  const stStyle = document.createElement('style');
+  stStyle.textContent = '@keyframes star-tw{0%{opacity:0.02}100%{opacity:0.15}}';
+  document.head.appendChild(stStyle);
+
+  // Halos
+  const haloG = root.append('g');
+  const halos = haloG.selectAll('circle')
+    .data(nodes.filter(n=>n.type==='category'||n.type==='person'))
+    .join('circle')
+    .attr('r', d=>R[d.type]*(d.type==='category'?2.8:2.2))
+    .attr('fill', d=>`url(#rg-${d.type})`)
+    .attr('pointer-events','none');
+
+  // Links
+  const lsel = root.append('g').selectAll('line').data(links).join('line')
+    .attr('class','link')
+    .attr('stroke', d=>{
+      const sn = typeof d.source==='object' ? d.source : nodes.find(n=>n.id===d.source);
+      return C[sn?.type] || '#888';
+    })
+    .attr('stroke-width', 1);
+
+  // Node groups
+  const nsel = root.append('g').selectAll('g').data(nodes).join('g').attr('class','node')
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y;})
+      .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;})
+    )
+    .on('click',(e,d)=>{e.stopPropagation();highlight(d);openPanel(d);})
+    .on('mouseover',(e,d)=>showTip(e,d))
+    .on('mousemove',moveTip)
+    .on('mouseout', hideTip);
+
+  // Outer dashed ring for categories
+  nsel.filter(d=>d.type==='category').append('circle')
+    .attr('r',d=>R[d.type]+9).attr('fill','none')
+    .attr('stroke',d=>C[d.type]).attr('stroke-width',.8)
+    .attr('stroke-opacity',.25).attr('stroke-dasharray','3 4');
+
+  // Core
+  nsel.append('circle').attr('class','node-core')
+    .attr('r',d=>R[d.type]).attr('fill',d=>C[d.type]+'1a')
+    .attr('stroke',d=>C[d.type]).attr('stroke-width',d=>d.type==='category'?2:1.5)
+    .attr('filter',d=>`url(#gf-${d.type})`);
+
+  // Inner dot
+  nsel.append('circle').attr('r',d=>R[d.type]*.3).attr('fill',d=>C[d.type])
+    .attr('fill-opacity',.6).attr('pointer-events','none');
+
+  // Label
+  nsel.append('text').attr('dy',d=>R[d.type]+16).text(d=>d.label)
+    .attr('fill',d=>C[d.type])
+    .attr('font-family',"'Crimson Pro', serif")
+    .attr('font-size',d=>d.type==='category'?12:d.type==='person'?11:10)
+    .attr('font-weight',d=>d.type==='category'?600:400)
+    .attr('text-anchor','middle').attr('pointer-events','none')
+    .style('text-shadow',d=>`0 0 12px ${C[d.type]}99`);
+
+  // Tick
+  sim.on('tick',()=>{
+    lsel.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    nsel.attr('transform',d=>`translate(${d.x},${d.y})`);
+    halos.attr('cx',d=>d.x).attr('cy',d=>d.y);
+  });
+
+  // Helpers
+  function getConn(d) {
+    const ids=new Set();
+    links.forEach(l=>{
+      const s=typeof l.source==='object'?l.source.id:l.source;
+      const t=typeof l.target==='object'?l.target.id:l.target;
+      if(s===d.id)ids.add(t); if(t===d.id)ids.add(s);
+    }); return ids;
+  }
+  function highlight(d) {
+    const ids=getConn(d); ids.add(d.id);
+    nsel.classed('hl',n=>ids.has(n.id)).classed('dm',n=>!ids.has(n.id)).style('--nc',n=>C[n.type]);
+    lsel.classed('hl',l=>{const s=typeof l.source==='object'?l.source.id:l.source,t=typeof l.target==='object'?l.target.id:l.target;return s===d.id||t===d.id;})
+        .classed('dm',l=>{const s=typeof l.source==='object'?l.source.id:l.source,t=typeof l.target==='object'?l.target.id:l.target;return s!==d.id&&t!==d.id;});
+    halos.attr('opacity',n=>ids.has(n.id)?1:.1);
+  }
+  function resetHL() {
+    nsel.classed('hl',false).classed('dm',false);
+    lsel.classed('hl',false).classed('dm',false);
+    halos.attr('opacity',1);
+  }
+
+  // Panel
+  const panel=document.getElementById('panel');
+  function openPanel(d) {
+    document.getElementById('panel-type').textContent=LABEL[d.type];
+    document.getElementById('panel-type').style.cssText=`background:${C[d.type]}18;color:${C[d.type]};border:1px solid ${C[d.type]}44`;
+    document.getElementById('panel-name').textContent=d.label;
+    document.getElementById('panel-name').style.color=C[d.type];
+    document.getElementById('panel-desc').textContent=d.desc+(d.date?'\n\n🕐 '+new Date(d.date).toLocaleDateString():'');
+    const chips=document.getElementById('panel-chips'); chips.innerHTML='';
+    getConn(d).forEach(id=>{
+      const n=nodes.find(x=>x.id===id); if(!n)return;
+      const ch=document.createElement('div'); ch.className='p-chip';
+      ch.textContent=n.label; ch.style.cssText=`color:${C[n.type]};border-color:${C[n.type]}44`;
+      ch.onclick=()=>{highlight(n);openPanel(n);}; chips.appendChild(ch);
+    });
+    panel.classList.add('open');
+  }
+  document.getElementById('close-panel').onclick=()=>{panel.classList.remove('open');resetHL();};
+  svg.on('click',()=>{panel.classList.remove('open');resetHL();});
+
+  document.getElementById('search').addEventListener('input',e=>{
+    const q=e.target.value.toLowerCase().trim(); if(!q){resetHL();return;}
+    const m=nodes.find(n=>n.label.toLowerCase().includes(q)||n.desc.toLowerCase().includes(q));
+    if(m){highlight(m);openPanel(m);}
+  });
+  document.getElementById('reset-btn').onclick=()=>{
+    document.getElementById('search').value=''; resetHL(); panel.classList.remove('open'); fit();
+  };
+  document.getElementById('z-in').onclick =()=>svg.transition().duration(300).call(zoom.scaleBy,1.5);
+  document.getElementById('z-out').onclick=()=>svg.transition().duration(300).call(zoom.scaleBy,.67);
+  document.getElementById('z-fit').onclick=fit;
+
+  function fit() { svg.transition().duration(700).call(zoom.transform,d3.zoomIdentity.translate(W/2,H/2).scale(.82).translate(-W/2,-H/2)); }
+  window.addEventListener('resize',()=>{W=svgEl.clientWidth;H=svgEl.clientHeight;sim.force('center',d3.forceCenter(W/2,H/2)).alpha(.3).restart();});
+  setTimeout(fit,200);
+
+  // Tooltip
+  const tip=document.getElementById('tip');
+  function showTip(e,d){tip.innerHTML=`<span style="color:${C[d.type]};font-weight:600">${d.label}</span><br/><span style="color:var(--muted);font-size:.75rem">${LABEL[d.type]}</span>`;tip.classList.add('show');moveTip(e);}
+  function moveTip(e){let x=e.clientX+14,y=e.clientY-32;if(x+210>W)x=e.clientX-220;tip.style.left=x+'px';tip.style.top=y+'px';}
+  function hideTip(){tip.classList.remove('show');}
+}
+
+// ── QUERY ─────────────────────────────────────────────────────
+function initQuery(nodes) {
+  const fab=document.getElementById('q-fab'), drawer=document.getElementById('q-drawer');
+  const inp=document.getElementById('q-input'), sub=document.getElementById('q-submit');
+  const clr=document.getElementById('q-clear'), res=document.getElementById('q-result');
+  fab.addEventListener('click',e=>{e.stopPropagation();drawer.classList.toggle('open');if(drawer.classList.contains('open'))inp.focus();});
+  document.addEventListener('click',e=>{if(!drawer.contains(e.target)&&e.target!==fab)drawer.classList.remove('open');});
+  clr.addEventListener('click',()=>{inp.value='';res.textContent='';res.classList.remove('show');inp.focus();});
+  sub.addEventListener('click',ask);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))ask();});
+  async function ask(){
+    const q=inp.value.trim(); if(!q)return;
+    sub.disabled=true; res.classList.add('show'); res.innerHTML='<div class="dots"><span></span><span></span><span></span></div>';
+    try {
+      const r=await fetch(`${API}/home/rag/query`,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+TOKEN
+        },
+        body:JSON.stringify({question:q,top_k:5})
+      });
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.detail||'Query failed');
+      res.textContent=d.answer||'No response.';
+    } catch(e) { res.textContent='⚠ Could not connect. Check backend is running.'; }
+    sub.disabled=false;
+  }
+}
+
+main();
+</script>
 </body>
 </html>

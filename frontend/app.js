@@ -1,6 +1,98 @@
 /* Memoir App - Complete with debugging */
 const API_BASE = 'http://127.0.0.1:8000';
 
+function initUniversalQueryWidget() {
+  if (document.getElementById('memoirAskFab')) return;
+
+  const fab = document.createElement('button');
+  fab.id = 'memoirAskFab';
+  fab.className = 'query-fab';
+  fab.type = 'button';
+  fab.title = 'Ask your memories';
+  fab.innerHTML = '✦';
+
+  const drawer = document.createElement('div');
+  drawer.id = 'memoirAskDrawer';
+  drawer.className = 'query-drawer hidden';
+  drawer.innerHTML = `
+    <div class="query-header">Ask Memoir</div>
+    <textarea id="memoirAskInput" placeholder="Ask anything about your memories..."></textarea>
+    <div class="query-actions">
+      <button id="memoirAskClose" class="btn subtle" type="button">Close</button>
+      <button id="memoirAskSubmit" class="btn primary" type="button">Ask</button>
+    </div>
+    <div id="memoirAskResult" class="query-result"></div>
+  `;
+
+  document.body.appendChild(fab);
+  document.body.appendChild(drawer);
+
+  const askInput = drawer.querySelector('#memoirAskInput');
+  const askResult = drawer.querySelector('#memoirAskResult');
+  const askSubmit = drawer.querySelector('#memoirAskSubmit');
+
+  fab.addEventListener('click', () => {
+    drawer.classList.toggle('hidden');
+    if (!drawer.classList.contains('hidden')) {
+      askInput.focus();
+    }
+  });
+
+  drawer.querySelector('#memoirAskClose').addEventListener('click', () => {
+    drawer.classList.add('hidden');
+  });
+
+  askSubmit.addEventListener('click', async () => {
+    const token = localStorage.getItem('memoir_token');
+    const question = askInput.value.trim();
+
+    if (!question) {
+      showToast('Please type a question', false);
+      return;
+    }
+
+    if (!token) {
+      askResult.textContent = 'Please sign in first to query your memories.';
+      askResult.classList.add('show');
+      return;
+    }
+
+    askSubmit.disabled = true;
+    askResult.textContent = 'Thinking...';
+    askResult.classList.add('show');
+
+    try {
+      const response = await fetch(`${API_BASE}/home/rag/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ question, top_k: 5 })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || 'Query failed');
+      }
+
+      askResult.textContent = data.answer || 'No answer available.';
+    } catch (error) {
+      askResult.textContent = error.message || 'Failed to query memories.';
+    } finally {
+      askSubmit.disabled = false;
+    }
+  });
+
+  askInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      askSubmit.click();
+    }
+  });
+}
+
+initUniversalQueryWidget();
+
 function showToast(msg, ok = true) {
   const t = document.getElementById('toast');
   if (!t) return; 
@@ -63,7 +155,7 @@ if (document.getElementById('loginForm')){
         localStorage.setItem('memoir_username', data.username || name);
         localStorage.setItem('memoir_user_id', data.user_id);
         showToast('Logged in — redirecting...');
-        setTimeout(()=>location.href='memoir_dashboard.html',600);
+        setTimeout(()=>location.href='dashboard.html',600);
       } else throw data;
     }catch(err){
       showToast(err.detail||'Login failed', false);
@@ -115,6 +207,7 @@ if (document.body.classList.contains('page-dashboard')){
   let categories = [];
   let currentCategory = null;
   let currentPerson = null;
+  let personPdfBlobUrl = null;
 
   // Get DOM elements
   const elements = {
@@ -143,9 +236,13 @@ if (document.body.classList.contains('page-dashboard')){
     addMemoryBtn: document.getElementById('addMemoryBtn'),
     viewBtn: document.getElementById('viewBtn'),
     downloadPdfBtn: document.getElementById('downloadPdfBtn'),
+    openPersonPdfBtn: document.getElementById('openPersonPdfBtn'),
+    personPdfSection: document.getElementById('personPdfSection'),
+    personPdfViewer: document.getElementById('personPdfViewer'),
     downloadGalleryPdfBtn: document.getElementById('downloadGalleryPdfBtn'),
     galleryMemoryTextInput: document.getElementById('galleryMemoryTextInput'),
     galleryAddMemoryBtn: document.getElementById('galleryAddMemoryBtn'),
+    backToDashboardFromGalleryBtn: document.getElementById('backToDashboardFromGalleryBtn'),
   };
 
   console.log('✅ Elements loaded:', Object.keys(elements).filter(k=>!!elements[k]).length, '/', Object.keys(elements).length);
@@ -640,12 +737,27 @@ if (document.body.classList.contains('page-dashboard')){
   // PDF DOWNLOAD
   elements.downloadPdfBtn?.addEventListener('click', ()=>{
     if (currentPerson) {
-      downloadMemoriesPdf();
+      downloadPersonPdf(currentPerson.id, currentPerson.person_name);
     }
+  });
+
+  elements.openPersonPdfBtn?.addEventListener('click', ()=>{
+    openPersonPdfInViewer();
   });
 
   elements.downloadGalleryPdfBtn?.addEventListener('click', ()=>{
     downloadMemoriesPdf();
+  });
+
+  elements.backToDashboardFromGalleryBtn?.addEventListener('click', ()=>{
+    elements.galleryView.classList.add('hidden');
+    if (currentPerson) {
+      elements.fileView.classList.remove('hidden');
+    } else if (currentCategory) {
+      elements.personView.classList.remove('hidden');
+    } else {
+      elements.categoryView.classList.remove('hidden');
+    }
   });
 
   // GALLERY FILTERS - removed
@@ -666,6 +778,9 @@ if (document.body.classList.contains('page-dashboard')){
       closeImageModal();
     }
   });
+
+  elements.imageModalClose?.addEventListener('click', closeImageModal);
+  elements.imageModalOverlay?.addEventListener('click', closeImageModal);
 
   let allContent = [];
 
@@ -692,8 +807,11 @@ if (document.body.classList.contains('page-dashboard')){
     const container = elements.galleryContainer;
     if (!container) return;
 
-    // Only show memories
-    const filteredContent = content.filter(item => item.type === 'memory');
+    // Show memories and images in reader section
+    const filteredContent = content.filter(item => {
+      if (item.type === 'memory') return true;
+      return item.type === 'file' && item.file_type && item.file_type.startsWith('image/');
+    });
 
     container.innerHTML = '';
 
@@ -709,21 +827,94 @@ if (document.body.classList.contains('page-dashboard')){
 
     filteredContent.forEach(item => {
       const el = document.createElement('div');
-      el.className = 'gallery-item gallery-memory';
+      el.className = 'gallery-item';
 
-      el.innerHTML = `
-        <div class="gallery-thumb">
-          <div class="memory-icon">📝</div>
-        </div>
-        <div class="gallery-info">
-          <div class="gallery-title">${escapeHtml(item.content.substring(0, 100))}${item.content.length > 100 ? '...' : ''}</div>
-          <div class="gallery-meta">${escapeHtml(item.category_name)} • ${escapeHtml(item.person_name)}</div>
-          <div class="gallery-date">${formatDate(item.created_at)}</div>
-        </div>
-      `;
+      if (item.type === 'memory') {
+        el.classList.add('gallery-memory');
+        el.innerHTML = `
+          <div class="gallery-thumb">
+            <div class="memory-icon">📝</div>
+          </div>
+          <div class="gallery-info">
+            <div class="gallery-title">${escapeHtml(item.content.substring(0, 100))}${item.content.length > 100 ? '...' : ''}</div>
+            <div class="gallery-meta">${escapeHtml(item.category_name)} • ${escapeHtml(item.person_name)}</div>
+            <div class="gallery-date">${formatDate(item.created_at)}</div>
+          </div>
+        `;
+      } else {
+        const src = `${API_BASE}/home/person/${item.person_id}/files/${item.id}/download`;
+        el.classList.add('gallery-image-item');
+        el.innerHTML = `
+          <div class="gallery-thumb">
+            <img src="${src}" class="gallery-image" alt="${escapeHtml(item.file_name || 'image')}" />
+          </div>
+          <div class="gallery-info">
+            <div class="gallery-title">${escapeHtml(item.file_name || 'Image')}</div>
+            <div class="gallery-meta">${escapeHtml(item.category_name)} • ${escapeHtml(item.person_name)}</div>
+            <div class="gallery-date">${formatDate(item.created_at)}</div>
+          </div>
+        `;
+      }
 
       container.appendChild(el);
     });
+  }
+
+  async function downloadPersonPdf(personId, personName) {
+    try {
+      showToast('Generating person PDF...');
+      const response = await fetch(`${API_BASE}/home/person/${personId}/pdf`, {
+        headers: {
+          'Authorization': 'Bearer ' + localStorage.getItem('memoir_token')
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Person PDF generation failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(personName || 'person').replace(/\s+/g, '_')}_memoir.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('Person PDF downloaded!');
+    } catch (e) {
+      console.error('Person PDF download error:', e);
+      showToast(e.message || 'Failed to download person PDF', false);
+    }
+  }
+
+  async function openPersonPdfInViewer() {
+    try {
+      if (!currentPerson) return showToast('Select a person first', false);
+      const response = await fetch(`${API_BASE}/home/person/${currentPerson.id}/pdf/view`, {
+        headers: {
+          'Authorization': 'Bearer ' + localStorage.getItem('memoir_token')
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Failed to load PDF');
+      }
+
+      const blob = await response.blob();
+      if (personPdfBlobUrl) {
+        window.URL.revokeObjectURL(personPdfBlobUrl);
+      }
+      personPdfBlobUrl = window.URL.createObjectURL(blob);
+      elements.personPdfViewer.src = personPdfBlobUrl;
+      elements.personPdfSection?.classList.remove('hidden');
+      showToast('PDF opened in reader section');
+    } catch (error) {
+      showToast(error.message || 'Failed to open PDF', false);
+    }
   }
 
   async function downloadMemoriesPdf() {

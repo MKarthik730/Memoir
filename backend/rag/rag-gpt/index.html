@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RAG Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 650px; margin: 40px auto; padding: 0 20px; }
+    #chatbox { border: 1px solid #ccc; height: 400px; overflow-y: auto; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+    .user { text-align: right; color: blue; margin: 8px 0; }
+    .bot { text-align: left; color: green; margin: 8px 0; }
+    .system { text-align: center; color: gray; font-size: 0.85em; margin: 6px 0; }
+    input[type="text"] { width: 100%; padding: 8px; margin-bottom: 6px; box-sizing: border-box; }
+    .row { display: flex; gap: 8px; }
+    .row input { flex: 1; }
+    button { padding: 8px 16px; cursor: pointer; }
+    #uploadStatus { color: green; font-size: 0.9em; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <h2>📄 RAG Chat with Llama 3.2</h2>
+
+  <!-- File Upload -->
+  <input type="file" id="fileInput" accept=".pdf,.txt" />
+  <button onclick="uploadFile()">Upload Document</button>
+  <div id="uploadStatus"></div>
+  <br><br>
+
+  <!-- Chat -->
+  <div id="chatbox"></div>
+  <div class="row">
+    <input type="text" id="userInput" placeholder="Ask something about your document..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    async function uploadFile() {
+      const fileInput = document.getElementById("fileInput");
+      const status = document.getElementById("uploadStatus");
+      if (!fileInput.files[0]) {
+        status.innerText = "Please select a file first!";
+        return;
+      }
+
+      status.innerText = "Uploading and indexing...";
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      const res = await fetch("http://127.0.0.1:8000/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      status.innerText = "✅ " + data.message;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const chatbox = document.getElementById("chatbox");
+      const userMessage = input.value.trim();
+      if (!userMessage) return;
+
+      chatbox.innerHTML += `<div class="user">You: ${userMessage}</div>`;
+      input.value = "";
+
+      chatbox.innerHTML += `<div class="bot" id="loading">Bot: thinking...</div>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
+
+      const res = await fetch("http://127.0.0.1:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage }),
+      });
+      const data = await res.json();
+
+      document.getElementById("loading").remove();
+      chatbox.innerHTML += `<div class="bot">Bot: ${data.response}</div>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    document.getElementById("userInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>
