@@ -15,6 +15,8 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 import asyncio
+import re
+import threading
 from typing import Optional, List
 from pydantic import BaseModel, Field
 from io import BytesIO
@@ -34,6 +36,15 @@ try:
     from rag.rag_model import RAGModel
 except Exception:
     RAGModel = None
+
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
+
+RAG_EMBEDDING_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "all-mpnet-base-v2")
+_RAG_MODEL_INSTANCE = None
+_RAG_MODEL_LOCK = threading.Lock()
 
 pwd_context = CryptContext(schemes=['bcrypt_sha256', 'bcrypt'], deprecated='auto')
 app = FastAPI()
@@ -265,26 +276,63 @@ def build_person_pdf_buffer(person: Person, db) -> BytesIO:
 
 
 def get_user_rag_documents(user_id: int, db) -> List[dict]:
+    def clean_text(value: str) -> str:
+        return re.sub(r"\s+", " ", (value or "")).strip()
+
+    def chunk_text(value: str, chunk_size: int = 900, overlap: int = 120) -> List[str]:
+        text = clean_text(value)
+        if not text:
+            return []
+        if len(text) <= chunk_size:
+            return [text]
+
+        chunks = []
+        start = 0
+        text_len = len(text)
+        while start < text_len:
+            end = min(start + chunk_size, text_len)
+            chunks.append(text[start:end])
+            if end == text_len:
+                break
+            start = max(end - overlap, start + 1)
+        return chunks
+
+    def extract_pdf_text(pdf_bytes: bytes) -> str:
+        if PdfReader is None:
+            return ""
+        try:
+            reader = PdfReader(BytesIO(pdf_bytes))
+            pages = []
+            for page in reader.pages:
+                page_text = page.extract_text() or ""
+                if page_text.strip():
+                    pages.append(page_text)
+            return "\n".join(pages)
+        except Exception:
+            return ""
+
     docs: List[dict] = []
 
     memories = db.query(Memory).join(Person).join(Category).filter(Category.user_id == user_id).all()
     for memory in memories:
-        docs.append({
-            "text": memory.content,
-            "metadata": {
-                "type": "memory",
-                "person_id": memory.person_id,
-                "person_name": memory.person.person_name,
-                "category_name": memory.person.category.cat_name,
-                "created_at": memory.created_at.isoformat() if memory.created_at else None,
-            },
-        })
+        for idx, chunk in enumerate(chunk_text(memory.content)):
+            docs.append({
+                "text": chunk,
+                "metadata": {
+                    "type": "memory",
+                    "chunk_index": idx,
+                    "person_id": memory.person_id,
+                    "person_name": memory.person.person_name,
+                    "category_name": memory.person.category.cat_name,
+                    "created_at": memory.created_at.isoformat() if memory.created_at else None,
+                },
+            })
 
     files = db.query(FileStore).join(Person).join(Category).filter(Category.user_id == user_id).all()
     for file in files:
         if file.description:
             docs.append({
-                "text": file.description,
+                "text": clean_text(file.description),
                 "metadata": {
                     "type": "file_description",
                     "file_name": file.file_name,
@@ -298,12 +346,13 @@ def get_user_rag_documents(user_id: int, db) -> List[dict]:
 
         if file.file_type in ("text/plain", "application/json"):
             try:
-                decoded = file.file_data.decode("utf-8", errors="ignore").strip()
-                if decoded:
+                decoded = clean_text(file.file_data.decode("utf-8", errors="ignore"))
+                for idx, chunk in enumerate(chunk_text(decoded)):
                     docs.append({
-                        "text": decoded[:4000],
+                        "text": chunk,
                         "metadata": {
                             "type": "text_file",
+                            "chunk_index": idx,
                             "file_name": file.file_name,
                             "file_type": file.file_type,
                             "person_id": file.person_id,
@@ -315,7 +364,71 @@ def get_user_rag_documents(user_id: int, db) -> List[dict]:
             except Exception:
                 pass
 
+        if file.file_type == "application/pdf" or file.file_name.lower().endswith(".pdf"):
+            pdf_text = extract_pdf_text(file.file_data)
+            for idx, chunk in enumerate(chunk_text(pdf_text)):
+                docs.append({
+                    "text": chunk,
+                    "metadata": {
+                        "type": "pdf_file",
+                        "chunk_index": idx,
+                        "file_name": file.file_name,
+                        "file_type": file.file_type,
+                        "person_id": file.person_id,
+                        "person_name": file.person.person_name,
+                        "category_name": file.person.category.cat_name,
+                        "created_at": file.created_at.isoformat() if file.created_at else None,
+                    },
+                })
+
     return docs
+
+
+def get_rag_model_instance():
+    global _RAG_MODEL_INSTANCE
+    if RAGModel is None:
+        return None
+    if _RAG_MODEL_INSTANCE is not None:
+        return _RAG_MODEL_INSTANCE
+
+    with _RAG_MODEL_LOCK:
+        if _RAG_MODEL_INSTANCE is None:
+            _RAG_MODEL_INSTANCE = RAGModel(embedding_model=RAG_EMBEDDING_MODEL)
+    return _RAG_MODEL_INSTANCE
+
+
+def synthesize_answer(question: str, retrieved_docs: List) -> str:
+    query_terms = [t for t in re.findall(r"[a-zA-Z0-9]+", question.lower()) if len(t) > 2]
+
+    candidates = []
+    for doc in retrieved_docs:
+        text = (getattr(doc, "text", "") or "").strip()
+        if not text:
+            continue
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+        for sentence in sentences:
+            line = sentence.strip()
+            if not line:
+                continue
+            score = sum(1 for token in query_terms if token in line.lower())
+            candidates.append((score, line))
+
+    if not candidates:
+        return "No relevant context found for this question in your memories and uploaded files."
+
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    selected = []
+    seen = set()
+    for _, sentence in candidates:
+        normalized = sentence.lower()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        selected.append(sentence)
+        if len(selected) >= 4:
+            break
+
+    return "\n\n".join(selected)
 
 def get_file_category(filename: str) -> Optional[str]:
     ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
@@ -1138,20 +1251,16 @@ async def rag_query(
     question = payload.question.strip()
     top_k = min(payload.top_k, len(docs))
 
-    if RAGModel is not None:
+    rag_model = get_rag_model_instance()
+    if rag_model is not None:
         try:
-            rag = RAGModel()
-            rag.add_documents([d["text"] for d in docs], [d["metadata"] for d in docs])
-            result = rag.query(question, top_k=top_k)
+            rag_model.documents = []
+            rag_model.vector_store = rag_model.vector_store.__class__(rag_model.embedding_model.get_dimension())
+            rag_model.add_documents([d["text"] for d in docs], [d["metadata"] for d in docs])
+            result = rag_model.query(question, top_k=top_k)
 
             retrieved = result.get("retrieved_documents", [])
-            lines = []
-            for doc in retrieved:
-                txt = (doc.text or "").strip()
-                if txt:
-                    lines.append(txt[:320])
-
-            answer = "\n\n".join(lines) if lines else "No relevant context found for this question."
+            answer = synthesize_answer(question, retrieved)
             return {
                 "answer": answer,
                 "sources": result.get("sources", []),
