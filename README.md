@@ -14,6 +14,7 @@ Memoir/
 │   │   ├── models.py            # SQLAlchemy models & Pydantic schemas
 │   │   └── __init__.py
 │   ├── routes/
+|   ├── rag/
 │   │   ├── main.py              # All API routes
 │   │   └── __init__.py
 │   └── __init__.py
