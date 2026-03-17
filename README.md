@@ -1,159 +1,132 @@
-# 📔 Memoir
+# Memoir 🧠
 
-> A web application for storing, managing, and intelligently querying personal memories and journal entries.
+> A personal memory vault that preserves your relationships and shared experiences — with an interactive knowledge graph to visualize how people and memories connect.
+
+![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green?style=flat-square&logo=fastapi)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=flat-square&logo=postgresql)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-ORM-red?style=flat-square)
+![D3.js](https://img.shields.io/badge/D3.js-v7-orange?style=flat-square&logo=d3dotjs)
 
 ---
 
-## 🗂️ Project Structure
+## What is Memoir?
+
+Memoir helps you preserve the people in your life and the memories you've shared with them. You can store photos, audio notes, and text entries linked to specific people — and explore those connections through an Obsidian-style force-directed knowledge graph.
+
+Think of it as a personal CRM meets memory journal, built for human relationships.
+
+---
+
+## Features
+
+- **Memory Storage** — Add text, photos, and audio notes tied to people or events
+- **Relationship Graph** — Interactive D3.js force-directed graph showing how people and memories connect
+- **People Management** — Track relationships, categories, and shared history
+- **REST API** — Clean FastAPI backend with full CRUD operations
+- **Persistent Storage** — PostgreSQL with SQLAlchemy ORM for reliable data modeling
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | FastAPI, Python 3.11 |
+| Database | PostgreSQL, SQLAlchemy |
+| Frontend | HTML/CSS/JS, D3.js |
+| API | RESTful with Pydantic validation |
+
+---
+
+## Project Structure
 
 ```
 Memoir/
-├── backend/
-│   ├── database/
-│   │   ├── config.py            # Database configuration & connection pooling
-│   │   ├── models.py            # SQLAlchemy models & Pydantic schemas
-│   │   └── __init__.py
-│   ├── routes/
-│   │   ├── main.py              # All API routes
-│   │   └── __init__.py
-|   ├── rag/
-│   └── __init__.py
-├── frontend/
-│   ├── index.html               # Login page
-│   ├── sign_up.html             # Registration page
-│   ├── memoir_dashboard.html    # Memoir dashboard view
-│   ├── app.js                   # Frontend JavaScript
-│   └── styles.css               # Styling
-├── .env                         # Environment variables (DO NOT COMMIT!)
-├── .gitignore                   # Git ignore rules
-├── requirements.txt             # Python dependencies
-├── run.py                       # Application launcher
-└── README.md                    # This file
+├── main.py              # FastAPI app entry point
+├── models.py            # SQLAlchemy ORM models
+├── schemas.py           # Pydantic request/response schemas
+├── database.py          # DB connection and session management
+├── routers/
+│   ├── people.py        # People CRUD endpoints
+│   └── memories.py      # Memory CRUD endpoints
+├── static/
+│   └── graph.js         # D3.js force graph visualization
+└── templates/
+    └── index.html       # Frontend UI
 ```
 
---
-
-## ✨ Features
-
-- **User Authentication** — Secure sign-up and login flow
-- **Memoir Dashboard** — Create, view, and manage personal journal entries
-- **FastAPI Backend** — High-performance async REST API
-- **SQLAlchemy ORM** — Clean database models with connection pooling
-- **Pydantic Schemas** — Request/response validation
-
 ---
 
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Backend Framework | FastAPI |
-| ASGI Server | Uvicorn |
-| ORM | SQLAlchemy |
-| Schema Validation | Pydantic |
-| Frontend | HTML, CSS, Vanilla JS |
-| Environment Config | python-dotenv |
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-
-- Python 3.12+
-- Git
+- Python 3.10+
+- PostgreSQL running locally
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/MKarthik730/Memoir.git
-   cd Memoir
-   ```
+```bash
+git clone https://github.com/MKarthik730/Memoir.git
+cd Memoir
 
-2. **Create and activate a virtual environment**
-   ```bash
-   python -m venv .venv
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-   # Windows
-   .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
 
-   # macOS / Linux
-   source .venv/bin/activate
-   ```
+### Configure Database
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+# Create a .env file
+DATABASE_URL=postgresql://user:password@localhost:5432/memoir_db
+```
 
-4. **Set up environment variables**
+### Run
 
-   Create a `.env` file in the root directory:
-   ```env
-   DATABASE_URL=your_database_url
-   SECRET_KEY=your_secret_key
-   ```
+```bash
+uvicorn main:app --reload
+```
 
-5. **Run the application**
-   ```bash
-   python run.py
-   ```
+Open `http://localhost:8000` in your browser.
 
-6. **Open the app**
-
-   Navigate to `http://localhost:8000` in your browser.
+API docs available at `http://localhost:8000/docs`
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/auth/register` | Register a new user |
-| `POST` | `/auth/login` | Login and receive token |
-| `GET` | `/memoirs` | Fetch all memoirs |
-| `POST` | `/memoirs` | Create a new memoir |
-| `PUT` | `/memoirs/{id}` | Update a memoir |
-| `DELETE` | `/memoirs/{id}` | Delete a memoir |
-
-> Full interactive API docs available at `http://localhost:8000/docs` (Swagger UI)
+|---|---|---|
+| GET | `/people` | List all people |
+| POST | `/people` | Add a new person |
+| GET | `/memories` | List all memories |
+| POST | `/memories` | Add a new memory |
+| GET | `/memories/{id}` | Get a specific memory |
+| DELETE | `/memories/{id}` | Delete a memory |
 
 ---
 
-## 🔒 Security
+## What I Learned
 
-- `.env` is listed in `.gitignore` and **never committed** to version control
-- Passwords are hashed before storage
-- JWT-based authentication for all protected routes
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-3. Commit your changes
-   ```bash
-   git commit -m "Add your feature"
-   ```
-4. Push to your branch
-   ```bash
-   git push origin feature/your-feature
-   ```
-5. Open a Pull Request on [GitHub](https://github.com/MKarthik730/Memoir)
+- Designing relational schemas for graph-like data (people ↔ memories many-to-many)
+- Building force-directed graphs with D3.js from a REST API response
+- FastAPI dependency injection for database session management
+- SQLAlchemy relationship modeling with backref
 
 ---
 
-## 📄 License
+## Future Improvements
 
-This project is licensed under the MIT License.
+- [ ] Authentication and per-user data isolation
+- [ ] Timeline view sorted by date
+- [ ] Export memories as PDF
+- [ ] Mobile-responsive UI
 
 ---
 
-## 👤 Author
+## Author
 
-**MKarthik730** — [github.com/MKarthik730](https://github.com/MKarthik730)
+**Karthik Motupalli** — [@MKarthik730](https://github.com/MKarthik730)  
+CS Student, ANITS Vizag | [LinkedIn](https://www.linkedin.com/in/karthik-motupalli-0b6951318)
