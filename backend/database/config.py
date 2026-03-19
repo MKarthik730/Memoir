@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
-import os
 import os
 
 load_dotenv()
@@ -17,6 +16,8 @@ engine = create_engine(
     connect_args={"check_same_thread": False} if db_url.startswith("sqlite") else {},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
+# Import Base from models to ensure tables are created correctly
+from database.models import Base
 
 Base.metadata.create_all(bind=engine)
