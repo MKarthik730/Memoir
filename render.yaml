@@ -1,0 +1,29 @@
+# Render Blueprint Specification
+# Deploy Memoir to Render
+
+services:
+  - type: web
+    name: memoir-api
+    env: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn routes.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /home
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: RAG_EMBEDDING_MODEL
+        value: "all-MiniLM-L6-v2"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - fromGroup: memoir-secrets

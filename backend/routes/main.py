@@ -115,13 +115,12 @@ app.add_middleware(
 )
 
 # Mount static files
-import os
-
-backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-memoir_dir = os.path.dirname(backend_dir)
-frontend_path = os.path.join(memoir_dir, "frontend")
+frontend_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "frontend",
+)
 print(f"Frontend path: {frontend_path}")
-app.mount("/frontend", StaticFiles(directory=frontend_path), name="frontend")
+app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
 
 
 def get_db():
