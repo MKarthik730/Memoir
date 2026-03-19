@@ -114,13 +114,14 @@ app.add_middleware(
     max_age=3600,
 )
 
-# Mount static files
+# Serve static files at /static prefix
+import os
+
 frontend_path = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "frontend",
 )
 print(f"Frontend path: {frontend_path}")
-app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
 
 
 def get_db():
@@ -1915,3 +1916,20 @@ async def batch_analyze_memories(
         db.rollback()
         logger.error(f"Batch analysis failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    """Serve frontend for non-API routes"""
+    import os
+
+    frontend_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "frontend",
+    )
+    index_path = os.path.join(frontend_path, "index.html")
+    if os.path.exists(index_path):
+        from fastapi.responses import FileResponse
+
+        return FileResponse(index_path)
+    return {"error": "Frontend not found"}
