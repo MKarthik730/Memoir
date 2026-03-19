@@ -1,7 +1,7 @@
 from typing import List, Dict
-from document import Document
-from embeddings import EmbeddingModel
-from vector_store import VectorStore
+from .document import Document
+from .embeddings import EmbeddingModel
+from .vector_store import VectorStore
 
 class RAGModel:
     def __init__(self, embedding_model: str = 'all-MiniLM-L6-v2'):

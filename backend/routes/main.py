@@ -1,11 +1,12 @@
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import logging
+
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -24,13 +25,45 @@ from io import BytesIO
 from fastapi.responses import StreamingResponse
 
 from database.models import (
-    User, UserData, UserResponse, Base, FileStore, FileResponse, 
-    LoginResponse, CategoryResponse, FileUploadResponse, Category, 
-    Person, CategoryData, PersonData, PersonResponse, Memory, MemoryData, MemoryResponse
+    User,
+    UserData,
+    UserResponse,
+    RegistrationResponse,
+    Base,
+    FileStore,
+    FileResponse,
+    LoginResponse,
+    CategoryResponse,
+    FileUploadResponse,
+    Category,
+    Person,
+    CategoryData,
+    PersonData,
+    PersonResponse,
+    Memory,
+    MemoryData,
+    MemoryResponse,
+    PersonSummary,
+    PersonSummaryData,
+    PersonSummaryResponse,
+    RelationshipSuggestion,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from database.config import SessionLocal, engine
 from fastapi.staticfiles import StaticFiles
+
+try:
+    from ai import (
+        SentimentAnalyzer,
+        MemorySummarizer,
+        RelationshipSuggester,
+        EMOTION_COLORS,
+    )
+except Exception:
+    SentimentAnalyzer = None
+    MemorySummarizer = None
+    RelationshipSuggester = None
+    EMOTION_COLORS = {}
 
 try:
     from rag.rag_model import RAGModel
@@ -42,11 +75,27 @@ try:
 except Exception:
     PdfReader = None
 
+try:
+    import cloudinary
+    import cloudinary.uploader
+    import cloudinary.api
+
+    CLOUDINARY_CONFIGURED = True
+except ImportError:
+    CLOUDINARY_CONFIGURED = False
+    cloudinary = None
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+)
+
 RAG_EMBEDDING_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "all-mpnet-base-v2")
 _RAG_MODEL_INSTANCE = None
 _RAG_MODEL_LOCK = threading.Lock()
 
-pwd_context = CryptContext(schemes=['bcrypt_sha256', 'bcrypt'], deprecated='auto')
+pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
 app = FastAPI()
 security = HTTPBearer()
 
@@ -66,8 +115,14 @@ app.add_middleware(
 )
 
 # Mount static files
-frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend")
+import os
+
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+memoir_dir = os.path.dirname(backend_dir)
+frontend_path = os.path.join(memoir_dir, "frontend")
+print(f"Frontend path: {frontend_path}")
 app.mount("/frontend", StaticFiles(directory=frontend_path), name="frontend")
+
 
 def get_db():
     db = SessionLocal()
@@ -76,12 +131,15 @@ def get_db():
     finally:
         db.close()
 
+
 async def hash_password(password: str) -> str:
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, pwd_context.hash, password)
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
@@ -90,6 +148,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, "HS256")
     logger.info(f"Token created for user: {data.get('sub')}")
     return encoded_jwt
+
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
@@ -101,28 +160,31 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
         if exp is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token missing expiration"
+                detail="Token missing expiration",
             )
 
         current_time = datetime.now(timezone.utc).timestamp()
         if current_time > exp:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token has expired"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired"
             )
 
         user_id = payload.get("user_id")
         if user_id is None or not isinstance(user_id, int) or user_id <= 0:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid user_id in token"
+                detail="Invalid user_id in token",
             )
 
         username = payload.get("sub")
-        if username is None or not isinstance(username, str) or len(username.strip()) == 0:
+        if (
+            username is None
+            or not isinstance(username, str)
+            or len(username.strip()) == 0
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username in token"
+                detail="Invalid username in token",
             )
 
         logger.info(f"Token verified for: {username} (ID: {user_id})")
@@ -131,23 +193,22 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
     except JWTError as e:
         logger.error(f"JWT verification failed: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token format"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format"
         )
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Unexpected token error: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token verification failed"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token verification failed"
         )
 
+
 ALLOWED_EXTENSIONS = {
-    'audio': {'mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg'},
-    'video': {'mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv', 'webm'},
-    'image': {'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'},
-    'document': {'pdf', 'txt', 'docx', 'xlsx', 'pptx'}
+    "audio": {"mp3", "wav", "flac", "aac", "m4a", "ogg"},
+    "video": {"mp4", "avi", "mov", "mkv", "flv", "wmv", "webm"},
+    "image": {"jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"},
+    "document": {"pdf", "txt", "docx", "xlsx", "pptx"},
 }
 
 MAX_FILE_SIZE = 100 * 1024 * 1024
@@ -165,25 +226,39 @@ def build_person_pdf_buffer(person: Person, db) -> BytesIO:
     from reportlab.lib.units import inch
     from PIL import Image as PILImage
 
-    files = db.query(FileStore).filter(FileStore.person_id == person.id).order_by(FileStore.created_at.asc()).all()
-    memories = db.query(Memory).filter(Memory.person_id == person.id).order_by(Memory.created_at.asc()).all()
+    files = (
+        db.query(FileStore)
+        .filter(FileStore.person_id == person.id)
+        .order_by(FileStore.created_at.asc())
+        .all()
+    )
+    memories = (
+        db.query(Memory)
+        .filter(Memory.person_id == person.id)
+        .order_by(Memory.created_at.asc())
+        .all()
+    )
 
     items = []
     for file in files:
-        items.append({
-            "type": "file",
-            "file_name": file.file_name,
-            "file_type": file.file_type,
-            "file_data": file.file_data,
-            "description": file.description,
-            "created_at": file.created_at,
-        })
+        items.append(
+            {
+                "type": "file",
+                "file_name": file.file_name,
+                "file_type": file.file_type,
+                "file_data": file.file_data,
+                "description": file.description,
+                "created_at": file.created_at,
+            }
+        )
     for memory in memories:
-        items.append({
-            "type": "memory",
-            "content": memory.content,
-            "created_at": memory.created_at,
-        })
+        items.append(
+            {
+                "type": "memory",
+                "content": memory.content,
+                "created_at": memory.created_at,
+            }
+        )
 
     items.sort(key=lambda x: x.get("created_at") or datetime.min)
 
@@ -240,7 +315,9 @@ def build_person_pdf_buffer(person: Person, db) -> BytesIO:
         if item["type"] == "memory":
             story.append(Paragraph("Memory", section_title_style))
             story.append(Paragraph(date_str, date_style))
-            story.append(Paragraph(item["content"].replace("\n", "<br/>"), content_style))
+            story.append(
+                Paragraph(item["content"].replace("\n", "<br/>"), content_style)
+            )
         elif item["type"] == "file" and item["file_type"].startswith("image/"):
             story.append(Paragraph(f"Image - {item['file_name']}", section_title_style))
             story.append(Paragraph(date_str, date_style))
@@ -252,7 +329,10 @@ def build_person_pdf_buffer(person: Person, db) -> BytesIO:
                 width, height = pil_img.size
                 if width > max_width or height > max_height:
                     ratio = min(max_width / width, max_height / height)
-                    pil_img = pil_img.resize((int(width * ratio), int(height * ratio)), PILImage.Resampling.LANCZOS)
+                    pil_img = pil_img.resize(
+                        (int(width * ratio), int(height * ratio)),
+                        PILImage.Resampling.LANCZOS,
+                    )
 
                 png_buffer = BytesIO()
                 pil_img.save(png_buffer, format="PNG")
@@ -263,11 +343,15 @@ def build_person_pdf_buffer(person: Person, db) -> BytesIO:
                 story.append(rl_img)
                 story.append(Spacer(1, 0.15 * inch))
                 if item.get("description"):
-                    story.append(Paragraph(f"Description: {item['description']}", content_style))
+                    story.append(
+                        Paragraph(f"Description: {item['description']}", content_style)
+                    )
                 else:
                     story.append(Spacer(1, 0.08 * inch))
             except Exception as img_err:
-                logger.error(f"Failed to add image '{item['file_name']}' to person PDF: {img_err}")
+                logger.error(
+                    f"Failed to add image '{item['file_name']}' to person PDF: {img_err}"
+                )
                 story.append(Paragraph("[Image could not be rendered]", content_style))
 
     doc.build(story)
@@ -313,73 +397,103 @@ def get_user_rag_documents(user_id: int, db) -> List[dict]:
 
     docs: List[dict] = []
 
-    memories = db.query(Memory).join(Person).join(Category).filter(Category.user_id == user_id).all()
+    memories = (
+        db.query(Memory)
+        .join(Person)
+        .join(Category)
+        .filter(Category.user_id == user_id)
+        .all()
+    )
     for memory in memories:
         for idx, chunk in enumerate(chunk_text(memory.content)):
-            docs.append({
-                "text": chunk,
-                "metadata": {
-                    "type": "memory",
-                    "chunk_index": idx,
-                    "person_id": memory.person_id,
-                    "person_name": memory.person.person_name,
-                    "category_name": memory.person.category.cat_name,
-                    "created_at": memory.created_at.isoformat() if memory.created_at else None,
-                },
-            })
+            docs.append(
+                {
+                    "text": chunk,
+                    "metadata": {
+                        "type": "memory",
+                        "chunk_index": idx,
+                        "person_id": memory.person_id,
+                        "person_name": memory.person.person_name,
+                        "category_name": memory.person.category.cat_name,
+                        "created_at": memory.created_at.isoformat()
+                        if memory.created_at
+                        else None,
+                    },
+                }
+            )
 
-    files = db.query(FileStore).join(Person).join(Category).filter(Category.user_id == user_id).all()
+    files = (
+        db.query(FileStore)
+        .join(Person)
+        .join(Category)
+        .filter(Category.user_id == user_id)
+        .all()
+    )
     for file in files:
         if file.description:
-            docs.append({
-                "text": clean_text(file.description),
-                "metadata": {
-                    "type": "file_description",
-                    "file_name": file.file_name,
-                    "file_type": file.file_type,
-                    "person_id": file.person_id,
-                    "person_name": file.person.person_name,
-                    "category_name": file.person.category.cat_name,
-                    "created_at": file.created_at.isoformat() if file.created_at else None,
-                },
-            })
+            docs.append(
+                {
+                    "text": clean_text(file.description),
+                    "metadata": {
+                        "type": "file_description",
+                        "file_name": file.file_name,
+                        "file_type": file.file_type,
+                        "person_id": file.person_id,
+                        "person_name": file.person.person_name,
+                        "category_name": file.person.category.cat_name,
+                        "created_at": file.created_at.isoformat()
+                        if file.created_at
+                        else None,
+                    },
+                }
+            )
 
         if file.file_type in ("text/plain", "application/json"):
             try:
                 decoded = clean_text(file.file_data.decode("utf-8", errors="ignore"))
                 for idx, chunk in enumerate(chunk_text(decoded)):
-                    docs.append({
+                    docs.append(
+                        {
+                            "text": chunk,
+                            "metadata": {
+                                "type": "text_file",
+                                "chunk_index": idx,
+                                "file_name": file.file_name,
+                                "file_type": file.file_type,
+                                "person_id": file.person_id,
+                                "person_name": file.person.person_name,
+                                "category_name": file.person.category.cat_name,
+                                "created_at": file.created_at.isoformat()
+                                if file.created_at
+                                else None,
+                            },
+                        }
+                    )
+            except Exception:
+                pass
+
+        if file.file_type == "application/pdf" or file.file_name.lower().endswith(
+            ".pdf"
+        ):
+            pdf_text = extract_pdf_text(file.file_data)
+            for idx, chunk in enumerate(chunk_text(pdf_text)):
+                docs.append(
+                    {
                         "text": chunk,
                         "metadata": {
-                            "type": "text_file",
+                            "type": "pdf_file",
                             "chunk_index": idx,
                             "file_name": file.file_name,
                             "file_type": file.file_type,
                             "person_id": file.person_id,
                             "person_name": file.person.person_name,
                             "category_name": file.person.category.cat_name,
-                            "created_at": file.created_at.isoformat() if file.created_at else None,
+                            "created_at": file.created_at.isoformat()
+                            if file.created_at
+                            else None,
                         },
-                    })
-            except Exception:
-                pass
-
-        if file.file_type == "application/pdf" or file.file_name.lower().endswith(".pdf"):
-            pdf_text = extract_pdf_text(file.file_data)
-            for idx, chunk in enumerate(chunk_text(pdf_text)):
-                docs.append({
-                    "text": chunk,
-                    "metadata": {
-                        "type": "pdf_file",
-                        "chunk_index": idx,
-                        "file_name": file.file_name,
-                        "file_type": file.file_type,
-                        "person_id": file.person_id,
-                        "person_name": file.person.person_name,
-                        "category_name": file.person.category.cat_name,
-                        "created_at": file.created_at.isoformat() if file.created_at else None,
-                    },
-                })
+                    }
+                )
 
     return docs
 
@@ -398,7 +512,9 @@ def get_rag_model_instance():
 
 
 def synthesize_answer(question: str, retrieved_docs: List) -> str:
-    query_terms = [t for t in re.findall(r"[a-zA-Z0-9]+", question.lower()) if len(t) > 2]
+    query_terms = [
+        t for t in re.findall(r"[a-zA-Z0-9]+", question.lower()) if len(t) > 2
+    ]
 
     candidates = []
     for doc in retrieved_docs:
@@ -430,12 +546,14 @@ def synthesize_answer(question: str, retrieved_docs: List) -> str:
 
     return "\n\n".join(selected)
 
+
 def get_file_category(filename: str) -> Optional[str]:
-    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     for category, extensions in ALLOWED_EXTENSIONS.items():
         if ext in extensions:
             return category
     return None
+
 
 def validate_file(file: UploadFile) -> tuple[bool, str]:
     if file.size and file.size > MAX_FILE_SIZE:
@@ -448,19 +566,19 @@ def validate_file(file: UploadFile) -> tuple[bool, str]:
     return True, "valid"
 
 
-
-@app.get('/home')
+@app.get("/home")
 async def home():
     return {"message": "Memoir API - Home page"}
 
-@app.post("/sign_up", response_model=UserResponse)
+
+@app.post("/sign_up", response_model=RegistrationResponse)
 async def sign_up(data: UserData, db=Depends(get_db)):
     logger.info(f"Sign up attempt for username: {data.name}")
     existing_user = db.query(User).filter(User.name == data.name).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail="Username already registered",
         )
     try:
         hashed = await hash_password(data.password)
@@ -468,15 +586,27 @@ async def sign_up(data: UserData, db=Depends(get_db)):
         db.add(user)
         db.commit()
         db.refresh(user)
+
+        access_token = create_access_token(
+            data={"sub": user.name, "user_id": user.id},
+            expires_delta=timedelta(minutes=expires_minutes),
+        )
+
         logger.info(f"User created successfully: {user.name} (ID: {user.id})")
-        return user
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": user.id,
+            "username": user.name,
+        }
     except Exception as e:
         db.rollback()
         logger.error(f"Sign up failed: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating user"
+            status_code=500,
+            detail="Error creating user",
         )
+
 
 @app.post("/login", response_model=LoginResponse)
 async def login(data: UserData, db=Depends(get_db)):
@@ -484,53 +614,48 @@ async def login(data: UserData, db=Depends(get_db)):
     if not data.name or not data.password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username and password required"
+            detail="Username and password required",
         )
     user = db.query(User).filter(User.name == data.name).first()
     if not user or not verify_password(data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
+            detail="Invalid username or password",
         )
     access_token = create_access_token(
         data={"sub": user.name, "user_id": user.id},
-        expires_delta=timedelta(minutes=expires_minutes)
+        expires_delta=timedelta(minutes=expires_minutes),
     )
     logger.info(f"Login successful for user: {user.name} (ID: {user.id})")
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user_id": user.id,
-        "username": user.name
+        "username": user.name,
     }
 
 
 @app.post("/home/category", response_model=CategoryResponse)
 async def create_category(
-    data: CategoryData,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    data: CategoryData, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Create a new category for the authenticated user"""
     user_id = token_data["user_id"]
-    
+
     # Check if category already exists for this user
-    existing = db.query(Category).filter(
-        Category.cat_name == data.cat_name,
-        Category.user_id == user_id
-    ).first()
-    
+    existing = (
+        db.query(Category)
+        .filter(Category.cat_name == data.cat_name, Category.user_id == user_id)
+        .first()
+    )
+
     if existing:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Category already exists"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Category already exists"
         )
-    
+
     try:
-        cat_obj = Category(
-            cat_name=data.cat_name,
-            user_id=user_id
-        )
+        cat_obj = Category(cat_name=data.cat_name, user_id=user_id)
         db.add(cat_obj)
         db.commit()
         db.refresh(cat_obj)
@@ -541,40 +666,37 @@ async def create_category(
         logger.error(f"Category creation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating category"
+            detail="Error creating category",
         )
 
+
 @app.get("/home/categories", response_model=List[CategoryResponse])
-async def get_categories(
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
-):
+async def get_categories(token_data: dict = Depends(verify_token), db=Depends(get_db)):
     """Get all categories for the authenticated user"""
     user_id = token_data["user_id"]
     categories = db.query(Category).filter(Category.user_id == user_id).all()
     logger.info(f"Retrieved {len(categories)} categories for user {user_id}")
     return categories
 
+
 @app.delete("/home/category/{category_id}")
 async def delete_category(
-    category_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    category_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Delete a category (and all its people and files)"""
     user_id = token_data["user_id"]
-    
-    category = db.query(Category).filter(
-        Category.id == category_id,
-        Category.user_id == user_id
-    ).first()
-    
+
+    category = (
+        db.query(Category)
+        .filter(Category.id == category_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not category:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
         )
-    
+
     try:
         db.delete(category)
         db.commit()
@@ -583,38 +705,31 @@ async def delete_category(
     except Exception as e:
         db.rollback()
         logger.error(f"Category deletion failed: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Deletion failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e)}")
 
 
 @app.post("/home/person", response_model=PersonResponse)
 async def create_person(
-    data: PersonData,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    data: PersonData, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Create a new person in a category"""
     user_id = token_data["user_id"]
-    
+
     # Verify category belongs to user
-    category = db.query(Category).filter(
-        Category.id == data.category_id,
-        Category.user_id == user_id
-    ).first()
-    
+    category = (
+        db.query(Category)
+        .filter(Category.id == data.category_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found or doesn't belong to you"
+            detail="Category not found or doesn't belong to you",
         )
-    
+
     try:
-        person_obj = Person(
-            person_name=data.person_name,
-            category_id=data.category_id
-        )
+        person_obj = Person(person_name=data.person_name, category_id=data.category_id)
         db.add(person_obj)
         db.commit()
         db.refresh(person_obj)
@@ -625,54 +740,53 @@ async def create_person(
         logger.error(f"Person creation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating person"
+            detail="Error creating person",
         )
+
 
 @app.get("/home/category/{category_id}/people", response_model=List[PersonResponse])
 async def get_people_in_category(
-    category_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    category_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Get all people in a specific category"""
     user_id = token_data["user_id"]
-    
+
     # Verify category belongs to user
-    category = db.query(Category).filter(
-        Category.id == category_id,
-        Category.user_id == user_id
-    ).first()
-    
+    category = (
+        db.query(Category)
+        .filter(Category.id == category_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not category:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
         )
-    
+
     people = db.query(Person).filter(Person.category_id == category_id).all()
     logger.info(f"Retrieved {len(people)} people for category {category_id}")
     return people
 
+
 @app.delete("/home/person/{person_id}")
 async def delete_person(
-    person_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Delete a person (and all their files)"""
     user_id = token_data["user_id"]
-    
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
-    
+
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not person:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Person not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
         )
-    
+
     try:
         db.delete(person)
         db.commit()
@@ -681,12 +795,11 @@ async def delete_person(
     except Exception as e:
         db.rollback()
         logger.error(f"Person deletion failed: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Deletion failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e)}")
+
 
 # FILE ENDPOINTS (Hierarchical - Person-based)
+
 
 @app.post("/home/person/{person_id}/upload", response_model=FileUploadResponse)
 async def upload_file_to_person(
@@ -694,116 +807,207 @@ async def upload_file_to_person(
     file: UploadFile = File(...),
     description: Optional[str] = None,
     token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """Upload a file to a specific person"""
     user_id = token_data["user_id"]
-    
+
     # Verify person belongs to user's category
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
-    
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not person:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Person not found or doesn't belong to you"
+            detail="Person not found or doesn't belong to you",
         )
-    
+
     is_valid, message = validate_file(file)
     if not is_valid:
         raise HTTPException(status_code=400, detail=message)
-    
+
     try:
         data = await file.read()
         filesize = len(data)
-        
+
         obj_file = FileStore(
             file_name=file.filename,
             file_data=data,
             file_type=file.content_type or "application/octet-stream",
             description=description,
-            person_id=person_id
+            person_id=person_id,
         )
         db.add(obj_file)
         db.commit()
         db.refresh(obj_file)
-        
+
         logger.info(f"File uploaded: {obj_file.file_name} to person {person_id}")
-        
+
         return {
             "id": obj_file.id,
             "file_name": obj_file.file_name,
             "file_size": filesize,
             "file_type": obj_file.file_type,
             "person_id": person_id,
-            "message": "File uploaded successfully"
+            "message": "File uploaded successfully",
         }
     except Exception as e:
         db.rollback()
         logger.error(f"Upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@app.post("/home/cloudinary/upload")
+async def upload_to_cloudinary(
+    person_id: int,
+    file: UploadFile = File(...),
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db),
+):
+    """Upload a file to Cloudinary"""
+    if not CLOUDINARY_CONFIGURED:
         raise HTTPException(
-            status_code=500,
-            detail=f"Upload failed: {str(e)}"
+            status_code=503,
+            detail="Cloudinary is not configured. Please set CLOUDINARY_* environment variables.",
         )
+
+    user_id = token_data["user_id"]
+
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    is_valid, message = validate_file(file)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=message)
+
+    try:
+        data = await file.read()
+
+        result = cloudinary.uploader.upload(
+            data,
+            folder=f"memoir/user_{user_id}/person_{person_id}",
+            resource_type="auto",
+            public_id=file.filename.rsplit(".", 1)[0]
+            if "." in file.filename
+            else file.filename,
+        )
+
+        obj_file = FileStore(
+            file_name=file.filename,
+            file_data=result.get("secure_url", "").encode(),
+            file_type=file.content_type or "application/octet-stream",
+            description=f"Cloudinary: {result.get('public_id')}",
+            person_id=person_id,
+        )
+        db.add(obj_file)
+        db.commit()
+        db.refresh(obj_file)
+
+        logger.info(f"File uploaded to Cloudinary: {file.filename}")
+
+        return {
+            "id": obj_file.id,
+            "file_name": file.filename,
+            "file_url": result.get("secure_url"),
+            "public_id": result.get("public_id"),
+            "file_type": file.content_type,
+            "person_id": person_id,
+            "message": "Uploaded to Cloudinary successfully",
+        }
+    except Exception as e:
+        logger.error(f"Cloudinary upload failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Cloudinary upload failed: {str(e)}"
+        )
+
+
+@app.delete("/home/cloudinary/delete/{public_id}")
+async def delete_from_cloudinary(
+    public_id: str,
+    token_data: dict = Depends(verify_token),
+):
+    """Delete a file from Cloudinary"""
+    if not CLOUDINARY_CONFIGURED:
+        raise HTTPException(status_code=503, detail="Cloudinary not configured")
+
+    try:
+        cloudinary.uploader.destroy(public_id)
+        logger.info(f"File deleted from Cloudinary: {public_id}")
+        return {"message": "Deleted from Cloudinary"}
+    except Exception as e:
+        logger.error(f"Cloudinary delete failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/home/person/{person_id}/files", response_model=List[FileResponse])
 async def get_person_files(
-    person_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Get all files for a specific person"""
     user_id = token_data["user_id"]
-    
+
     # Verify person belongs to user
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
-    
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not person:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Person not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
         )
-    
+
     files = db.query(FileStore).filter(FileStore.person_id == person_id).all()
     logger.info(f"Retrieved {len(files)} files for person {person_id}")
     return files
+
 
 @app.delete("/home/person/{person_id}/files/{file_id}")
 async def delete_person_file(
     person_id: int,
     file_id: int,
     token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """Delete a specific file from a person"""
     user_id = token_data["user_id"]
-    
+
     # Verify person belongs to user
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
-    
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not person:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Person not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
         )
-    
+
     # Get the file
-    db_file = db.query(FileStore).filter(
-        FileStore.id == file_id,
-        FileStore.person_id == person_id
-    ).first()
-    
+    db_file = (
+        db.query(FileStore)
+        .filter(FileStore.id == file_id, FileStore.person_id == person_id)
+        .first()
+    )
+
     if not db_file:
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     try:
         db.delete(db_file)
         db.commit()
@@ -812,11 +1016,7 @@ async def delete_person_file(
     except Exception as e:
         db.rollback()
         logger.error(f"File deletion failed: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Deletion failed: {str(e)}"
-        )
-
+        raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e)}")
 
 
 # Memory endpoints
@@ -825,53 +1025,74 @@ async def create_memory(
     person_id: int,
     memory_data: MemoryData,
     token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
-    """Create a new memory for a person"""
+    """Create a new memory for a person with automatic emotion analysis"""
     user_id = token_data["user_id"]
-    
+
     # Verify the person belongs to the user
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
-    
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
-    
-    # Create the memory
+
+    # Analyze emotion
+    emotion_tag = None
+    emotion_confidence = None
+    if SentimentAnalyzer:
+        try:
+            analyzer = SentimentAnalyzer()
+            result = analyzer.analyze(memory_data.content)
+            emotion_tag = result.emotion
+            emotion_confidence = result.confidence
+        except Exception as e:
+            logger.warning(f"Emotion analysis failed: {str(e)}")
+
+    # Create the memory with emotion data
     memory = Memory(
         content=memory_data.content,
-        person_id=person_id
+        person_id=person_id,
+        emotion_tag=emotion_tag,
+        emotion_confidence=str(emotion_confidence) if emotion_confidence else None,
     )
-    
+
     db.add(memory)
     db.commit()
     db.refresh(memory)
-    
-    return MemoryResponse.from_orm(memory)
+
+    return MemoryResponse.model_validate(memory)
 
 
 @app.get("/home/person/{person_id}/memories", response_model=List[MemoryResponse])
 async def get_memories(
-    person_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Get all memories for a person"""
     user_id = token_data["user_id"]
-    
+
     # Verify the person belongs to the user
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
-    
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
-    
-    memories = db.query(Memory).filter(Memory.person_id == person_id).order_by(Memory.created_at.desc()).all()
-    
+
+    memories = (
+        db.query(Memory)
+        .filter(Memory.person_id == person_id)
+        .order_by(Memory.created_at.desc())
+        .all()
+    )
+
     return [MemoryResponse.from_orm(memory) for memory in memories]
 
 
@@ -880,253 +1101,296 @@ async def delete_memory(
     person_id: int,
     memory_id: int,
     token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """Delete a memory from a person"""
     user_id = token_data["user_id"]
-    
+
     # Verify the person belongs to the user
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
-    
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
-    
+
     # Find and delete the memory
-    memory = db.query(Memory).filter(
-        Memory.id == memory_id,
-        Memory.person_id == person_id
-    ).first()
-    
+    memory = (
+        db.query(Memory)
+        .filter(Memory.id == memory_id, Memory.person_id == person_id)
+        .first()
+    )
+
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
-    
+
     db.delete(memory)
     db.commit()
-    
+
     return {"message": "Memory deleted successfully"}
+
 
 @app.get("/home/person/{person_id}/files/{file_id}/download")
 async def download_file(
     person_id: int,
     file_id: int,
     token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """Download a file"""
     user_id = token_data["user_id"]
-    
+
     # Verify the person belongs to the user
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
-    
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
-    
+
     # Get the file
-    db_file = db.query(FileStore).filter(
-        FileStore.id == file_id,
-        FileStore.person_id == person_id
-    ).first()
-    
+    db_file = (
+        db.query(FileStore)
+        .filter(FileStore.id == file_id, FileStore.person_id == person_id)
+        .first()
+    )
+
     if not db_file:
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     # Return file data
     from fastapi.responses import StreamingResponse
     import io
-    
+
     file_data = io.BytesIO(db_file.file_data)
-    
+
     # For images, serve inline; for other files, force download
-    if db_file.file_type.startswith('image/'):
-        return StreamingResponse(
-            file_data,
-            media_type=db_file.file_type
-        )
+    if db_file.file_type.startswith("image/"):
+        return StreamingResponse(file_data, media_type=db_file.file_type)
     else:
         return StreamingResponse(
             file_data,
             media_type=db_file.file_type,
-            headers={"Content-Disposition": f"attachment; filename={db_file.file_name}"}
+            headers={
+                "Content-Disposition": f"attachment; filename={db_file.file_name}"
+            },
         )
+
 
 @app.get("/home/user/all-content")
 async def get_all_user_content(
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Get all files and memories for the user across all categories and people"""
     user_id = token_data["user_id"]
-    
+
     # Get all files
-    files = db.query(FileStore).join(Person).join(Category).filter(
-        Category.user_id == user_id
-    ).order_by(FileStore.created_at.desc()).all()
-    
+    files = (
+        db.query(FileStore)
+        .join(Person)
+        .join(Category)
+        .filter(Category.user_id == user_id)
+        .order_by(FileStore.created_at.desc())
+        .all()
+    )
+
     # Get all memories
-    memories = db.query(Memory).join(Person).join(Category).filter(
-        Category.user_id == user_id
-    ).order_by(Memory.created_at.desc()).all()
-    
+    memories = (
+        db.query(Memory)
+        .join(Person)
+        .join(Category)
+        .filter(Category.user_id == user_id)
+        .order_by(Memory.created_at.desc())
+        .all()
+    )
+
     # Combine and sort by date
     all_content = []
-    
+
     for file in files:
-        all_content.append({
-            "id": file.id,
-            "type": "file",
-            "file_name": file.file_name,
-            "file_type": file.file_type,
-            "description": file.description,
-            "person_name": file.person.person_name,
-            "category_name": file.person.category.cat_name,
-            "created_at": file.created_at.isoformat() if file.created_at else None,
-            "person_id": file.person_id
-        })
-    
+        all_content.append(
+            {
+                "id": file.id,
+                "type": "file",
+                "file_name": file.file_name,
+                "file_type": file.file_type,
+                "description": file.description,
+                "person_name": file.person.person_name,
+                "category_name": file.person.category.cat_name,
+                "created_at": file.created_at.isoformat() if file.created_at else None,
+                "person_id": file.person_id,
+            }
+        )
+
     for memory in memories:
-        all_content.append({
-            "id": memory.id,
-            "type": "memory",
-            "content": memory.content,
-            "person_name": memory.person.person_name,
-            "category_name": memory.person.category.cat_name,
-            "created_at": memory.created_at.isoformat() if memory.created_at else None,
-            "person_id": memory.person_id
-        })
-    
+        all_content.append(
+            {
+                "id": memory.id,
+                "type": "memory",
+                "content": memory.content,
+                "person_name": memory.person.person_name,
+                "category_name": memory.person.category.cat_name,
+                "created_at": memory.created_at.isoformat()
+                if memory.created_at
+                else None,
+                "person_id": memory.person_id,
+            }
+        )
+
     # Sort by creation date (newest first)
     all_content.sort(key=lambda x: x["created_at"] or "", reverse=True)
-    
-    return {
-        "user_id": user_id,
-        "total_items": len(all_content),
-        "content": all_content
-    }
+
+    return {"user_id": user_id, "total_items": len(all_content), "content": all_content}
 
 
 @app.get("/home/user/memories/pdf")
 async def generate_memories_pdf(
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Generate a PDF containing all user memories and images"""
     user_id = token_data["user_id"]
-    
+
     # Get all files
-    files = db.query(FileStore).join(Person).join(Category).filter(
-        Category.user_id == user_id
-    ).order_by(FileStore.created_at.asc()).all()
-    
+    files = (
+        db.query(FileStore)
+        .join(Person)
+        .join(Category)
+        .filter(Category.user_id == user_id)
+        .order_by(FileStore.created_at.asc())
+        .all()
+    )
+
     # Get all memories
-    memories = db.query(Memory).join(Person).join(Category).filter(
-        Category.user_id == user_id
-    ).order_by(Memory.created_at.asc()).all()
-    
+    memories = (
+        db.query(Memory)
+        .join(Person)
+        .join(Category)
+        .filter(Category.user_id == user_id)
+        .order_by(Memory.created_at.asc())
+        .all()
+    )
+
     # Combine and sort by date
     all_content = []
-    
+
     for file in files:
-        all_content.append({
-            "id": file.id,
-            "type": "file",
-            "file_name": file.file_name,
-            "file_type": file.file_type,
-            "file_data": file.file_data,
-            "description": file.description,
-            "person_name": file.person.person_name,
-            "category_name": file.person.category.cat_name,
-            "created_at": file.created_at,
-            "person_id": file.person_id
-        })
-    
+        all_content.append(
+            {
+                "id": file.id,
+                "type": "file",
+                "file_name": file.file_name,
+                "file_type": file.file_type,
+                "file_data": file.file_data,
+                "description": file.description,
+                "person_name": file.person.person_name,
+                "category_name": file.person.category.cat_name,
+                "created_at": file.created_at,
+                "person_id": file.person_id,
+            }
+        )
+
     for memory in memories:
-        all_content.append({
-            "id": memory.id,
-            "type": "memory",
-            "content": memory.content,
-            "person_name": memory.person.person_name,
-            "category_name": memory.person.category.cat_name,
-            "created_at": memory.created_at,
-            "person_id": memory.person_id
-        })
-    
+        all_content.append(
+            {
+                "id": memory.id,
+                "type": "memory",
+                "content": memory.content,
+                "person_name": memory.person.person_name,
+                "category_name": memory.person.category.cat_name,
+                "created_at": memory.created_at,
+                "person_id": memory.person_id,
+            }
+        )
+
     # Sort by creation date (oldest first for PDF)
     all_content.sort(key=lambda x: x["created_at"] or datetime.min)
-    
+
     if not all_content:
         raise HTTPException(status_code=404, detail="No content found")
-    
+
     # Generate PDF
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image as RLImage
+        from reportlab.platypus import (
+            SimpleDocTemplate,
+            Paragraph,
+            Spacer,
+            PageBreak,
+            Image as RLImage,
+        )
         from reportlab.lib.units import inch
         from io import BytesIO
         from PIL import Image as PILImage
-        
+
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
         styles = getSampleStyleSheet()
-        
+
         # Custom styles
         title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
+            "CustomTitle",
+            parent=styles["Heading1"],
             fontSize=24,
             spaceAfter=30,
         )
-        
+
         memory_title_style = ParagraphStyle(
-            'MemoryTitle',
-            parent=styles['Heading2'],
+            "MemoryTitle",
+            parent=styles["Heading2"],
             fontSize=16,
             spaceAfter=10,
         )
-        
+
         date_style = ParagraphStyle(
-            'DateStyle',
-            parent=styles['Normal'],
+            "DateStyle",
+            parent=styles["Normal"],
             fontSize=10,
-            textColor='gray',
+            textColor="gray",
             spaceAfter=15,
         )
-        
+
         content_style = ParagraphStyle(
-            'ContentStyle',
-            parent=styles['Normal'],
+            "ContentStyle",
+            parent=styles["Normal"],
             fontSize=12,
             spaceAfter=20,
         )
-        
+
         story = []
-        
+
         # Title
         story.append(Paragraph("My Memoir Collection", title_style))
-        story.append(Spacer(1, 0.5*inch))
-        
+        story.append(Spacer(1, 0.5 * inch))
+
         for item in all_content:
             # Item header
             person_info = f"{item['category_name']} - {item['person_name']}"
             story.append(Paragraph(person_info, memory_title_style))
-            
+
             # Date
-            date_str = item['created_at'].strftime("%B %d, %Y at %I:%M %p") if item['created_at'] else "Unknown date"
+            date_str = (
+                item["created_at"].strftime("%B %d, %Y at %I:%M %p")
+                if item["created_at"]
+                else "Unknown date"
+            )
             story.append(Paragraph(date_str, date_style))
-            
-            if item['type'] == 'memory':
+
+            if item["type"] == "memory":
                 # Content
-                story.append(Paragraph(item['content'].replace('\n', '<br/>'), content_style))
-            elif item['type'] == 'file' and item['file_type'].startswith('image/'):
+                story.append(
+                    Paragraph(item["content"].replace("\n", "<br/>"), content_style)
+                )
+            elif item["type"] == "file" and item["file_type"].startswith("image/"):
                 # Image
                 try:
-                    img_buffer = BytesIO(item['file_data'])
+                    img_buffer = BytesIO(item["file_data"])
                     pil_img = PILImage.open(img_buffer)
                     # Resize if too large
                     max_width = 6 * inch
@@ -1136,39 +1400,48 @@ async def generate_memories_pdf(
                         ratio = min(max_width / width, max_height / height)
                         new_width = width * ratio
                         new_height = height * ratio
-                        pil_img = pil_img.resize((int(new_width), int(new_height)), PILImage.Resampling.LANCZOS)
-                    
+                        pil_img = pil_img.resize(
+                            (int(new_width), int(new_height)),
+                            PILImage.Resampling.LANCZOS,
+                        )
+
                     img_buffer = BytesIO()
-                    pil_img.save(img_buffer, format='PNG')
+                    pil_img.save(img_buffer, format="PNG")
                     img_buffer.seek(0)
-                    
+
                     rl_img = RLImage(img_buffer)
-                    rl_img.hAlign = 'CENTER'
+                    rl_img.hAlign = "CENTER"
                     story.append(rl_img)
-                    story.append(Spacer(1, 0.2*inch))
-                    
-                    if item.get('description'):
-                        story.append(Paragraph(f"Description: {item['description']}", content_style))
+                    story.append(Spacer(1, 0.2 * inch))
+
+                    if item.get("description"):
+                        story.append(
+                            Paragraph(
+                                f"Description: {item['description']}", content_style
+                            )
+                        )
                 except Exception as e:
                     logger.error(f"Failed to add image {item['id']}: {str(e)}")
-                    story.append(Paragraph(f"[Image: {item['file_name']}]", content_style))
-            
+                    story.append(
+                        Paragraph(f"[Image: {item['file_name']}]", content_style)
+                    )
+
             # Separator
-            story.append(Spacer(1, 0.3*inch))
-        
+            story.append(Spacer(1, 0.3 * inch))
+
         doc.build(story)
         buffer.seek(0)
-        
+
         return StreamingResponse(
             buffer,
-            media_type='application/pdf',
-            headers={"Content-Disposition": "attachment; filename=memories.pdf"}
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=memories.pdf"},
         )
-        
+
     except ImportError:
         raise HTTPException(
-            status_code=500, 
-            detail="PDF generation not available. Please install reportlab and pillow: pip install reportlab pillow"
+            status_code=500,
+            detail="PDF generation not available. Please install reportlab and pillow: pip install reportlab pillow",
         )
     except Exception as e:
         logger.error(f"PDF generation failed: {str(e)}")
@@ -1177,16 +1450,16 @@ async def generate_memories_pdf(
 
 @app.get("/home/person/{person_id}/pdf")
 async def generate_person_pdf_download(
-    person_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     user_id = token_data["user_id"]
 
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
 
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
@@ -1197,25 +1470,29 @@ async def generate_person_pdf_download(
         return StreamingResponse(
             pdf_buffer,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={safe_name}_memoir.pdf"},
+            headers={
+                "Content-Disposition": f"attachment; filename={safe_name}_memoir.pdf"
+            },
         )
     except Exception as e:
         logger.error(f"Person PDF generation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Person PDF generation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Person PDF generation failed: {str(e)}"
+        )
 
 
 @app.get("/home/person/{person_id}/pdf/view")
 async def generate_person_pdf_inline(
-    person_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     user_id = token_data["user_id"]
 
-    person = db.query(Person).join(Category).filter(
-        Person.id == person_id,
-        Category.user_id == user_id
-    ).first()
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
 
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
@@ -1229,14 +1506,16 @@ async def generate_person_pdf_inline(
         )
     except Exception as e:
         logger.error(f"Person inline PDF generation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Person inline PDF generation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Person inline PDF generation failed: {str(e)}"
+        )
 
 
 @app.post("/home/rag/query")
 async def rag_query(
     payload: RAGQueryRequest,
     token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     user_id = token_data["user_id"]
     docs = get_user_rag_documents(user_id, db)
@@ -1255,8 +1534,12 @@ async def rag_query(
     if rag_model is not None:
         try:
             rag_model.documents = []
-            rag_model.vector_store = rag_model.vector_store.__class__(rag_model.embedding_model.get_dimension())
-            rag_model.add_documents([d["text"] for d in docs], [d["metadata"] for d in docs])
+            rag_model.vector_store = rag_model.vector_store.__class__(
+                rag_model.embedding_model.get_dimension()
+            )
+            rag_model.add_documents(
+                [d["text"] for d in docs], [d["metadata"] for d in docs]
+            )
             result = rag_model.query(question, top_k=top_k)
 
             retrieved = result.get("retrieved_documents", [])
@@ -1280,7 +1563,11 @@ async def rag_query(
     selected = [item[1] for item in ranked[:top_k]]
 
     answer_parts = [s["text"][:320] for s in selected if s.get("text")]
-    answer = "\n\n".join(answer_parts) if answer_parts else "No relevant context found for this question."
+    answer = (
+        "\n\n".join(answer_parts)
+        if answer_parts
+        else "No relevant context found for this question."
+    )
     return {
         "answer": answer,
         "sources": [s.get("metadata", {}) for s in selected],
@@ -1290,55 +1577,342 @@ async def rag_query(
 
 @app.get("/home/user/structure")
 async def get_user_structure(
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db)
+    token_data: dict = Depends(verify_token), db=Depends(get_db)
 ):
     """Get the complete hierarchical structure for the user"""
     user_id = token_data["user_id"]
-    
+
     categories = db.query(Category).filter(Category.user_id == user_id).all()
-    
+
     structure = []
     for category in categories:
         people = db.query(Person).filter(Person.category_id == category.id).all()
-        
+
         people_data = []
         for person in people:
             files = db.query(FileStore).filter(FileStore.person_id == person.id).all()
             memories = db.query(Memory).filter(Memory.person_id == person.id).all()
-            people_data.append({
-                "id": person.id,
-                "name": person.person_name,
-                "file_count": len(files),
-                "memory_count": len(memories),
-                "files": [
-                    {
-                        "id": f.id,
-                        "file_name": f.file_name,
-                        "file_type": f.file_type,
-                        "description": f.description,
-                        "created_at": f.created_at.isoformat() if f.created_at else None
-                    }
-                    for f in files
-                ],
-                "memories": [
-                    {
-                        "id": m.id,
-                        "content": m.content,
-                        "created_at": m.created_at.isoformat() if m.created_at else None
-                    }
-                    for m in memories
-                ]
-            })
-        
-        structure.append({
-            "id": category.id,
-            "name": category.cat_name,
-            "people_count": len(people),
-            "people": people_data
-        })
-    
+            people_data.append(
+                {
+                    "id": person.id,
+                    "name": person.person_name,
+                    "file_count": len(files),
+                    "memory_count": len(memories),
+                    "files": [
+                        {
+                            "id": f.id,
+                            "file_name": f.file_name,
+                            "file_type": f.file_type,
+                            "description": f.description,
+                            "created_at": f.created_at.isoformat()
+                            if f.created_at
+                            else None,
+                        }
+                        for f in files
+                    ],
+                    "memories": [
+                        {
+                            "id": m.id,
+                            "content": m.content,
+                            "created_at": m.created_at.isoformat()
+                            if m.created_at
+                            else None,
+                        }
+                        for m in memories
+                    ],
+                }
+            )
+
+        structure.append(
+            {
+                "id": category.id,
+                "name": category.cat_name,
+                "people_count": len(people),
+                "people": people_data,
+            }
+        )
+
+    return {"user_id": user_id, "categories": structure}
+
+
+@app.post("/home/person/{person_id}/summary")
+async def generate_person_summary(
+    person_id: int,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db),
+):
+    """Generate AI summary for a person's memories"""
+    user_id = token_data["user_id"]
+
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    memories = db.query(Memory).filter(Memory.person_id == person_id).all()
+
+    if not memories:
+        return {
+            "summary": f"No memories recorded for {person.person_name} yet.",
+            "key_topics": "",
+        }
+
+    if not MemorySummarizer:
+        return {"error": "Summarization service not available"}, 503
+
+    try:
+        summarizer = MemorySummarizer()
+        memory_contents = [m.content for m in memories]
+        result = summarizer.summarize(memory_contents, person.person_name)
+
+        existing_summary = (
+            db.query(PersonSummary).filter(PersonSummary.person_id == person_id).first()
+        )
+
+        if existing_summary:
+            existing_summary.summary = result["summary"]
+            existing_summary.key_topics = result["key_topics"]
+            existing_summary.last_summary_at = datetime.utcnow()
+        else:
+            new_summary = PersonSummary(
+                person_id=person_id,
+                summary=result["summary"],
+                key_topics=result["key_topics"],
+            )
+            db.add(new_summary)
+
+        db.commit()
+
+        return result
+    except Exception as e:
+        logger.error(f"Summary generation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Summary generation failed: {str(e)}"
+        )
+
+
+@app.get("/home/person/{person_id}/summary")
+async def get_person_summary(
+    person_id: int,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db),
+):
+    """Get existing AI summary for a person"""
+    user_id = token_data["user_id"]
+
+    person = (
+        db.query(Person)
+        .join(Category)
+        .filter(Person.id == person_id, Category.user_id == user_id)
+        .first()
+    )
+
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    summary = (
+        db.query(PersonSummary).filter(PersonSummary.person_id == person_id).first()
+    )
+
+    if not summary:
+        return {
+            "summary": None,
+            "key_topics": None,
+            "message": "No summary generated yet",
+        }
+
     return {
-        "user_id": user_id,
-        "categories": structure
+        "summary": summary.summary,
+        "key_topics": summary.key_topics,
+        "last_summary_at": summary.last_summary_at.isoformat()
+        if summary.last_summary_at
+        else None,
     }
+
+
+@app.get("/home/user/relationship-suggestions")
+async def get_relationship_suggestions(
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db),
+    min_confidence: float = 0.3,
+):
+    """Get AI-suggested relationships between people"""
+    user_id = token_data["user_id"]
+
+    if not RelationshipSuggester or not SentimentAnalyzer:
+        return {
+            "suggestions": [],
+            "message": "Relationship suggestion service not available",
+        }
+
+    persons = db.query(Person).join(Category).filter(Category.user_id == user_id).all()
+
+    if len(persons) < 2:
+        return {
+            "suggestions": [],
+            "message": "Need at least 2 people to suggest relationships",
+        }
+
+    try:
+        suggester = RelationshipSuggester()
+        persons_data = []
+
+        for person in persons:
+            memories = db.query(Memory).filter(Memory.person_id == person.id).all()
+            emotion_tags = [m.emotion_tag for m in memories if m.emotion_tag]
+
+            analyzer = SentimentAnalyzer()
+            topics = []
+            for memory in memories:
+                result = analyzer.analyze(memory.content)
+                if result.emotion:
+                    topics.append(result.emotion)
+
+            persons_data.append(
+                {
+                    "id": person.id,
+                    "name": person.person_name,
+                    "emotion_tags": list(set(emotion_tags)),
+                    "topics": list(set(topics)),
+                }
+            )
+
+        suggestions = suggester.suggest_relationships(persons_data, min_confidence)
+        return {"suggestions": suggestions}
+
+    except Exception as e:
+        logger.error(f"Relationship suggestion failed: {str(e)}")
+        return {"suggestions": [], "error": str(e)}
+
+
+@app.get("/home/user/emotion-stats")
+async def get_emotion_stats(
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db),
+):
+    """Get emotion statistics across all user memories"""
+    user_id = token_data["user_id"]
+
+    memories = (
+        db.query(Memory)
+        .join(Person)
+        .join(Category)
+        .filter(Category.user_id == user_id)
+        .all()
+    )
+
+    emotion_counts = {}
+    emotion_by_person = {}
+
+    for memory in memories:
+        if memory.emotion_tag:
+            emotion_counts[memory.emotion_tag] = (
+                emotion_counts.get(memory.emotion_tag, 0) + 1
+            )
+
+            person_name = memory.person.person_name
+            if person_name not in emotion_by_person:
+                emotion_by_person[person_name] = {}
+            emotion_by_person[person_name][memory.emotion_tag] = (
+                emotion_by_person[person_name].get(memory.emotion_tag, 0) + 1
+            )
+
+    return {
+        "total_memories": len(memories),
+        "emotion_distribution": emotion_counts,
+        "emotion_by_person": emotion_by_person,
+        "emotion_colors": EMOTION_COLORS if EMOTION_COLORS else {},
+    }
+
+
+@app.post("/home/memory/{memory_id}/analyze")
+async def analyze_memory_emotion(
+    memory_id: int,
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db),
+):
+    """Re-analyze a memory's emotion (useful for updating old memories)"""
+    user_id = token_data["user_id"]
+
+    memory = (
+        db.query(Memory)
+        .join(Person)
+        .join(Category)
+        .filter(Memory.id == memory_id, Category.user_id == user_id)
+        .first()
+    )
+
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    if not SentimentAnalyzer:
+        return {"error": "Sentiment analysis service not available"}, 503
+
+    try:
+        analyzer = SentimentAnalyzer()
+        result = analyzer.analyze(memory.content)
+
+        memory.emotion_tag = result.emotion
+        memory.emotion_confidence = str(result.confidence)
+        db.commit()
+
+        return {
+            "emotion_tag": result.emotion,
+            "confidence": result.confidence,
+            "color": result.color,
+        }
+    except Exception as e:
+        logger.error(f"Memory emotion analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+@app.post("/home/user/batch-analyze")
+async def batch_analyze_memories(
+    token_data: dict = Depends(verify_token),
+    db=Depends(get_db),
+):
+    """Analyze emotions for all unanalyzed memories"""
+    user_id = token_data["user_id"]
+
+    memories = (
+        db.query(Memory)
+        .join(Person)
+        .join(Category)
+        .filter(
+            Category.user_id == user_id,
+            Memory.emotion_tag == None,
+        )
+        .all()
+    )
+
+    if not memories:
+        return {"analyzed": 0, "message": "No memories to analyze"}
+
+    if not SentimentAnalyzer:
+        return {"analyzed": 0, "error": "Sentiment analysis service not available"}, 503
+
+    analyzed_count = 0
+    try:
+        analyzer = SentimentAnalyzer()
+
+        for memory in memories:
+            result = analyzer.analyze(memory.content)
+            memory.emotion_tag = result.emotion
+            memory.emotion_confidence = str(result.confidence)
+            analyzed_count += 1
+
+        db.commit()
+        return {
+            "analyzed": analyzed_count,
+            "message": f"Successfully analyzed {analyzed_count} memories",
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Batch analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")

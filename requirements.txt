@@ -22,6 +22,20 @@ python-dotenv==1.0.0
 # PDF Generation
 reportlab==4.0.7
 pillow==10.2.0
+pypdf==5.4.0
+
+# Cloud Storage
+cloudinary>=1.44.0
+
+# RAG (optional but recommended)
+# sentence-transformers==3.4.1
+# faiss-cpu==1.10.0
+# numpy==2.2.3
+
+# AI/ML Features (optional)
+transformers>=4.36.0
+torch>=2.0.0
+ollama>=0.1.0
 
 # Optional: Development & Testing
 # pytest==7.4.3

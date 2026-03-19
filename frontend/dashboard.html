@@ -1,233 +1,679 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Memoir — Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
 </head>
-<body class="page-dashboard">
-  <header class="topbar">
-    <div class="brand-left">
-      <svg class="logo-small" viewBox="0 0 48 48" aria-hidden>
-        <rect width="48" height="48" rx="8" fill="#00A8CC"></rect>
-        <path d="M12 32 L20 16 L28 32" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span class="app-title">Memoir</span>
+<body>
+  <!-- Background -->
+  <div class="gradient-bg"></div>
+
+  <!-- App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <img src="/logo.svg" alt="Memoir" style="width: 40px; height: 40px;">
+        <span class="sidebar-logo-text">Memoir</span>
+      </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Menu</div>
+          <a href="dashboard.html" class="nav-item active">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" id="navPeople">
+            <i class="fas fa-users"></i>
+            <span>People</span>
+            <span class="nav-item-badge" id="peopleCount">0</span>
+          </a>
+          <a href="#" class="nav-item" id="navMemories">
+            <i class="fas fa-book"></i>
+            <span>Memories</span>
+            <span class="nav-item-badge" id="memoriesCount">0</span>
+          </a>
+          <a href="graph.html" class="nav-item">
+            <i class="fas fa-project-diagram"></i>
+            <span>Relationship Graph</span>
+          </a>
+        </div>
+
+        <div class="nav-section" id="categoriesNav">
+          <div class="nav-section-title">Categories</div>
+          <!-- Categories loaded dynamically -->
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Settings</div>
+          <a href="#" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span>Settings</span>
+          </a>
+          <a href="index.html" class="nav-item" id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Sign Out</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="userAvatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="userName">User</div>
+            <div class="sidebar-user-email" id="userEmail">user@example.com</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <button class="btn-icon" id="menuToggle">
+          <i class="fas fa-bars"></i>
+        </button>
+
+        <div class="topbar-search">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search memories, people..." id="searchInput">
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn-icon" id="notificationsBtn">
+            <i class="fas fa-bell"></i>
+            <span class="notification-dot" id="notificationDot" style="display:none;"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content" id="pageContent">
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-card-icon"><i class="fas fa-users"></i></div>
+            </div>
+            <div class="stat-card-value" id="statPeople">0</div>
+            <div class="stat-card-label">People</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-card-icon"><i class="fas fa-book"></i></div>
+            </div>
+            <div class="stat-card-value" id="statMemories">0</div>
+            <div class="stat-card-label">Memories</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-card-icon"><i class="fas fa-image"></i></div>
+            </div>
+            <div class="stat-card-value" id="statFiles">0</div>
+            <div class="stat-card-label">Photos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-card-icon"><i class="fas fa-link"></i></div>
+            </div>
+            <div class="stat-card-value" id="statCategories">0</div>
+            <div class="stat-card-label">Categories</div>
+          </div>
+        </div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <h1 class="page-title">Recent Memories</h1>
+          <p class="page-subtitle">Your latest memories and moments captured</p>
+        </div>
+
+        <!-- Memory Grid -->
+        <div class="masonry-grid" id="memoryGrid">
+          <div class="empty-state" id="loadingState">
+            <div class="empty-state-icon"><i class="fas fa-spinner fa-spin"></i></div>
+            <h3 class="empty-state-title">Loading memories...</h3>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- FAB Button -->
+  <button class="btn-fab" id="fabAddMemory" title="Add Memory">
+    <i class="fas fa-plus"></i>
+  </button>
+
+  <!-- Add Memory Modal -->
+  <div class="modal-overlay" id="addMemoryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Add New Memory</h3>
+        <div class="modal-progress">
+          <div class="modal-progress-step active" data-step="1"></div>
+          <div class="modal-progress-step" data-step="2"></div>
+          <div class="modal-progress-step" data-step="3"></div>
+        </div>
+        <button class="btn-icon modal-close" onclick="closeAddMemoryModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Step 1: Select Person -->
+        <div class="step-content" id="step1">
+          <h4 class="step-title">Who is this memory about?</h4>
+          <p class="step-description">Select a person from your network</p>
+          
+          <div class="person-selector" id="personSelector">
+            <!-- People loaded dynamically -->
+          </div>
+
+          <div style="margin-top: 20px; text-align: center;">
+            <button class="btn btn-ghost" onclick="showAddPersonForm()">
+              <i class="fas fa-plus"></i> Add New Person
+            </button>
+          </div>
+
+          <div class="add-person-form hidden" id="addPersonForm" style="margin-top: 20px;">
+            <div class="input-group">
+              <label class="input-label">Category</label>
+              <select class="input-field" id="newPersonCategory">
+                <!-- Categories loaded dynamically -->
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Person Name</label>
+              <input type="text" class="input-field" id="newPersonName" placeholder="Enter person name">
+            </div>
+            <button class="btn btn-primary w-full" onclick="createNewPerson()">
+              <i class="fas fa-plus"></i> Create Person
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Memory Type -->
+        <div class="step-content hidden" id="step2">
+          <h4 class="step-title">What type of memory?</h4>
+          <p class="step-description">Choose how you want to capture this moment</p>
+          
+          <div class="memory-type-selector">
+            <div class="memory-type-option selected" data-type="text">
+              <div class="memory-type-icon"><i class="fas fa-pen"></i></div>
+              <div class="memory-type-label">Text</div>
+            </div>
+            <div class="memory-type-option" data-type="photo">
+              <div class="memory-type-icon"><i class="fas fa-camera"></i></div>
+              <div class="memory-type-label">Photo</div>
+            </div>
+            <div class="memory-type-option" data-type="audio">
+              <div class="memory-type-icon"><i class="fas fa-microphone"></i></div>
+              <div class="memory-type-label">Audio</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Content & Mood -->
+        <div class="step-content hidden" id="step3">
+          <h4 class="step-title">Tell us about this moment</h4>
+          <p class="step-description">Write your memory and select the mood</p>
+          
+          <div class="input-group">
+            <label class="input-label">Your Memory</label>
+            <textarea class="input-field" id="memoryContent" placeholder="What happened? How did it feel?" rows="4"></textarea>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">How are you feeling?</label>
+            <div class="mood-selector">
+              <button class="mood-option" data-mood="happy" title="Happy">😊</button>
+              <button class="mood-option" data-mood="sad" title="Sad">😢</button>
+              <button class="mood-option" data-mood="excited" title="Excited">🤩</button>
+              <button class="mood-option" data-mood="grateful" title="Grateful">🙏</button>
+              <button class="mood-option" data-mood="nostalgic" title="Nostalgic">🥹</button>
+              <button class="mood-option" data-mood="loving" title="Loving">❤️</button>
+              <button class="mood-option" data-mood="angry" title="Angry">😤</button>
+              <button class="mood-option" data-mood="anxious" title="Anxious">😰</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalBack" onclick="prevStep()">
+          <i class="fas fa-arrow-left"></i>
+          Back
+        </button>
+        <div class="modal-footer-right">
+          <button class="btn btn-secondary" onclick="closeAddMemoryModal()">Cancel</button>
+          <button class="btn btn-primary" id="modalNext" onclick="nextStep()">
+            Next
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="user-area">
-      <a href="memoir_dashboard.html" class="btn subtle" style="text-decoration:none">✦ Graph</a>
-      <div id="userAvatar" class="avatar">U</div>
-      <div id="username" class="username muted">Guest</div>
-      <button id="logoutBtn" class="btn subtle">Sign out</button>
-    </div>
-  </header>
-
-  <main class="dashboard-container">
-
-    <!-- Category View -->
-    <section id="categoryView" class="view-section">
-      <div class="panel panel--glass">
-        <div class="panel-header-row">
-          <div>
-            <h2>📁 Your Categories</h2>
-            <p class="muted">Organize your memories by category</p>
-          </div>
-          <button id="addCategoryBtn" class="btn primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            New Category
-          </button>
-        </div>
-        <div id="categoriesContainer" class="cards-grid">
-          <div class="empty-state">Loading categories...</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Person View -->
-    <section id="personView" class="view-section hidden">
-      <div class="panel panel--glass">
-        <div class="panel-header-row">
-          <div class="flex-row">
-            <button id="backToCategoriesBtn" class="btn-back">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 18l-6-6 6-6"/>
-              </svg>
-              Back
-            </button>
-            <div>
-              <h2>👥 <span id="categoryTitle">Category</span></h2>
-              <p class="muted">People in this category</p>
-            </div>
-          </div>
-          <button id="addPersonBtn" class="btn primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Add Person
-          </button>
-        </div>
-        <div id="peopleContainer" class="cards-grid">
-          <div class="empty-state">Loading people...</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- File View -->
-    <section id="fileView" class="view-section hidden">
-      <div class="panel panel--glass">
-        <div class="breadcrumb">
-          <button id="backToPeopleBtn" class="btn-back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
-            Back
-          </button>
-          <span class="breadcrumb-text">
-            <span id="breadcrumbCategory" class="muted">Category</span>
-            <span class="muted"> / </span>
-            <span id="personTitle" class="strong">Person</span>
-          </span>
-        </div>
-
-        <div class="upload-section">
-          <h3>📤 Upload Files</h3>
-          <div class="memory-input-section">
-            <label for="memoryTextInput">📝 Add memory text for this person</label>
-            <textarea id="memoryTextInput" placeholder="Write memory text for this person..."></textarea>
-            <button id="addMemoryBtn" class="btn primary" type="button">Save Memory Text</button>
-          </div>
-
-          <div class="view-actions">
-            <button id="viewBtn" class="btn subtle" type="button">Read Memories</button>
-            <button id="downloadPdfBtn" class="btn primary" type="button">Download Person PDF</button>
-            <button id="openPersonPdfBtn" class="btn subtle" type="button">Open Person PDF</button>
-          </div>
-
-          <div class="or-divider"><span>or upload files</span></div>
-
-          <div class="drop" id="dropZone">
-            <input id="fileInput" type="file" />
-            <div class="drop-inner">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M12 3v12" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M8 7l4-4 4 4" stroke="#0B2545" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <p class="muted">Drag & drop or click to choose a file</p>
-              <p class="muted small">Photos, videos, audio, and documents</p>
-            </div>
-          </div>
-          <div class="upload-controls">
-            <input id="descInput" type="text" maxlength="180" placeholder="Optional description..." />
-            <button id="uploadBtn" class="btn primary" type="button">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              Upload
-            </button>
-          </div>
-          <div id="progressWrap" class="progress-wrap hidden">
-            <div id="progressBar" class="progress-bar" style="width:0%"></div>
-          </div>
-        </div>
-
-        <div class="files-section">
-          <h3>📂 Files</h3>
-          <div id="filesContainer" class="files-list">
-            <div class="empty-state">Loading files...</div>
-          </div>
-        </div>
-
-        <div class="files-section">
-          <h3>📖 Person PDF Reader</h3>
-          <div id="personPdfSection" class="pdf-viewer-wrap hidden">
-            <iframe id="personPdfViewer" class="pdf-viewer" title="Person PDF Viewer"></iframe>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="galleryView" class="view-section hidden">
-      <div class="panel panel--glass">
-        <div class="panel-header-row">
-          <div class="flex-row">
-            <button id="backToDashboardFromGalleryBtn" class="btn-back">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 18l-6-6 6-6"/>
-              </svg>
-              Back
-            </button>
-            <div>
-              <h2>🖼️ Memory Reader</h2>
-              <p class="muted">Read memory text and review media in one place</p>
-            </div>
-          </div>
-          <button id="downloadGalleryPdfBtn" class="btn primary" type="button">Download Full PDF</button>
-        </div>
-        <div id="galleryContainer" class="gallery-grid">
-          <div class="empty-state">Loading content...</div>
-        </div>
-      </div>
-    </section>
-
-  </main>
+  </div>
 
   <!-- Category Modal -->
-  <div id="categoryModal" class="modal hidden">
-    <div class="modal-content">
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal" style="max-width: 400px;">
       <div class="modal-header">
-        <h3>📁 Create New Category</h3>
-        <button id="closeCategoryModal" class="btn-close">&times;</button>
+        <h3 class="modal-title">Add Category</h3>
+        <button class="btn-icon modal-close" onclick="closeModal('categoryModal')">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <form id="categoryForm">
-        <label>Category Name
-          <input id="categoryNameInput" type="text" placeholder="e.g., Family, Friends, Travel..." maxlength="100" required />
-        </label>
-        <div class="modal-actions">
-          <button type="submit" class="btn primary">Create Category</button>
+      <div class="modal-body">
+        <div class="input-group">
+          <label class="input-label">Category Name</label>
+          <input type="text" class="input-field" id="categoryNameInput" placeholder="e.g., Family, Friends, Work">
         </div>
-      </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('categoryModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="createCategory()">
+          <i class="fas fa-plus"></i> Create
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Person Modal -->
-  <div id="personModal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>👤 Add New Person</h3>
-        <button id="closePersonModal" class="btn-close">&times;</button>
-      </div>
-      <form id="personForm">
-        <label>Person Name
-          <input id="personNameInput" type="text" placeholder="Enter name..." maxlength="100" required />
-        </label>
-        <div class="modal-actions">
-          <button type="submit" class="btn primary">Add Person</button>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/app.js"></script>
+  <script>
+    const API_BASE = 'http://127.0.0.1:8000';
+    let currentStep = 1;
+    let selectedPerson = null;
+    let selectedPersonName = '';
+    let selectedType = 'text';
+    let selectedMood = '';
+    let categories = [];
+    let people = [];
+    let allMemories = [];
+
+    // Check authentication
+    function checkAuth() {
+      const token = localStorage.getItem('memoir_token');
+      const userName = localStorage.getItem('memoir_user');
+      if (!token) {
+        window.location.href = 'index.html';
+        return false;
+      }
+      if (userName) {
+        document.getElementById('userName').textContent = userName;
+        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+      }
+      return true;
+    }
+
+    // API calls
+    async function apiGet(endpoint) {
+      const token = localStorage.getItem('memoir_token');
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPost(endpoint, body) {
+      const token = localStorage.getItem('memoir_token');
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `API Error: ${res.status}`);
+      return data;
+    }
+
+    // Load all data
+    async function loadData() {
+      try {
+        // Load categories
+        categories = await apiGet('/home/categories');
+        renderCategories();
+        updateStats();
+        
+        // Load all content
+        const content = await apiGet('/home/user/all-content');
+        allMemories = content.content || [];
+        
+        // Extract people from categories
+        people = [];
+        for (const cat of categories) {
+          const catPeople = await apiGet(`/home/category/${cat.id}/people`);
+          people = people.concat(catPeople.map(p => ({ ...p, category: cat.cat_name })));
+        }
+        
+        renderPeopleSelector();
+        renderMemories();
+        updateNavCounts();
+        
+        document.getElementById('loadingState').style.display = 'none';
+      } catch (e) {
+        console.error('Failed to load data:', e);
+        showToast('Failed to load data. Please refresh.', 'error');
+      }
+    }
+
+    function renderCategories() {
+      const container = document.getElementById('categoriesNav');
+      const catsHtml = categories.map(cat => `
+        <a href="#" class="nav-item" data-category="${cat.id}">
+          <i class="fas fa-folder"></i>
+          <span>${escapeHtml(cat.cat_name)}</span>
+          <span class="nav-item-badge">...</span>
+        </a>
+      `).join('');
+      
+      container.innerHTML = `
+        <div class="nav-section-title">Categories</div>
+        ${catsHtml}
+        <button class="btn btn-ghost w-full" onclick="openModal('categoryModal')" style="margin-top: 8px;">
+          <i class="fas fa-plus"></i> Add Category
+        </button>
+      `;
+      
+      // Populate category dropdown
+      const select = document.getElementById('newPersonCategory');
+      select.innerHTML = categories.map(c => `<option value="${c.id}">${escapeHtml(c.cat_name)}</option>`).join('');
+      
+      document.getElementById('statCategories').textContent = categories.length;
+    }
+
+    function renderPeopleSelector() {
+      const container = document.getElementById('personSelector');
+      if (people.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="padding: 40px;">
+            <p>No people yet. Add someone to start recording memories!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = people.map(p => `
+        <div class="person-selector-item" data-person-id="${p.id}" data-person-name="${escapeHtml(p.person_name)}" data-category="${escapeHtml(p.category || '')}">
+          <div class="person-selector-avatar">${p.person_name.charAt(0).toUpperCase()}</div>
+          <div>
+            <div style="font-weight: 600;">${escapeHtml(p.person_name)}</div>
+            <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(p.category || 'Uncategorized')}</div>
+          </div>
         </div>
-      </form>
-    </div>
-  </div>
+      `).join('');
 
-  <div id="imageModal" class="image-modal hidden">
-    <div id="imageModalOverlay" class="image-modal-overlay"></div>
-    <div class="image-modal-content">
-      <button id="imageModalClose" class="image-modal-close" aria-label="Close image preview">×</button>
-      <img id="imageModalImg" class="image-modal-image" alt="Preview" />
-      <div class="image-modal-info">
-        <h3 id="imageModalTitle"></h3>
-        <p id="imageModalMeta"></p>
-        <p id="imageModalDesc"></p>
-      </div>
-    </div>
-  </div>
+      // Add click handlers
+      container.querySelectorAll('.person-selector-item').forEach(item => {
+        item.addEventListener('click', () => {
+          container.querySelectorAll('.person-selector-item').forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          selectedPerson = parseInt(item.dataset.personId);
+          selectedPersonName = item.dataset.personName;
+        });
+      });
+    }
 
-  <div id="toast" class="toast"></div>
-  <script src="app.js"></script>
+    function renderMemories() {
+      const container = document.getElementById('memoryGrid');
+      
+      // Filter memories that have person info
+      const memoriesWithPeople = allMemories.filter(m => m.type === 'memory' && m.person_name);
+      
+      if (memoriesWithPeople.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-book-open"></i></div>
+            <h3 class="empty-state-title">No memories yet</h3>
+            <p class="empty-state-description">Click the + button to add your first memory!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = memoriesWithPeople.slice(0, 20).map(memory => `
+        <div class="memory-card ${memory.emotion_tag || ''}" onclick="openPersonProfile(${memory.person_id})">
+          <div class="memory-card-header">
+            <div class="memory-card-person">
+              <div class="memory-card-avatar">${memory.person_name.charAt(0).toUpperCase()}</div>
+              <div>
+                <div class="memory-card-person-name">${escapeHtml(memory.person_name)}</div>
+                <div class="memory-card-person-category">${escapeHtml(memory.category_name || '')}</div>
+              </div>
+            </div>
+            ${memory.emotion_tag ? `<div class="memory-card-mood">${getEmotionEmoji(memory.emotion_tag)} ${memory.emotion_tag}</div>` : ''}
+          </div>
+          <div class="memory-card-content">
+            ${escapeHtml(memory.content)}
+          </div>
+          <div class="memory-card-footer">
+            <div class="memory-card-date">
+              <i class="far fa-calendar"></i>
+              ${formatDate(memory.created_at)}
+            </div>
+            <div class="memory-card-media">
+              <div class="memory-card-media-item">
+                <i class="fas fa-book"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateNavCounts() {
+      document.getElementById('peopleCount').textContent = people.length;
+      document.getElementById('memoriesCount').textContent = allMemories.filter(m => m.type === 'memory').length;
+      document.getElementById('statPeople').textContent = people.length;
+      document.getElementById('statMemories').textContent = allMemories.filter(m => m.type === 'memory').length;
+      document.getElementById('statFiles').textContent = allMemories.filter(m => m.type === 'file').length;
+    }
+
+    function updateStats() {
+      document.getElementById('statCategories').textContent = categories.length;
+    }
+
+    function openPersonProfile(personId) {
+      window.location.href = `person.html?id=${personId}`;
+    }
+
+    // Modal steps
+    function updateProgress() {
+      document.querySelectorAll('.modal-progress-step').forEach((step, index) => {
+        step.classList.remove('active', 'completed');
+        if (index + 1 < currentStep) step.classList.add('completed');
+        else if (index + 1 === currentStep) step.classList.add('active');
+      });
+
+      document.getElementById('step1').classList.toggle('hidden', currentStep !== 1);
+      document.getElementById('step2').classList.toggle('hidden', currentStep !== 2);
+      document.getElementById('step3').classList.toggle('hidden', currentStep !== 3);
+
+      document.getElementById('modalBack').style.visibility = currentStep === 1 ? 'hidden' : 'visible';
+      document.getElementById('modalNext').innerHTML = currentStep === 3 
+        ? 'Save Memory <i class="fas fa-check"></i>' 
+        : 'Next <i class="fas fa-arrow-right"></i>';
+    }
+
+    function nextStep() {
+      if (currentStep === 1 && !selectedPerson) {
+        showToast('Please select a person', 'warning');
+        return;
+      }
+      if (currentStep < 3) {
+        currentStep++;
+        updateProgress();
+      } else {
+        saveMemory();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateProgress();
+      }
+    }
+
+    function openAddMemoryModal() {
+      document.getElementById('addMemoryModal').classList.add('open');
+      currentStep = 1;
+      selectedPerson = null;
+      selectedType = 'text';
+      selectedMood = '';
+      document.querySelectorAll('.person-selector-item').forEach(i => i.classList.remove('selected'));
+      document.querySelectorAll('.memory-type-option').forEach(o => o.classList.remove('selected'));
+      document.querySelector('.memory-type-option[data-type="text"]').classList.add('selected');
+      document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
+      document.getElementById('memoryContent').value = '';
+      updateProgress();
+    }
+
+    function closeAddMemoryModal() {
+      document.getElementById('addMemoryModal').classList.remove('open');
+    }
+
+    async function saveMemory() {
+      const content = document.getElementById('memoryContent').value.trim();
+      if (!content) {
+        showToast('Please write something about this memory', 'warning');
+        return;
+      }
+
+      try {
+        await apiPost(`/home/person/${selectedPerson}/memory`, { content });
+        showToast('Memory saved successfully!', 'success');
+        closeAddMemoryModal();
+        await loadData();
+      } catch (e) {
+        showToast('Failed to save memory: ' + e.message, 'error');
+      }
+    }
+
+    function showAddPersonForm() {
+      document.getElementById('addPersonForm').classList.toggle('hidden');
+    }
+
+    async function createNewPerson() {
+      const categoryId = document.getElementById('newPersonCategory').value;
+      const name = document.getElementById('newPersonName').value.trim();
+      
+      if (!name) {
+        showToast('Please enter a name', 'warning');
+        return;
+      }
+
+      try {
+        await apiPost('/home/person', { person_name: name, category_id: parseInt(categoryId) });
+        showToast('Person created!', 'success');
+        document.getElementById('newPersonName').value = '';
+        document.getElementById('addPersonForm').classList.add('hidden');
+        await loadData();
+        
+        // Auto-select the new person
+        selectedPerson = people.find(p => p.person_name === name)?.id;
+        selectedPersonName = name;
+      } catch (e) {
+        showToast('Failed to create person: ' + e.message, 'error');
+      }
+    }
+
+    async function createCategory() {
+      const name = document.getElementById('categoryNameInput').value.trim();
+      if (!name) {
+        showToast('Please enter a category name', 'warning');
+        return;
+      }
+
+      try {
+        await apiPost('/home/category', { cat_name: name });
+        showToast('Category created!', 'success');
+        document.getElementById('categoryNameInput').value = '';
+        closeModal('categoryModal');
+        await loadData();
+      } catch (e) {
+        showToast('Failed to create category: ' + e.message, 'error');
+      }
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!checkAuth()) return;
+      
+      loadData();
+
+      // FAB click
+      document.getElementById('fabAddMemory').addEventListener('click', openAddMemoryModal);
+
+      // Memory type selector
+      document.querySelectorAll('.memory-type-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.memory-type-option').forEach(o => o.classList.remove('selected'));
+          option.classList.add('selected');
+          selectedType = option.dataset.type;
+        });
+      });
+
+      // Mood selector
+      document.querySelectorAll('.mood-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
+          option.classList.add('selected');
+          selectedMood = option.dataset.mood;
+        });
+      });
+
+      // Search
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.memory-card').forEach(card => {
+          const content = card.querySelector('.memory-card-content')?.textContent.toLowerCase() || '';
+          const name = card.querySelector('.memory-card-person-name')?.textContent.toLowerCase() || '';
+          card.style.display = (content.includes(query) || name.includes(query)) ? '' : 'none';
+        });
+      });
+
+      // Logout
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          localStorage.removeItem('memoir_token');
+          localStorage.removeItem('memoir_user');
+          window.location.href = 'index.html';
+        });
+      }
+
+      // Mobile menu
+      document.getElementById('menuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+      });
+
+      // Close modal on overlay click
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target.classList.contains('modal-overlay')) {
+            overlay.classList.remove('open');
+          }
+        });
+      });
+    });
+  </script>
 </body>
 </html>

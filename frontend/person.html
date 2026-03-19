@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memoir — Person Profile</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+</head>
+<body>
+  <!-- Background -->
+  <div class="gradient-bg"></div>
+
+  <!-- App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <img src="/logo.svg" alt="Memoir" style="width: 40px; height: 40px;">
+        <span class="sidebar-logo-text">Memoir</span>
+      </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Menu</div>
+          <a href="dashboard.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" id="navPeople">
+            <i class="fas fa-users"></i>
+            <span>People</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i class="fas fa-book"></i>
+            <span>Memories</span>
+          </a>
+          <a href="graph.html" class="nav-item">
+            <i class="fas fa-project-diagram"></i>
+            <span>Relationship Graph</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="userAvatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="userName">User</div>
+            <div class="sidebar-user-email">Profile</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <a href="dashboard.html" class="btn-icon">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+
+        <div class="topbar-search">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search memories..." id="searchInput">
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn-icon" id="shareBtn" title="Share">
+            <i class="fas fa-share-alt"></i>
+          </button>
+          <button class="btn-icon" id="moreBtn" title="More">
+            <i class="fas fa-ellipsis-v"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content" id="pageContent">
+        <!-- Loading -->
+        <div class="empty-state" id="loadingState">
+          <div class="empty-state-icon"><i class="fas fa-spinner fa-spin"></i></div>
+          <h3 class="empty-state-title">Loading...</h3>
+        </div>
+
+        <!-- Person Hero (hidden initially) -->
+        <div class="person-hero hidden" id="personHero">
+          <div class="person-hero-content">
+            <div class="person-avatar" id="personAvatar">?</div>
+            <div class="person-info">
+              <h1 class="person-name" id="personName">Loading...</h1>
+              <div class="person-badges">
+                <span class="person-badge category" id="personCategory">
+                  <i class="fas fa-folder"></i>
+                  <span>Category</span>
+                </span>
+                <span class="person-badge">
+                  <i class="far fa-calendar"></i>
+                  <span id="personSince">Added recently</span>
+                </span>
+              </div>
+            </div>
+            <div class="person-actions">
+              <button class="btn btn-secondary" id="editPersonBtn">
+                <i class="fas fa-edit"></i>
+                Edit
+              </button>
+              <button class="btn btn-primary" onclick="openAddMemoryModal()">
+                <i class="fas fa-plus"></i>
+                Add Memory
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Summary Card (hidden initially) -->
+        <div class="glass-card hidden" id="aiSummaryCard" style="padding: 24px; margin-bottom: 32px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 40px; height: 40px; background: var(--accent-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-brain" style="color: white;"></i>
+            </div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 600;">AI Summary</h3>
+              <p style="font-size: 12px; color: var(--text-muted);" id="summaryCount">Generated from 0 memories</p>
+            </div>
+            <button class="btn btn-ghost" id="refreshSummaryBtn" style="margin-left: auto;">
+              <i class="fas fa-sync-alt"></i>
+              Refresh
+            </button>
+          </div>
+          <p id="aiSummaryText" style="color: var(--text-secondary); line-height: 1.7; font-size: 14px;">
+            Loading summary...
+          </p>
+          <div id="keyTopicsContainer" style="display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap;">
+            <!-- Topics loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Timeline Header -->
+        <div class="page-header hidden" id="timelineHeader">
+          <h2 class="page-title">Memory Timeline</h2>
+          <p class="page-subtitle" id="memoryCount">0 memories</p>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline hidden" id="timelineContainer">
+          <!-- Memories loaded dynamically -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state hidden" id="emptyState">
+          <div class="empty-state-icon"><i class="fas fa-book-open"></i></div>
+          <h3 class="empty-state-title">No memories yet</h3>
+          <p class="empty-state-description">Click the + button to add your first memory with this person!</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- FAB Button -->
+  <button class="btn-fab" onclick="openAddMemoryModal()" title="Add Memory">
+    <i class="fas fa-plus"></i>
+  </button>
+
+  <!-- Add Memory Modal -->
+  <div class="modal-overlay" id="addMemoryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Memory</h3>
+        <div class="modal-progress">
+          <div class="modal-progress-step active" data-step="1"></div>
+          <div class="modal-progress-step" data-step="2"></div>
+        </div>
+        <button class="btn-icon modal-close" onclick="closeAddMemoryModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Step 1: Memory Type -->
+        <div class="step-content" id="step1">
+          <h4 class="step-title">What type of memory?</h4>
+          <p class="step-description">Choose how you want to capture this moment</p>
+          
+          <div class="memory-type-selector">
+            <div class="memory-type-option selected" data-type="text">
+              <div class="memory-type-icon"><i class="fas fa-pen"></i></div>
+              <div class="memory-type-label">Text</div>
+            </div>
+            <div class="memory-type-option" data-type="photo">
+              <div class="memory-type-icon"><i class="fas fa-camera"></i></div>
+              <div class="memory-type-label">Photo</div>
+            </div>
+            <div class="memory-type-option" data-type="audio">
+              <div class="memory-type-icon"><i class="fas fa-microphone"></i></div>
+              <div class="memory-type-label">Audio</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Content & Mood -->
+        <div class="step-content hidden" id="step2">
+          <h4 class="step-title">Tell us about this moment</h4>
+          <p class="step-description">Write your memory and select the mood</p>
+          
+          <div class="input-group">
+            <label class="input-label">Your Memory</label>
+            <textarea class="input-field" id="memoryContent" placeholder="What happened? How did it feel?" rows="4"></textarea>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">How are you feeling?</label>
+            <div class="mood-selector">
+              <button class="mood-option" data-mood="happy" title="Happy">😊</button>
+              <button class="mood-option" data-mood="sad" title="Sad">😢</button>
+              <button class="mood-option" data-mood="excited" title="Excited">🤩</button>
+              <button class="mood-option" data-mood="grateful" title="Grateful">🙏</button>
+              <button class="mood-option" data-mood="nostalgic" title="Nostalgic">🥹</button>
+              <button class="mood-option" data-mood="loving" title="Loving">❤️</button>
+              <button class="mood-option" data-mood="angry" title="Angry">😤</button>
+              <button class="mood-option" data-mood="anxious" title="Anxious">😰</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalBack" onclick="prevStep()">
+          <i class="fas fa-arrow-left"></i>
+          Back
+        </button>
+        <div class="modal-footer-right">
+          <button class="btn btn-secondary" onclick="closeAddMemoryModal()">Cancel</button>
+          <button class="btn btn-primary" id="modalNext" onclick="nextStep()">
+            Next
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/app.js"></script>
+  <script>
+    const API_BASE = 'http://127.0.0.1:8000';
+    let currentStep = 1;
+    let personId = null;
+    let personData = null;
+    let memories = [];
+    let selectedType = 'text';
+    let selectedMood = '';
+
+    // Check authentication
+    function checkAuth() {
+      const token = localStorage.getItem('memoir_token');
+      if (!token) {
+        window.location.href = 'index.html';
+        return false;
+      }
+      return true;
+    }
+
+    // API calls
+    async function apiGet(endpoint) {
+      const token = localStorage.getItem('memoir_token');
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPost(endpoint, body) {
+      const token = localStorage.getItem('memoir_token');
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `API Error: ${res.status}`);
+      return data;
+    }
+
+    // Load person data
+    async function loadPersonData() {
+      const urlParams = new URLSearchParams(window.location.search);
+      personId = urlParams.get('id');
+      
+      if (!personId) {
+        showToast('No person specified', 'error');
+        document.getElementById('loadingState').innerHTML = `
+          <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+          <h3 class="empty-state-title">No person selected</h3>
+          <a href="dashboard.html" class="btn btn-primary" style="margin-top: 16px;">Go to Dashboard</a>
+        `;
+        return;
+      }
+
+      try {
+        // Load person details and memories
+        const [person, mems, summary] = await Promise.all([
+          getPersonDetails(),
+          apiGet(`/home/person/${personId}/memories`),
+          getPersonSummary()
+        ]);
+
+        personData = person;
+        memories = mems || [];
+
+        // Update page
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('personHero').classList.remove('hidden');
+        
+        document.getElementById('personName').textContent = personData.person_name;
+        document.getElementById('personAvatar').textContent = personData.person_name.charAt(0).toUpperCase();
+        document.getElementById('personCategory').querySelector('span').textContent = personData.category_name || 'Uncategorized';
+        
+        if (personData.created_at) {
+          document.getElementById('personSince').textContent = `Added ${formatDate(personData.created_at)}`;
+        }
+
+        // AI Summary
+        if (summary && summary.summary) {
+          document.getElementById('aiSummaryCard').classList.remove('hidden');
+          document.getElementById('aiSummaryText').textContent = summary.summary;
+          document.getElementById('summaryCount').textContent = `Generated from ${memories.length} memories`;
+          
+          if (summary.key_topics) {
+            const topics = summary.key_topics.split(',').map(t => t.trim()).filter(t => t);
+            document.getElementById('keyTopicsContainer').innerHTML = topics.map(t => 
+              `<span class="key-topic-tag">${escapeHtml(t)}</span>`
+            ).join('');
+          }
+        }
+
+        // Timeline
+        renderTimeline();
+        
+      } catch (e) {
+        console.error('Failed to load person:', e);
+        showToast('Failed to load person data', 'error');
+        document.getElementById('loadingState').innerHTML = `
+          <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+          <h3 class="empty-state-title">Error loading data</h3>
+          <a href="dashboard.html" class="btn btn-primary" style="margin-top: 16px;">Go to Dashboard</a>
+        `;
+      }
+    }
+
+    async function getPersonDetails() {
+      // Get person from all content
+      const content = await apiGet('/home/user/all-content');
+      const memory = content.content?.find(m => m.person_id === parseInt(personId));
+      
+      if (memory) {
+        return {
+          person_name: memory.person_name,
+          category_name: memory.category_name,
+          created_at: null
+        };
+      }
+      
+      // Fallback: try to get from categories
+      const categories = await apiGet('/home/categories');
+      for (const cat of categories) {
+        const people = await apiGet(`/home/category/${cat.id}/people`);
+        const person = people.find(p => p.id === parseInt(personId));
+        if (person) {
+          return { ...person, category_name: cat.cat_name };
+        }
+      }
+      
+      throw new Error('Person not found');
+    }
+
+    async function getPersonSummary() {
+      try {
+        return await apiGet(`/home/person/${personId}/summary`);
+      } catch {
+        return {};
+      }
+    }
+
+    function renderTimeline() {
+      const container = document.getElementById('timelineContainer');
+      const emptyState = document.getElementById('emptyState');
+      const header = document.getElementById('timelineHeader');
+
+      if (memories.length === 0) {
+        container.classList.add('hidden');
+        header.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      header.classList.remove('hidden');
+      container.classList.remove('hidden');
+      
+      document.getElementById('memoryCount').textContent = `${memories.length} memories`;
+
+      container.innerHTML = memories.map((memory, index) => `
+        <div class="timeline-item">
+          <div class="timeline-marker">${getEmotionEmoji(memory.emotion_tag) || '📝'}</div>
+          <div class="timeline-card">
+            <div class="timeline-date">${formatDate(memory.created_at)}</div>
+            ${memory.emotion_tag ? `<div class="timeline-mood">${getEmotionEmoji(memory.emotion_tag)} ${memory.emotion_tag}</div>` : ''}
+            <div class="timeline-content">
+              ${escapeHtml(memory.content)}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Modal steps
+    function updateProgress() {
+      document.querySelectorAll('.modal-progress-step').forEach((step, index) => {
+        step.classList.remove('active', 'completed');
+        if (index + 1 < currentStep) step.classList.add('completed');
+        else if (index + 1 === currentStep) step.classList.add('active');
+      });
+
+      document.getElementById('step1').classList.toggle('hidden', currentStep !== 1);
+      document.getElementById('step2').classList.toggle('hidden', currentStep !== 2);
+
+      document.getElementById('modalBack').style.visibility = currentStep === 1 ? 'hidden' : 'visible';
+      document.getElementById('modalNext').innerHTML = currentStep === 2 
+        ? 'Save Memory <i class="fas fa-check"></i>' 
+        : 'Next <i class="fas fa-arrow-right"></i>';
+    }
+
+    function nextStep() {
+      if (currentStep < 2) {
+        currentStep++;
+        updateProgress();
+      } else {
+        saveMemory();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateProgress();
+      }
+    }
+
+    function openAddMemoryModal() {
+      document.getElementById('addMemoryModal').classList.add('open');
+      currentStep = 1;
+      selectedMood = '';
+      document.getElementById('memoryContent').value = '';
+      document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
+      updateProgress();
+    }
+
+    function closeAddMemoryModal() {
+      document.getElementById('addMemoryModal').classList.remove('open');
+    }
+
+    async function saveMemory() {
+      const content = document.getElementById('memoryContent').value.trim();
+      if (!content) {
+        showToast('Please write something about this memory', 'warning');
+        return;
+      }
+
+      try {
+        await apiPost(`/home/person/${personId}/memory`, { content });
+        showToast('Memory saved successfully!', 'success');
+        closeAddMemoryModal();
+        
+        // Reload memories
+        memories = await apiGet(`/home/person/${personId}/memories`);
+        renderTimeline();
+      } catch (e) {
+        showToast('Failed to save memory: ' + e.message, 'error');
+      }
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!checkAuth()) return;
+      
+      loadPersonData();
+
+      // Memory type selector
+      document.querySelectorAll('.memory-type-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.memory-type-option').forEach(o => o.classList.remove('selected'));
+          option.classList.add('selected');
+          selectedType = option.dataset.type;
+        });
+      });
+
+      // Mood selector
+      document.querySelectorAll('.mood-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
+          option.classList.add('selected');
+          selectedMood = option.dataset.mood;
+        });
+      });
+
+      // Search
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.timeline-card').forEach((card, index) => {
+          const content = card.querySelector('.timeline-content')?.textContent.toLowerCase() || '';
+          card.style.display = content.includes(query) ? '' : 'none';
+        });
+      });
+
+      // Refresh summary
+      document.getElementById('refreshSummaryBtn')?.addEventListener('click', async () => {
+        try {
+          showToast('Generating summary...', 'info');
+          await apiPost(`/home/person/${personId}/summary`, {});
+          const summary = await getPersonSummary();
+          if (summary && summary.summary) {
+            document.getElementById('aiSummaryText').textContent = summary.summary;
+            if (summary.key_topics) {
+              const topics = summary.key_topics.split(',').map(t => t.trim()).filter(t => t);
+              document.getElementById('keyTopicsContainer').innerHTML = topics.map(t => 
+                `<span class="key-topic-tag">${escapeHtml(t)}</span>`
+              ).join('');
+            }
+          }
+          showToast('Summary generated!', 'success');
+        } catch (e) {
+          showToast('Failed to generate summary', 'error');
+        }
+      });
+
+      // Close modal on overlay click
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target.classList.contains('modal-overlay')) {
+            overlay.classList.remove('open');
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

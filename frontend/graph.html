@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memoir — Relationship Graph</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+</head>
+<body>
+  <!-- Background -->
+  <div class="gradient-bg"></div>
+
+  <!-- App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <img src="/logo.svg" alt="Memoir" style="width: 40px; height: 40px;">
+        <span class="sidebar-logo-text">Memoir</span>
+      </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Menu</div>
+          <a href="dashboard.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" id="navPeople">
+            <i class="fas fa-users"></i>
+            <span>People</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i class="fas fa-book"></i>
+            <span>Memories</span>
+          </a>
+          <a href="graph.html" class="nav-item active">
+            <i class="fas fa-project-diagram"></i>
+            <span>Relationship Graph</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="userAvatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="userName">User</div>
+            <div class="sidebar-user-email">Graph View</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <a href="dashboard.html" class="btn-icon">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+
+        <div class="topbar-search">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search people..." id="searchInput">
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn-icon" id="expandBtn" title="Expand">
+            <i class="fas fa-expand"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content" style="padding-top: 20px;">
+        <!-- Graph Filter Bar -->
+        <div class="graph-filter-bar">
+          <button class="graph-filter-btn active" data-filter="all">All</button>
+          <button class="graph-filter-btn" data-filter="family">Family</button>
+          <button class="graph-filter-btn" data-filter="friends">Friends</button>
+          <button class="graph-filter-btn" data-filter="work">Work</button>
+        </div>
+
+        <!-- Graph Container -->
+        <div class="graph-container" id="graphContainer">
+          <canvas id="graphCanvas"></canvas>
+          
+          <!-- Graph Nodes (loaded dynamically) -->
+          <div id="nodesContainer"></div>
+          
+          <!-- Loading state -->
+          <div class="empty-state" id="loadingState" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+            <div class="empty-state-icon"><i class="fas fa-spinner fa-spin"></i></div>
+            <h3 class="empty-state-title">Loading people...</h3>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Person Detail Panel -->
+  <div class="graph-panel" id="personPanel">
+    <button class="btn-icon graph-panel-close" onclick="closePersonPanel()">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="person-hero" style="padding: 32px; margin: -32px -32px 24px -32px;">
+      <div class="person-hero-content" style="flex-direction: column; text-align: center;">
+        <div class="person-avatar" id="panelAvatar" style="width: 80px; height: 80px; font-size: 32px;">?</div>
+        <div class="person-info" style="text-align: center;">
+          <h2 class="person-name" id="panelName" style="font-size: 24px;">Loading...</h2>
+          <div class="person-badges" style="justify-content: center;">
+            <span class="person-badge category" id="panelCategoryBadge">
+              <i class="fas fa-folder"></i>
+              <span id="panelCategory">Category</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Summary -->
+    <div class="glass-card" style="padding: 20px; margin-bottom: 20px;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <i class="fas fa-brain" style="color: var(--accent-primary);"></i>
+        <span style="font-weight: 600;">AI Summary</span>
+      </div>
+      <p id="panelSummary" style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+        Loading summary...
+      </p>
+    </div>
+
+    <!-- Stats -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+      <div class="glass-card" style="padding: 16px; text-align: center;">
+        <div style="font-size: 24px; font-weight: 700; color: var(--accent-primary);" id="panelMemoryCount">0</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Memories</div>
+      </div>
+      <div class="glass-card" style="padding: 16px; text-align: center;">
+        <div style="font-size: 24px; font-weight: 700; color: var(--accent-tertiary);" id="panelFileCount">0</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Photos</div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="margin-top: 24px; display: flex; gap: 12px;">
+      <button class="btn btn-primary w-full" onclick="viewFullProfile()">
+        <i class="fas fa-user"></i>
+        View Profile
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const API_BASE = 'http://127.0.0.1:8000';
+    let people = [];
+    let categories = [];
+    let currentFilter = 'all';
+    let selectedPerson = null;
+
+    // Check authentication
+    function checkAuth() {
+      const token = localStorage.getItem('memoir_token');
+      const userName = localStorage.getItem('memoir_user');
+      if (!token) {
+        window.location.href = 'index.html';
+        return false;
+      }
+      if (userName) {
+        document.getElementById('userName').textContent = userName;
+        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+      }
+      return true;
+    }
+
+    // API calls
+    async function apiGet(endpoint) {
+      const token = localStorage.getItem('memoir_token');
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      return res.json();
+    }
+
+    // Load data
+    async function loadData() {
+      try {
+        // Load categories
+        categories = await apiGet('/home/categories');
+        
+        // Load all people
+        people = [];
+        for (const cat of categories) {
+          const catPeople = await apiGet(`/home/category/${cat.id}/people`);
+          people = people.concat(catPeople.map(p => ({ ...p, category: cat.cat_name, category_id: cat.id })));
+        }
+        
+        document.getElementById('loadingState').style.display = 'none';
+        renderNodes();
+        drawEdges();
+      } catch (e) {
+        console.error('Failed to load data:', e);
+        showToast('Failed to load people data', 'error');
+      }
+    }
+
+    function renderNodes() {
+      const container = document.getElementById('nodesContainer');
+      
+      if (people.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+            <div class="empty-state-icon"><i class="fas fa-users"></i></div>
+            <h3 class="empty-state-title">No people yet</h3>
+            <p class="empty-state-description">Add people from the dashboard to see them here!</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Calculate positions for nodes
+      const container = document.getElementById('graphContainer');
+      const containerRect = container.getBoundingClientRect();
+      const width = containerRect.width;
+      const height = containerRect.height;
+
+      // Position nodes in a circle
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = Math.min(width, height) * 0.35;
+
+      container.innerHTML = people.map((person, index) => {
+        const angle = (index / people.length) * 2 * Math.PI - Math.PI / 2;
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        
+        const categoryClass = person.category?.toLowerCase() || 'friends';
+        const initial = person.person_name?.charAt(0).toUpperCase() || '?';
+        
+        return `
+          <div class="graph-node ${categoryClass}" 
+               style="position: absolute; left: ${x}px; top: ${y}px; transform: translate(-50%, -50%);"
+               data-person-id="${person.id}"
+               data-person-name="${escapeHtml(person.person_name)}"
+               data-category="${escapeHtml(person.category || '')}"
+               onclick="openPersonPanel(${person.id})">
+            <span>${initial}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function drawEdges() {
+      const canvas = document.getElementById('graphCanvas');
+      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('graphContainer');
+      
+      function resize() {
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+      }
+      resize();
+      window.addEventListener('resize', () => {
+        resize();
+        drawEdges();
+      });
+
+      // Simple animation
+      let time = 0;
+      const width = canvas.width;
+      const height = canvas.height;
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+        time += 0.02;
+
+        // Draw animated gradient background
+        const gradient = ctx.createRadialGradient(
+          width / 2 + Math.sin(time) * 50,
+          height / 2 + Math.cos(time) * 50,
+          0,
+          width / 2,
+          height / 2,
+          Math.max(width, height) * 0.5
+        );
+        gradient.addColorStop(0, 'rgba(139, 92, 246, 0.05)');
+        gradient.addColorStop(1, 'rgba(6, 182, 212, 0.02)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    }
+
+    // Filter functionality
+    document.querySelectorAll('.graph-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.graph-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        filterNodes();
+      });
+    });
+
+    function filterNodes() {
+      document.querySelectorAll('.graph-node').forEach(node => {
+        const category = node.dataset.category?.toLowerCase() || '';
+        
+        if (currentFilter === 'all' || category === currentFilter) {
+          node.style.opacity = '1';
+          node.style.transform = 'translate(-50%, -50%) scale(1)';
+        } else {
+          node.style.opacity = '0.2';
+          node.style.transform = 'translate(-50%, -50%) scale(0.8)';
+        }
+      });
+    }
+
+    // Panel functionality
+    async function openPersonPanel(personId) {
+      selectedPerson = people.find(p => p.id === personId);
+      if (!selectedPerson) return;
+
+      document.getElementById('panelAvatar').textContent = selectedPerson.person_name?.charAt(0).toUpperCase() || '?';
+      document.getElementById('panelName').textContent = selectedPerson.person_name || 'Unknown';
+      document.getElementById('panelCategory').textContent = selectedPerson.category || 'Uncategorized';
+      document.getElementById('panelSummary').textContent = 'Loading...';
+      document.getElementById('panelMemoryCount').textContent = '...';
+      document.getElementById('panelFileCount').textContent = '...';
+
+      // Set avatar color
+      const avatar = document.getElementById('panelAvatar');
+      const category = selectedPerson.category?.toLowerCase() || '';
+      if (category === 'family') avatar.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+      else if (category === 'friends') avatar.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+      else if (category === 'work') avatar.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+      else avatar.style.background = 'var(--accent-gradient)';
+
+      document.getElementById('personPanel').classList.add('open');
+
+      // Load details
+      try {
+        const [memories, files, summary] = await Promise.all([
+          apiGet(`/home/person/${personId}/memories`),
+          apiGet(`/home/person/${personId}/files`),
+          getPersonSummary(personId)
+        ]);
+
+        document.getElementById('panelMemoryCount').textContent = (memories || []).length;
+        document.getElementById('panelFileCount').textContent = (files || []).length;
+
+        if (summary && summary.summary) {
+          document.getElementById('panelSummary').textContent = summary.summary;
+        } else {
+          document.getElementById('panelSummary').textContent = 'No AI summary available yet.';
+        }
+      } catch (e) {
+        console.error('Failed to load person details:', e);
+        document.getElementById('panelSummary').textContent = 'Failed to load details.';
+      }
+    }
+
+    async function getPersonSummary(personId) {
+      try {
+        return await apiGet(`/home/person/${personId}/summary`);
+      } catch {
+        return {};
+      }
+    }
+
+    function closePersonPanel() {
+      document.getElementById('personPanel').classList.remove('open');
+      selectedPerson = null;
+    }
+
+    function viewFullProfile() {
+      if (selectedPerson) {
+        window.location.href = `person.html?id=${selectedPerson.id}`;
+      }
+    }
+
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll('.graph-node').forEach(node => {
+        const name = node.dataset.personName?.toLowerCase() || '';
+        if (name.includes(query)) {
+          node.style.opacity = '1';
+          node.style.transform = 'translate(-50%, -50%) scale(1.2)';
+        } else if (!query) {
+          filterNodes();
+        } else {
+          node.style.opacity = '0.2';
+          node.style.transform = 'translate(-50%, -50%) scale(0.8)';
+        }
+      });
+    });
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!checkAuth()) return;
+      
+      loadData();
+
+      // Close panel on escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePersonPanel();
+      });
+    });
+  </script>
+</body>
+</html>
