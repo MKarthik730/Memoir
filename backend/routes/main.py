@@ -95,7 +95,7 @@ RAG_EMBEDDING_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "all-mpnet-base-v2")
 _RAG_MODEL_INSTANCE = None
 _RAG_MODEL_LOCK = threading.Lock()
 
-pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 app = FastAPI()
 security = HTTPBearer()
 
