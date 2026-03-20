@@ -134,6 +134,9 @@ def get_db():
 
 async def hash_password(password: str) -> str:
     password_bytes = password.encode("utf-8")[:72]
+    logger.info(
+        f"Password length before truncate: {len(password)}, after: {len(password_bytes)}"
+    )
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, pwd_context.hash, password_bytes)
 
