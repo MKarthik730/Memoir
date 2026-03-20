@@ -586,7 +586,7 @@ async def sign_up(data: UserData, db=Depends(get_db)):
             detail="Username already registered",
         )
     try:
-        hashed = await hash_password(data.password)
+        hashed = await hash_password(data.password[:72])
         user = User(name=data.name, password=hashed)
         db.add(user)
         db.commit()
