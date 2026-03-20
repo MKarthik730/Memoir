@@ -133,8 +133,9 @@ def get_db():
 
 
 async def hash_password(password: str) -> str:
+    password_bytes = password.encode("utf-8")[:72]
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, pwd_context.hash, password)
+    return await loop.run_in_executor(None, pwd_context.hash, password_bytes)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
