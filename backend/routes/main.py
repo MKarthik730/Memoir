@@ -75,22 +75,6 @@ try:
 except Exception:
     PdfReader = None
 
-try:
-    import cloudinary
-    import cloudinary.uploader
-    import cloudinary.api
-
-    CLOUDINARY_CONFIGURED = True
-except ImportError:
-    CLOUDINARY_CONFIGURED = False
-    cloudinary = None
-
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-)
-
 RAG_EMBEDDING_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "all-mpnet-base-v2")
 _RAG_MODEL_INSTANCE = None
 _RAG_MODEL_LOCK = threading.Lock()
@@ -860,95 +844,6 @@ async def upload_file_to_person(
         db.rollback()
         logger.error(f"Upload failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-
-
-@app.post("/home/cloudinary/upload")
-async def upload_to_cloudinary(
-    person_id: int,
-    file: UploadFile = File(...),
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Upload a file to Cloudinary"""
-    if not CLOUDINARY_CONFIGURED:
-        raise HTTPException(
-            status_code=503,
-            detail="Cloudinary is not configured. Please set CLOUDINARY_* environment variables.",
-        )
-
-    user_id = token_data["user_id"]
-
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(status_code=404, detail="Person not found")
-
-    is_valid, message = validate_file(file)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=message)
-
-    try:
-        data = await file.read()
-
-        result = cloudinary.uploader.upload(
-            data,
-            folder=f"memoir/user_{user_id}/person_{person_id}",
-            resource_type="auto",
-            public_id=file.filename.rsplit(".", 1)[0]
-            if "." in file.filename
-            else file.filename,
-        )
-
-        obj_file = FileStore(
-            file_name=file.filename,
-            file_data=result.get("secure_url", "").encode(),
-            file_type=file.content_type or "application/octet-stream",
-            description=f"Cloudinary: {result.get('public_id')}",
-            person_id=person_id,
-        )
-        db.add(obj_file)
-        db.commit()
-        db.refresh(obj_file)
-
-        logger.info(f"File uploaded to Cloudinary: {file.filename}")
-
-        return {
-            "id": obj_file.id,
-            "file_name": file.filename,
-            "file_url": result.get("secure_url"),
-            "public_id": result.get("public_id"),
-            "file_type": file.content_type,
-            "person_id": person_id,
-            "message": "Uploaded to Cloudinary successfully",
-        }
-    except Exception as e:
-        logger.error(f"Cloudinary upload failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Cloudinary upload failed: {str(e)}"
-        )
-
-
-@app.delete("/home/cloudinary/delete/{public_id}")
-async def delete_from_cloudinary(
-    public_id: str,
-    token_data: dict = Depends(verify_token),
-):
-    """Delete a file from Cloudinary"""
-    if not CLOUDINARY_CONFIGURED:
-        raise HTTPException(status_code=503, detail="Cloudinary not configured")
-
-    try:
-        cloudinary.uploader.destroy(public_id)
-        logger.info(f"File deleted from Cloudinary: {public_id}")
-        return {"message": "Deleted from Cloudinary"}
-    except Exception as e:
-        logger.error(f"Cloudinary delete failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/home/person/{person_id}/files", response_model=List[FileResponse])

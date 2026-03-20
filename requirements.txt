@@ -24,9 +24,6 @@ reportlab>=4.0.7
 pillow>=10.0.0
 pypdf>=4.0.0
 
-# Cloud Storage
-cloudinary>=1.44.0
-
 # RAG (optional - comment out if not needed)
 # sentence-transformers>=2.7.0
 # faiss-cpu>=1.8.0

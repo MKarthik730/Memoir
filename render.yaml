@@ -20,10 +20,4 @@ services:
         value: "1440"
       - key: RAG_EMBEDDING_MODEL
         value: "all-MiniLM-L6-v2"
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false
       - fromGroup: memoir-secrets
