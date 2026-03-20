@@ -85,6 +85,22 @@ security = HTTPBearer()
 
 Base.metadata.create_all(bind=engine)
 
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Testing database connection...")
+    try:
+        from database.config import engine
+
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("Database connection successful")
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+
+
+from sqlalchemy import text
+
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 expires_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
@@ -589,7 +605,7 @@ async def sign_up(data: UserData, db=Depends(get_db)):
         logger.error(f"Sign up failed: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Error creating user",
+            detail=f"Error creating user: {str(e)}",
         )
 
 
