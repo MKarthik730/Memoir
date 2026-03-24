@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memoir — Search Memories</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="gradient-bg"></div>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="/logo.svg" alt="Memoir" style="width: 40px; height: 40px;">
+          <span class="sidebar-logo-text">Memoir</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Menu</div>
+          <a href="dashboard.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" id="navPeople">
+            <i class="fas fa-users"></i>
+            <span>People</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i class="fas fa-book"></i>
+            <span>Memories</span>
+          </a>
+          <a href="graph.html" class="nav-item">
+            <i class="fas fa-project-diagram"></i>
+            <span>Relationship Graph</span>
+          </a>
+          <a href="search.html" class="nav-item active">
+            <i class="fas fa-search"></i>
+            <span>Search Memories</span>
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="userAvatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="userName">User</div>
+            <div class="sidebar-user-email">Search</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <a href="dashboard.html" class="btn-icon">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+        <h1 style="font-size: 18px; font-weight: 600;">Search Memories</h1>
+        <div style="width: 40px;"></div>
+      </header>
+
+      <div class="page-content">
+        <div class="search-container">
+          <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Ask about your memories...">
+            <button class="btn btn-primary" id="searchBtn" onclick="performSearch()">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px; text-align: center;">
+            Example: "What did I do last summer?" or "Tell me about my trips with family"
+          </p>
+        </div>
+
+        <div id="loadingState" style="display: none; text-align: center; padding: 40px;">
+          <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: var(--accent-primary);"></i>
+          <p style="margin-top: 16px; color: var(--text-muted);">Searching your memories...</p>
+        </div>
+
+        <div id="resultsContainer" style="margin-top: 24px;">
+        </div>
+
+        <div id="emptyState" class="empty-state" style="margin-top: 60px;">
+          <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+          <h3 class="empty-state-title">Search your memories</h3>
+          <p class="empty-state-description">Ask questions about your saved memories and photos</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/app.js"></script>
+  <script>
+    const API_BASE = '';
+
+    function checkAuth() {
+      const token = localStorage.getItem('memoir_token');
+      const userName = localStorage.getItem('memoir_user');
+      if (!token) {
+        window.location.href = 'index.html';
+        return false;
+      }
+      if (userName) {
+        document.getElementById('userName').textContent = userName;
+        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+      }
+      return true;
+    }
+
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performSearch();
+    });
+
+    async function performSearch() {
+      const query = document.getElementById('searchInput').value.trim();
+      if (!query) {
+        showToast('Please enter a question', 'warning');
+        return;
+      }
+
+      const token = localStorage.getItem('memoir_token');
+      document.getElementById('loadingState').style.display = 'block';
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('resultsContainer').innerHTML = '';
+
+      try {
+        const res = await fetch(`${API_BASE}/home/rag/query`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ question: query, top_k: 5 })
+        });
+
+        if (!res.ok) throw new Error('Search failed');
+        const data = await res.json();
+
+        document.getElementById('loadingState').style.display = 'none';
+        renderResults(data, query);
+      } catch (e) {
+        document.getElementById('loadingState').style.display = 'none';
+        showToast('Search failed: ' + e.message, 'error');
+      }
+    }
+
+    function renderResults(data, query) {
+      const container = document.getElementById('resultsContainer');
+
+      if (!data.answer || data.answer.includes('No memories')) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-frown"></i></div>
+            <h3 class="empty-state-title">No results found</h3>
+            <p class="empty-state-description">Add more memories and photos to get better search results</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <div class="glass-card" style="padding: 24px; margin-bottom: 24px;">
+          <h3 style="font-size: 18px; margin-bottom: 16px;">
+            <i class="fas fa-robot" style="color: var(--accent-primary); margin-right: 8px;"></i>
+            Answer
+          </h3>
+          <p style="color: var(--text-secondary); line-height: 1.8; font-size: 15px;">${escapeHtml(data.answer)}</p>
+        </div>
+      `;
+
+      if (data.sources && data.sources.length > 0) {
+        html += `
+          <h3 style="font-size: 16px; margin-bottom: 16px; color: var(--text-secondary);">
+            <i class="fas fa-link" style="margin-right: 8px;"></i>
+            Sources
+          </h3>
+        `;
+
+        data.sources.forEach(source => {
+          const type = source.type || 'memory';
+          const personName = source.person_name || 'Unknown';
+          const categoryName = source.category_name || '';
+          const fileName = source.file_name || '';
+          const createdAt = source.created_at ? formatDate(source.created_at) : '';
+
+          html += `
+            <div class="glass-card" style="padding: 16px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span class="person-badge category" style="background: var(--accent-gradient); color: white;">
+                  ${type === 'memory' ? '<i class="fas fa-book"></i>' : '<i class="fas fa-file"></i>'}
+                  ${type === 'memory' ? 'Memory' : 'File'}
+                </span>
+                <span style="font-weight: 600;">${escapeHtml(personName)}</span>
+                ${categoryName ? `<span style="color: var(--text-muted); font-size: 12px;">• ${escapeHtml(categoryName)}</span>` : ''}
+                ${createdAt ? `<span style="color: var(--text-muted); font-size: 12px;">• ${createdAt}</span>` : ''}
+              </div>
+              ${fileName ? `<p style="color: var(--text-secondary); font-size: 13px;"><i class="fas fa-file" style="margin-right: 4px;"></i>${escapeHtml(fileName)}</p>` : ''}
+            </div>
+          `;
+        });
+      }
+
+      container.innerHTML = html;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!checkAuth()) return;
+    });
+  </script>
+</body>
+</html>

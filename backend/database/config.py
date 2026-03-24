@@ -16,7 +16,7 @@ if db_url.startswith("postgresql"):
     engine = create_engine(
         db_url,
         poolclass=NullPool,
-        connect_args={"sslmode": "require"},
+        connect_args={"sslmode": "prefer"},
     )
 else:
     engine = create_engine(

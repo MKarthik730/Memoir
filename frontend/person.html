@@ -105,13 +105,17 @@
               </div>
             </div>
             <div class="person-actions">
-              <button class="btn btn-secondary" id="editPersonBtn">
-                <i class="fas fa-edit"></i>
-                Edit
+              <button class="btn btn-secondary" id="downloadPdfBtn" onclick="downloadPersonPdf()">
+                <i class="fas fa-file-pdf"></i>
+                Download PDF
               </button>
-              <button class="btn btn-primary" onclick="openAddMemoryModal()">
-                <i class="fas fa-plus"></i>
+              <button class="btn btn-secondary" onclick="openAddMemoryModal()">
+                <i class="fas fa-pen"></i>
                 Add Memory
+              </button>
+              <button class="btn btn-primary" onclick="openPhotoUpload()">
+                <i class="fas fa-camera"></i>
+                Add Photo
               </button>
             </div>
           </div>
@@ -166,6 +170,53 @@
     <i class="fas fa-plus"></i>
   </button>
 
+  <!-- FAB Menu -->
+  <div class="fab-menu" id="fabMenu" style="display: none;">
+    <button class="fab-menu-item" onclick="openAddMemoryModal(); closeFabMenu();">
+      <i class="fas fa-pen"></i>
+      <span>Add Memory</span>
+    </button>
+    <button class="fab-menu-item" onclick="openPhotoUpload(); closeFabMenu();">
+      <i class="fas fa-camera"></i>
+      <span>Add Photo</span>
+    </button>
+  </div>
+
+  <!-- Photo Upload Modal -->
+  <div class="modal-overlay" id="photoUploadModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Upload Photo</h3>
+        <button class="btn-icon modal-close" onclick="closePhotoUpload()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <label class="input-label">Select Photo</label>
+          <div class="file-upload-area" id="photoUploadArea">
+            <input type="file" id="photoInput" accept="image/*" style="display: none;">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--text-muted);"></i>
+            <p style="margin-top: 12px; color: var(--text-muted);">Click or drag to upload</p>
+            <p style="font-size: 12px; color: var(--text-muted);">Images only (JPG, PNG, etc.)</p>
+          </div>
+          <p id="photoFileName" style="margin-top: 8px; color: var(--accent-primary);"></p>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Description (optional)</label>
+          <textarea class="input-field" id="photoDescription" placeholder="Add a description for this photo..." rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closePhotoUpload()">Cancel</button>
+        <button class="btn btn-primary" id="uploadPhotoBtn" onclick="uploadPhoto()">
+          <i class="fas fa-upload"></i>
+          Upload
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Memory Modal -->
   <div class="modal-overlay" id="addMemoryModal">
     <div class="modal">
@@ -207,9 +258,20 @@
           <h4 class="step-title">Tell us about this moment</h4>
           <p class="step-description">Write your memory and select the mood</p>
           
-          <div class="input-group">
+          <div class="input-group" id="memoryTextGroup">
             <label class="input-label">Your Memory</label>
             <textarea class="input-field" id="memoryContent" placeholder="What happened? How did it feel?" rows="4"></textarea>
+          </div>
+
+          <div class="input-group" id="fileUploadGroup" style="display: none;">
+            <label class="input-label">Upload Photo/File</label>
+            <div class="file-upload-area" id="fileUploadArea">
+              <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.docx" style="display: none;">
+              <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--text-muted);"></i>
+              <p style="margin-top: 12px; color: var(--text-muted);">Click or drag to upload</p>
+              <p style="font-size: 12px; color: var(--text-muted);">Images, PDFs, or documents</p>
+            </div>
+            <p id="fileName" style="margin-top: 8px; color: var(--accent-primary);"></p>
           </div>
 
           <div class="input-group">
@@ -289,6 +351,20 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || `API Error: ${res.status}`);
+      return data;
+    }
+
+    async function apiUploadFile(endpoint, formData) {
+      const token = localStorage.getItem('memoir_token');
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `Upload Error: ${res.status}`);
       return data;
     }
 
@@ -470,23 +546,73 @@
       document.getElementById('addMemoryModal').classList.remove('open');
     }
 
+    function openPhotoUpload() {
+      document.getElementById('photoUploadModal').classList.add('open');
+      document.getElementById('photoFileName').textContent = '';
+      document.getElementById('photoDescription').value = '';
+    }
+
+    function closePhotoUpload() {
+      document.getElementById('photoUploadModal').classList.remove('open');
+    }
+
+    async function uploadPhoto() {
+      const photoInput = document.getElementById('photoInput');
+      const file = photoInput?.files[0];
+      const description = document.getElementById('photoDescription').value.trim();
+
+      if (!file) {
+        showToast('Please select a photo', 'warning');
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (description) formData.append('description', description);
+        await apiUploadFile(`/home/person/${personId}/upload`, formData);
+        showToast('Photo uploaded successfully!', 'success');
+        closePhotoUpload();
+        renderTimeline();
+      } catch (e) {
+        showToast('Failed to upload: ' + e.message, 'error');
+      }
+    }
+
+    function downloadPersonPdf() {
+      const token = localStorage.getItem('memoir_token');
+      window.open(`${API_BASE}/home/person/${personId}/pdf?token=${token}`, '_blank');
+    }
+
+    function closeFabMenu() {
+      document.getElementById('fabMenu').style.display = 'none';
+    }
+
     async function saveMemory() {
       const content = document.getElementById('memoryContent').value.trim();
-      if (!content) {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput?.files[0];
+
+      if (selectedType === 'text' && !content) {
         showToast('Please write something about this memory', 'warning');
         return;
       }
 
       try {
-        await apiPost(`/home/person/${personId}/memory`, { content });
-        showToast('Memory saved successfully!', 'success');
+        if (selectedType === 'photo' && file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          if (content) formData.append('description', content);
+          await apiUploadFile(`/home/person/${personId}/upload`, formData);
+          showToast('Photo uploaded successfully!', 'success');
+        } else if (selectedType === 'text' && content) {
+          await apiPost(`/home/person/${personId}/memory`, { content });
+          showToast('Memory saved successfully!', 'success');
+        }
         closeAddMemoryModal();
-        
-        // Reload memories
-        memories = await apiGet(`/home/person/${personId}/memories`);
         renderTimeline();
       } catch (e) {
-        showToast('Failed to save memory: ' + e.message, 'error');
+        showToast('Failed to save: ' + e.message, 'error');
       }
     }
 
@@ -502,8 +628,64 @@
           document.querySelectorAll('.memory-type-option').forEach(o => o.classList.remove('selected'));
           option.classList.add('selected');
           selectedType = option.dataset.type;
+          document.getElementById('memoryTextGroup').style.display = selectedType === 'photo' ? 'none' : 'block';
+          document.getElementById('fileUploadGroup').style.display = selectedType === 'photo' ? 'block' : 'none';
         });
       });
+
+      // File upload
+      const fileUploadArea = document.getElementById('fileUploadArea');
+      const fileInput = document.getElementById('fileInput');
+      if (fileUploadArea && fileInput) {
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        fileUploadArea.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          fileUploadArea.style.borderColor = 'var(--accent-primary)';
+        });
+        fileUploadArea.addEventListener('dragleave', () => {
+          fileUploadArea.style.borderColor = '';
+        });
+        fileUploadArea.addEventListener('drop', (e) => {
+          e.preventDefault();
+          fileUploadArea.style.borderColor = '';
+          if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            document.getElementById('fileName').textContent = e.dataTransfer.files[0].name;
+          }
+        });
+        fileInput.addEventListener('change', () => {
+          if (fileInput.files.length) {
+            document.getElementById('fileName').textContent = fileInput.files[0].name;
+          }
+        });
+      }
+
+      // Photo upload
+      const photoUploadArea = document.getElementById('photoUploadArea');
+      const photoInput = document.getElementById('photoInput');
+      if (photoUploadArea && photoInput) {
+        photoUploadArea.addEventListener('click', () => photoInput.click());
+        photoUploadArea.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          photoUploadArea.style.borderColor = 'var(--accent-primary)';
+        });
+        photoUploadArea.addEventListener('dragleave', () => {
+          photoUploadArea.style.borderColor = '';
+        });
+        photoUploadArea.addEventListener('drop', (e) => {
+          e.preventDefault();
+          photoUploadArea.style.borderColor = '';
+          if (e.dataTransfer.files.length) {
+            photoInput.files = e.dataTransfer.files;
+            document.getElementById('photoFileName').textContent = e.dataTransfer.files[0].name;
+          }
+        });
+        photoInput.addEventListener('change', () => {
+          if (photoInput.files.length) {
+            document.getElementById('photoFileName').textContent = photoInput.files[0].name;
+          }
+        });
+      }
 
       // Mood selector
       document.querySelectorAll('.mood-option').forEach(option => {
