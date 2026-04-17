@@ -120,15 +120,15 @@ export default function PersonDetail({ personId, onBack, token }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--color-parchment)' }}>
-        <div style={{ width: '40px', height: '40px', border: '2px solid var(--color-sepia)', borderTopColor: 'var(--color-gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div className="min-h-screen bg-parchment flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-sepia border-t-gold rounded-full animate-spin" />
       </div>
     )
   }
 
   if (!person) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--color-parchment)' }}>
+      <div className="min-h-screen bg-parchment flex items-center justify-center">
         <p>Person not found</p>
       </div>
     )
@@ -138,136 +138,120 @@ export default function PersonDetail({ personId, onBack, token }) {
   const personName = person.person_name || 'Unknown'
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-parchment)' }}>
-      {/* Header */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        borderBottom: '1px solid var(--color-sepia)',
-        backgroundColor: 'rgba(247, 241, 232, 0.92)',
-        backdropFilter: 'blur(12px)'
-      }}>
-        <div style={{
-          maxWidth: '1200px', margin: '0 auto', padding: 'var(--space-md) var(--space-lg)',
-          display: 'flex', alignItems: 'center', gap: 'var(--space-md)'
-        }}>
-          <button onClick={onBack} style={{
-            width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'none', border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-sm)',
-            color: 'var(--color-ink-muted)', cursor: 'pointer'
-          }}>
+    <div className="min-h-screen bg-parchment">
+      <nav className="sticky top-0 z-[100] border-b border-sepia bg-[rgba(247,241,232,0.92)] backdrop-blur-12">
+        <div className="max-w-[1200px] mx-auto px-8 py-4 flex items-center gap-4">
+          <button 
+            onClick={onBack} 
+            className="w-9 h-9 flex items-center justify-center bg-transparent border border-sepia rounded-sm text-ink-muted cursor-pointer"
+          >
             <ArrowLeft size={18} />
           </button>
-          <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 'var(--text-xl)', color: 'var(--color-ink)', flex: 1 }}>
+          <span className="font-display italic text-xl text-ink flex-1">
             {personName}
           </span>
-          <button onClick={downloadPdf} style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '10px 20px', backgroundColor: 'var(--color-ink)', color: 'var(--color-parchment)',
-            border: 'none', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-ui)',
-            fontSize: 'var(--text-xs)', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer'
-          }}>
+          <button 
+            onClick={downloadPdf} 
+            className="flex items-center gap-1.5 px-5 py-2.5 bg-ink text-parchment border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer"
+          >
             <Download size={14} />
             PDF
           </button>
         </div>
       </nav>
 
-      {/* Content */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: 'var(--space-xl) var(--space-lg)' }}>
-        {/* Person Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 'var(--space-xl)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
-            <div style={{
-              width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-              border: '2px solid var(--color-sepia)', backgroundColor: 'var(--color-sepia)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <span style={{ fontSize: '32px', fontFamily: 'var(--font-display)', color: 'var(--color-parchment)' }}>
+      <main className="max-w-[1200px] mx-auto px-8 py-16">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="mb-16"
+        >
+          <div className="flex items-center gap-8 mb-8">
+            <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 border-2 border-sepia bg-sepia flex items-center justify-center">
+              <span className="text-3xl font-display text-parchment">
                 {personName.charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <h1 style={{ fontSize: 'var(--text-3xl)', fontStyle: 'italic', marginBottom: 'var(--space-xs)', color: 'var(--color-ink)' }}>
+              <h1 className="font-display italic text-[2.8rem] mb-1 text-ink">
                 {personName}
               </h1>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                padding: '4px 12px', backgroundColor: colors.bg, border: `1px solid ${colors.border}`,
-                borderRadius: 'var(--radius-sm)', fontSize: '0.65rem',
-                fontFamily: 'var(--font-ui)', letterSpacing: '0.14em', textTransform: 'uppercase', color: colors.text
-              }}>
+              <div 
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-sm text-[0.65rem] font-ui tracking-widest uppercase"
+                style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
+              >
                 {person.category}
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-            <button onClick={() => setShowAddMemory(true)} style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '12px 20px', backgroundColor: 'var(--color-ink)', color: 'var(--color-parchment)',
-              border: 'none', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-ui)',
-              fontSize: 'var(--text-xs)', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer'
-            }}>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowAddMemory(true)} 
+              className="flex items-center gap-1.5 px-5 py-3 bg-ink text-parchment border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer"
+            >
               <Plus size={14} />
               Add Memory
             </button>
-            <label style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '12px 20px', backgroundColor: 'var(--color-cream)', color: 'var(--color-ink)',
-              border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-ui)',
-              fontSize: 'var(--text-xs)', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer'
-            }}>
+            <label className="flex items-center gap-1.5 px-5 py-3 bg-cream text-ink border border-sepia rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer">
               <Image size={14} />
               Add Photo
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
-                if (e.target.files[0]) handlePhotoUpload(e.target.files[0])
-              }} />
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={(e) => {
+                  if (e.target.files[0]) handlePhotoUpload(e.target.files[0])
+                }} 
+              />
             </label>
           </div>
         </motion.div>
 
-        {/* Stats */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          style={{ display: 'flex', gap: 'var(--space-lg)', marginBottom: 'var(--space-xl)' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.1 }}
+          className="flex gap-8 mb-16"
+        >
           {[{ icon: BookOpen, label: 'Memories', count: memories.length }, 
             { icon: Image, label: 'Photos', count: files.filter(f => f.file_type?.startsWith('image/')).length }].map(stat => (
-            <div key={stat.label} style={{
-              padding: 'var(--space-md) var(--space-lg)', backgroundColor: 'var(--color-cream)',
-              border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-sm)', textAlign: 'center'
-            }}>
-              <div style={{ fontSize: 'var(--text-2xl)', fontFamily: 'var(--font-display)', color: 'var(--color-gold)' }}>{stat.count}</div>
-              <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-ui)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink-muted)' }}>{stat.label}</div>
+            <div 
+              key={stat.label} 
+              className="px-8 py-4 bg-cream border border-sepia rounded-sm text-center"
+            >
+              <div className="text-2xl font-display text-gold">{stat.count}</div>
+              <div className="text-xs font-ui tracking-widest uppercase text-ink-muted">{stat.label}</div>
             </div>
           ))}
         </motion.div>
 
-        {/* Memories */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontStyle: 'italic', marginBottom: 'var(--space-lg)', color: 'var(--color-ink)' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.2 }}
+        >
+          <h2 className="font-display italic text-xl mb-8 text-ink">
             Memories
           </h2>
           
           {memories.length === 0 ? (
-            <div style={{
-              textAlign: 'center', padding: 'var(--space-2xl)', backgroundColor: 'var(--color-cream)',
-              border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-md)'
-            }}>
-              <BookOpen size={48} style={{ color: 'var(--color-sepia)', marginBottom: 'var(--space-md)' }} />
-              <p style={{ color: 'var(--color-ink-muted)' }}>No memories yet. Add your first one!</p>
+            <div className="text-center py-16 bg-cream border border-sepia rounded-md">
+              <BookOpen size={48} className="text-sepia mx-auto mb-4" />
+              <p className="text-ink-muted">No memories yet. Add your first one!</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            <div className="flex flex-col gap-4">
               {memories.map(memory => (
-                <div key={memory.id} style={{
-                  padding: 'var(--space-lg)', backgroundColor: 'var(--color-cream)',
-                  border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-sm)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: 'var(--space-sm)', color: 'var(--color-ink-muted)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>
+                <div 
+                  key={memory.id} 
+                  className="p-8 bg-cream border border-sepia rounded-sm"
+                >
+                  <div className="flex items-center gap-1.5 mb-2 text-ink-muted text-xs font-mono">
                     <Clock size={12} />
                     {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
-                  <p style={{ fontSize: 'var(--text-base)', lineHeight: 1.7, color: 'var(--color-ink)' }}>
+                  <p className="text-base leading-relaxed text-ink">
                     {memory.content}
                   </p>
                 </div>
@@ -276,52 +260,62 @@ export default function PersonDetail({ personId, onBack, token }) {
           )}
         </motion.div>
 
-        {/* Photos */}
         {files.filter(f => f.file_type?.startsWith('image/')).length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} style={{ marginTop: 'var(--space-xl)' }}>
-            <h2 style={{ fontSize: 'var(--text-xl)', fontStyle: 'italic', marginBottom: 'var(--space-lg)', color: 'var(--color-ink)' }}>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.3 }} 
+            className="mt-16"
+          >
+            <h2 className="font-display italic text-xl mb-8 text-ink">
               Photos
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-md)' }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
               {files.filter(f => f.file_type?.startsWith('image/')).map(file => (
-                <img key={file.id} src={`/home/person/${personId}/files/${file.id}/download`} alt={file.file_name}
-                  style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-sepia)' }} />
+                <img 
+                  key={file.id} 
+                  src={`/home/person/${personId}/files/${file.id}/download`} 
+                  alt={file.file_name}
+                  className="w-full aspect-square object-cover rounded-sm border border-sepia" 
+                />
               ))}
             </div>
           </motion.div>
         )}
       </main>
 
-      {/* Add Memory Modal */}
       {showAddMemory && (
-        <div onClick={() => setShowAddMemory(false)} style={{
-          position: 'fixed', inset: 0, backgroundColor: 'rgba(28, 23, 16, 0.5)',
-          backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: 'var(--space-md)'
-        }}>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} onClick={e => e.stopPropagation()} style={{
-            width: '100%', maxWidth: '500px', backgroundColor: 'var(--color-cream)',
-            border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-md)', overflow: 'hidden'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-lg)', borderBottom: '1px solid var(--color-sepia)' }}>
-              <h2 style={{ fontSize: 'var(--text-xl)' }}>Add Memory</h2>
-              <button onClick={() => setShowAddMemory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-ink-muted)' }}>
+        <div 
+          onClick={() => setShowAddMemory(false)} 
+          className="fixed inset-0 bg-[rgba(28,23,16,0.5)] backdrop-blur-sm flex items-center justify-center z-[1000] p-4"
+        >
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            onClick={e => e.stopPropagation()} 
+            className="w-full max-w-[500px] bg-cream border border-sepia rounded-md overflow-hidden"
+          >
+            <div className="flex items-center justify-between p-8 border-b border-sepia">
+              <h2 className="font-display italic text-xl">Add Memory</h2>
+              <button 
+                onClick={() => setShowAddMemory(false)} 
+                className="bg-transparent border-none cursor-pointer text-ink-muted"
+              >
                 <X size={20} />
               </button>
             </div>
-            <div style={{ padding: 'var(--space-lg)' }}>
-              <textarea value={memoryContent} onChange={e => setMemoryContent(e.target.value)} rows={5}
-                placeholder="Write your memory..." style={{
-                  width: '100%', padding: '12px', backgroundColor: 'transparent', border: 'none',
-                  borderBottom: '1px solid var(--color-sepia)', color: 'var(--color-ink)',
-                  fontFamily: 'var(--font-body)', fontSize: 'var(--text-base)', outline: 'none', resize: 'none'
-                }} />
-              <button onClick={handleAddMemory} style={{
-                width: '100%', marginTop: 'var(--space-lg)', padding: '14px',
-                backgroundColor: 'var(--color-ink)', color: 'var(--color-parchment)', border: 'none',
-                borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)',
-                letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer'
-              }}>
+            <div className="p-8">
+              <textarea 
+                value={memoryContent} 
+                onChange={e => setMemoryContent(e.target.value)} 
+                rows={5}
+                placeholder="Write your memory..." 
+                className="w-full p-3 bg-transparent border-b border-sepia text-ink font-body text-base outline-none resize-none focus:border-gold transition-colors duration-150" 
+              />
+              <button 
+                onClick={handleAddMemory} 
+                className="w-full mt-8 px-4 py-3.5 bg-ink text-parchment border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer"
+              >
                 Save Memory
               </button>
             </div>

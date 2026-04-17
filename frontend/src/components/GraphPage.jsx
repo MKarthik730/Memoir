@@ -109,7 +109,6 @@ export default function GraphPage({ onBack, token }) {
       const nodes = nodesRef.current
       const time = Date.now() * 0.001
 
-      // Draw connections
       ctx.strokeStyle = 'rgba(139, 148, 158, 0.15)'
       ctx.lineWidth = 1
       for (let i = 0; i < nodes.length; i++) {
@@ -126,15 +125,12 @@ export default function GraphPage({ onBack, token }) {
         }
       }
 
-      // Physics simulation
       nodes.forEach((node, i) => {
-        // Spring force toward target position
         const dx = node.targetX - node.x
         const dy = node.targetY - node.y
         node.vx += dx * 0.02
         node.vy += dy * 0.02
 
-        // Repulsion from other nodes
         nodes.forEach((other, j) => {
           if (i === j) return
           const odx = node.x - other.x
@@ -146,7 +142,6 @@ export default function GraphPage({ onBack, token }) {
           }
         })
 
-        // Damping
         node.vx *= 0.92
         node.vy *= 0.92
 
@@ -154,13 +149,11 @@ export default function GraphPage({ onBack, token }) {
         node.y += node.vy
       })
 
-      // Draw nodes
       nodes.forEach(node => {
         const pulse = 1 + Math.sin(time * 2 + node.pulsePhase) * 0.05
         const isHovered = hoveredPerson === node.id
         const isSearched = searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase())
 
-        // Glow
         const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, node.radius * 3 * pulse)
         gradient.addColorStop(0, isHovered ? node.glowColor.replace('0.3', '0.8') : node.glowColor)
         gradient.addColorStop(1, 'transparent')
@@ -169,25 +162,21 @@ export default function GraphPage({ onBack, token }) {
         ctx.arc(node.x, node.y, node.radius * 3 * pulse, 0, Math.PI * 2)
         ctx.fill()
 
-        // Node circle
         ctx.fillStyle = node.color
         ctx.beginPath()
         ctx.arc(node.x, node.y, (isHovered ? node.radius * 1.3 : node.radius) * pulse, 0, Math.PI * 2)
         ctx.fill()
 
-        // Node border
         ctx.strokeStyle = isHovered || isSearched ? 'white' : 'rgba(255,255,255,0.2)'
         ctx.lineWidth = isHovered ? 2 : 1
         ctx.stroke()
 
-        // Label
         ctx.fillStyle = isHovered ? 'white' : 'rgba(201, 208, 215, 0.8)'
         ctx.font = `${isHovered ? 'bold ' : ''}12px -apple-system, BlinkMacSystemFont, sans-serif`
         ctx.textAlign = 'center'
         ctx.fillText(node.name, node.x, node.y + node.radius + 18)
       })
 
-      // Draw center
       ctx.fillStyle = 'rgba(139, 148, 158, 0.1)'
       ctx.beginPath()
       ctx.arc(dimensions.width / 2, dimensions.height / 2, 30, 0, Math.PI * 2)
@@ -219,105 +208,72 @@ export default function GraphPage({ onBack, token }) {
 
   if (loading) {
     return (
-      <div style={{ 
-        height: '100vh', backgroundColor: '#0d1117', display: 'flex', 
-        alignItems: 'center', justifyContent: 'center', color: 'white' 
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            width: '40px', height: '40px', border: '2px solid #30363d', 
-            borderTopColor: '#58a6ff', borderRadius: '50%', 
-            animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' 
-          }} />
-          <p style={{ color: '#8b949e' }}>Loading graph...</p>
+      <div className="h-screen bg-[#0d1117] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-[#30363d] border-t-[#58a6ff] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#8b949e]">Loading graph...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ height: '100vh', backgroundColor: '#0d1117', position: 'relative' }}>
-      {/* Header */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-        padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px',
-        background: 'linear-gradient(to bottom, #0d1117, transparent)'
-      }}>
-        <button onClick={onBack} style={{
-          width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(139, 148, 158, 0.1)', border: '1px solid #30363d', borderRadius: '6px',
-          color: '#c9d1d9', cursor: 'pointer'
-        }}>
+    <div className="h-screen bg-[#0d1117] relative">
+      <div className="absolute top-0 left-0 right-0 z-10 p-4 flex items-center gap-4 bg-gradient-to-b from-[#0d1117] to-transparent">
+        <button 
+          onClick={onBack} 
+          className="w-9 h-9 flex items-center justify-center bg-[rgba(139,148,158,0.1)] border border-[#30363d] rounded-md text-[#c9d1d9] cursor-pointer"
+        >
           <ArrowLeft size={18} />
         </button>
-        <h1 style={{ 
-          fontSize: '16px', fontWeight: 600, color: '#c9d1d9', flex: 1,
-          fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif'
-        }}>
+        <h1 className="text-base font-semibold text-[#c9d1d9] flex-1 font-sans">
           Graph View
         </h1>
-        <div style={{ position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#8b949e' }} />
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8b949e]" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search nodes..."
-            style={{
-              padding: '8px 12px 8px 36px', backgroundColor: 'rgba(139, 148, 158, 0.1)',
-              border: '1px solid #30363d', borderRadius: '6px', color: '#c9d1d9',
-              fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', fontSize: '13px',
-              outline: 'none', width: '200px'
-            }}
+            className="pl-9 pr-3 py-2 bg-[rgba(139,148,158,0.1)] border border-[#30363d] rounded-md text-[#c9d1d9] font-sans text-sm outline-none w-[200px]"
           />
         </div>
       </div>
 
-      {/* Legend */}
-      <div style={{
-        position: 'absolute', bottom: '20px', left: '20px', zIndex: 10,
-        padding: '12px 16px', backgroundColor: 'rgba(13, 17, 23, 0.9)',
-        border: '1px solid #30363d', borderRadius: '8px'
-      }}>
-        <p style={{ color: '#8b949e', fontSize: '11px', marginBottom: '8px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Categories</p>
+      <div className="absolute bottom-5 left-5 z-10 p-3 bg-[rgba(13,17,23,0.9)] border border-[#30363d] rounded-lg">
+        <p className="text-[#8b949e] text-[11px] mb-2 font-sans uppercase tracking-wider">Categories</p>
         {categories.map(cat => {
           const color = getCategoryColor(cat.cat_name)
           return (
-            <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: `hsl(${color.h}, ${color.s}%, ${color.l}%)` }} />
-              <span style={{ color: '#c9d1d9', fontSize: '12px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>{cat.cat_name}</span>
+            <div key={cat.id} className="flex items-center gap-2 mb-1">
+              <div 
+                className="w-2.5 h-2.5 rounded-full" 
+                style={{ backgroundColor: `hsl(${color.h}, ${color.s}%, ${color.l}%)` }} 
+              />
+              <span className="text-[#c9d1d9] text-xs font-sans">{cat.cat_name}</span>
             </div>
           )
         })}
       </div>
 
-      {/* Stats */}
-      <div style={{
-        position: 'absolute', bottom: '20px', right: '20px', zIndex: 10,
-        padding: '12px 16px', backgroundColor: 'rgba(13, 17, 23, 0.9)',
-        border: '1px solid #30363d', borderRadius: '8px'
-      }}>
-        <p style={{ color: '#8b949e', fontSize: '11px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
-          <span style={{ color: '#c9d1d9', fontWeight: 600 }}>{people.length}</span> nodes
+      <div className="absolute bottom-5 right-5 z-10 p-3 bg-[rgba(13,17,23,0.9)] border border-[#30363d] rounded-lg">
+        <p className="text-[#8b949e] text-[11px] font-sans">
+          <span className="text-[#c9d1d9] font-semibold">{people.length}</span> nodes
         </p>
       </div>
 
-      {/* Hover Info */}
       {hoveredPerson && (
-        <div style={{
-          position: 'absolute', top: '80px', right: '20px', zIndex: 10,
-          padding: '16px', backgroundColor: 'rgba(13, 17, 23, 0.95)',
-          border: '1px solid #30363d', borderRadius: '8px', minWidth: '200px'
-        }}>
+        <div className="absolute top-20 right-5 z-10 p-4 bg-[rgba(13,17,23,0.95)] border border-[#30363d] rounded-lg min-w-[200px]">
           {(() => {
             const person = people.find(p => p.id === hoveredPerson)
             if (!person) return null
             return (
               <>
-                <h3 style={{ color: 'white', fontSize: '14px', marginBottom: '8px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+                <h3 className="text-white text-sm mb-2 font-sans">
                   {person.person_name}
                 </h3>
-                <p style={{ color: '#8b949e', fontSize: '12px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+                <p className="text-[#8b949e] text-xs font-sans">
                   {person.category}
                 </p>
               </>
@@ -326,13 +282,9 @@ export default function GraphPage({ onBack, token }) {
         </div>
       )}
 
-      {/* Canvas */}
       {people.length === 0 ? (
-        <div style={{ 
-          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          textAlign: 'center'
-        }}>
-          <p style={{ color: '#8b949e', fontSize: '14px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+          <p className="text-[#8b949e] text-sm font-sans">
             No people to display. Add people from the dashboard!
           </p>
         </div>
@@ -342,15 +294,9 @@ export default function GraphPage({ onBack, token }) {
           width={dimensions.width}
           height={dimensions.height}
           onClick={handleCanvasClick}
-          style={{ cursor: 'pointer', display: 'block' }}
+          className="cursor-pointer block"
         />
       )}
-
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   )
 }

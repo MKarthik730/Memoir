@@ -20,26 +20,8 @@ function App() {
 
   if (isLoading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'var(--color-parchment)'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '2px solid var(--color-sepia)',
-          borderTopColor: 'var(--color-gold)',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite'
-        }} />
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div className="min-h-screen bg-parchment flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-sepia border-t-gold rounded-full animate-spin" />
       </div>
     )
   }

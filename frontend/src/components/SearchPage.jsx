@@ -29,97 +29,84 @@ export default function SearchPage({ onBack, token }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-parchment)' }}>
-      {/* Header */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        borderBottom: '1px solid var(--color-sepia)',
-        backgroundColor: 'rgba(247, 241, 232, 0.92)',
-        backdropFilter: 'blur(12px)'
-      }}>
-        <div style={{
-          maxWidth: '800px', margin: '0 auto', padding: 'var(--space-md) var(--space-lg)',
-          display: 'flex', alignItems: 'center', gap: 'var(--space-md)'
-        }}>
-          <button onClick={onBack} style={{
-            width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'none', border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-sm)',
-            color: 'var(--color-ink-muted)', cursor: 'pointer'
-          }}>
+    <div className="min-h-screen bg-parchment">
+      <nav className="sticky top-0 z-[100] border-b border-sepia bg-[rgba(247,241,232,0.92)] backdrop-blur-12">
+        <div className="max-w-[800px] mx-auto px-8 py-4 flex items-center gap-4">
+          <button 
+            onClick={onBack} 
+            className="w-9 h-9 flex items-center justify-center bg-transparent border border-sepia rounded-sm text-ink-muted cursor-pointer"
+          >
             <ArrowLeft size={18} />
           </button>
-          <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 'var(--text-xl)', color: 'var(--color-ink)', flex: 1 }}>
+          <span className="font-display italic text-xl text-ink flex-1">
             Search Memories
           </span>
         </div>
       </nav>
 
-      {/* Content */}
-      <main style={{ maxWidth: '800px', margin: '0 auto', padding: 'var(--space-xl) var(--space-lg)' }}>
-        {/* Search Box */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 'var(--space-xl)' }}>
-          <div style={{
-            display: 'flex', gap: 'var(--space-sm)', padding: '8px', backgroundColor: 'var(--color-cream)',
-            border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-md)'
-          }}>
-            <Search size={20} style={{ margin: 'auto 0', paddingLeft: '12px', color: 'var(--color-ink-muted)' }} />
-            <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="Ask about your memories..." style={{
-                flex: 1, padding: '12px', backgroundColor: 'transparent', border: 'none', color: 'var(--color-ink)',
-                fontFamily: 'var(--font-body)', fontSize: 'var(--text-base)', outline: 'none'
-              }} />
-            <button onClick={handleSearch} disabled={loading} style={{
-              padding: '12px 24px', backgroundColor: 'var(--color-ink)', color: 'var(--color-parchment)',
-              border: 'none', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-ui)',
-              fontSize: 'var(--text-xs)', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer'
-            }}>
+      <main className="max-w-[800px] mx-auto px-8 py-16">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="mb-16"
+        >
+          <div className="flex gap-2 p-2 bg-cream border border-sepia rounded-md">
+            <Search size={20} className="my-auto pl-3 text-ink-muted" />
+            <input 
+              type="text" 
+              value={query} 
+              onChange={e => setQuery(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="Ask about your memories..." 
+              className="flex-1 px-3 py-3 bg-transparent border-none text-ink font-body text-base outline-none" 
+            />
+            <button 
+              onClick={handleSearch} 
+              disabled={loading} 
+              className="px-6 py-3 bg-ink text-parchment border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer"
+            >
               {loading ? 'Searching...' : 'Search'}
             </button>
           </div>
-          <p style={{ marginTop: 'var(--space-sm)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', textAlign: 'center' }}>
+          <p className="mt-2 text-xs text-ink-muted text-center">
             Example: "What did I do last summer?" or "Tell me about my trips with family"
           </p>
         </motion.div>
 
-        {/* Loading */}
         {loading && (
-          <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-            <Sparkles size={32} style={{ color: 'var(--color-gold)', animation: 'spin 1s linear infinite' }} />
-            <p style={{ marginTop: 'var(--space-md)', color: 'var(--color-ink-muted)' }}>Searching your memories...</p>
+          <div className="text-center py-16">
+            <Sparkles size={32} className="text-gold mx-auto animate-spin" />
+            <p className="mt-4 text-ink-muted">Searching your memories...</p>
           </div>
         )}
 
-        {/* Results */}
         {results && !loading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {results.answer && !results.answer.includes('No memories') ? (
               <>
-                <div style={{
-                  padding: 'var(--space-lg)', backgroundColor: 'var(--color-cream)',
-                  border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-lg)'
-                }}>
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)', fontSize: 'var(--text-lg)' }}>
-                    <Sparkles size={18} style={{ color: 'var(--color-gold)' }} />
+                <div className="p-8 bg-cream border border-sepia rounded-md mb-8">
+                  <h3 className="flex items-center gap-2 mb-4 text-lg">
+                    <Sparkles size={18} className="text-gold" />
                     Answer
                   </h3>
-                  <p style={{ lineHeight: 1.8, color: 'var(--color-ink)' }}>{results.answer}</p>
+                  <p className="leading-relaxed text-ink">{results.answer}</p>
                 </div>
 
                 {results.sources?.length > 0 && (
                   <>
-                    <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-md)', color: 'var(--color-ink)' }}>
+                    <h3 className="text-lg mb-4 text-ink">
                       Sources
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                    <div className="flex flex-col gap-2">
                       {results.sources.map((source, i) => (
-                        <div key={i} style={{
-                          padding: 'var(--space-md)', backgroundColor: 'var(--color-cream)',
-                          border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-sm)'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <div 
+                          key={i} 
+                          className="p-4 bg-cream border border-sepia rounded-sm"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
                             {source.type === 'memory' ? <BookOpen size={14} /> : <Image size={14} />}
-                            <span style={{ fontWeight: 600 }}>{source.person_name}</span>
-                            <span style={{ color: 'var(--color-ink-muted)', fontSize: 'var(--text-xs)' }}>
+                            <span className="font-semibold">{source.person_name}</span>
+                            <span className="text-ink-muted text-xs">
                               {source.category_name}
                             </span>
                           </div>
@@ -130,26 +117,22 @@ export default function SearchPage({ onBack, token }) {
                 )}
               </>
             ) : (
-              <div style={{
-                textAlign: 'center', padding: 'var(--space-2xl)', backgroundColor: 'var(--color-cream)',
-                border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-md)'
-              }}>
-                <Search size={48} style={{ color: 'var(--color-sepia)', marginBottom: 'var(--space-md)' }} />
-                <h3 style={{ marginBottom: 'var(--space-sm)', color: 'var(--color-ink)' }}>No results found</h3>
-                <p style={{ color: 'var(--color-ink-muted)' }}>Add more memories and photos to get better search results</p>
+              <div className="text-center py-16 bg-cream border border-sepia rounded-md">
+                <Search size={48} className="text-sepia mx-auto mb-4" />
+                <h3 className="mb-2 text-ink">No results found</h3>
+                <p className="text-ink-muted">Add more memories and photos to get better search results</p>
               </div>
             )}
           </motion.div>
         )}
 
-        {/* Empty State */}
         {!results && !loading && (
-          <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-            <Search size={64} style={{ color: 'var(--color-sepia)', marginBottom: 'var(--space-lg)' }} />
-            <h2 style={{ fontSize: 'var(--text-2xl)', fontStyle: 'italic', marginBottom: 'var(--space-sm)', color: 'var(--color-ink)' }}>
+          <div className="text-center py-16">
+            <Search size={64} className="text-sepia mx-auto mb-8" />
+            <h2 className="font-display italic text-2xl mb-2 text-ink">
               Ask about your memories
             </h2>
-            <p style={{ color: 'var(--color-ink-muted)' }}>
+            <p className="text-ink-muted">
               Use AI to search through your saved memories and photos
             </p>
           </div>

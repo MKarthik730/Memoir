@@ -14,12 +14,13 @@ const CATEGORIES = [
   { id: 'colleagues', label: 'Colleagues', icon: Briefcase },
 ]
 
+const categoryColors = {
+  family: { bg: 'rgba(201, 132, 122, 0.15)', border: 'rgba(201, 132, 122, 0.4)', text: '#8B5A4A' },
+  friends: { bg: 'rgba(184, 150, 62, 0.12)', border: 'rgba(184, 150, 62, 0.35)', text: '#7A6530' },
+  colleagues: { bg: 'rgba(122, 158, 142, 0.12)', border: 'rgba(122, 158, 142, 0.35)', text: '#4A6B5C' }
+}
+
 function PersonCard({ person, onClick, index }) {
-  const categoryColors = {
-    family: { bg: 'rgba(201, 132, 122, 0.15)', border: 'rgba(201, 132, 122, 0.4)', text: '#8B5A4A' },
-    friends: { bg: 'rgba(184, 150, 62, 0.12)', border: 'rgba(184, 150, 62, 0.35)', text: '#7A6530' },
-    colleagues: { bg: 'rgba(122, 158, 142, 0.12)', border: 'rgba(122, 158, 142, 0.35)', text: '#4A6B5C' }
-  }
   const colors = categoryColors[person.category?.toLowerCase()] || categoryColors.friends
   const personName = person.person_name || person.name || 'Unknown'
   const personBio = person.bio || ''
@@ -34,79 +35,28 @@ function PersonCard({ person, onClick, index }) {
         ease: [0.16, 1, 0.3, 1]
       }}
       onClick={onClick}
-      style={{
-        position: 'relative',
-        backgroundColor: 'var(--color-cream)',
-        border: '1px solid var(--color-sepia)',
-        borderRadius: 'var(--radius-sm)',
-        boxShadow: '0 2px 0 var(--color-sepia), 0 8px 32px rgba(28,23,16,0.10)',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out)'
-      }}
       whileHover={{ y: -4, boxShadow: '0 12px 48px rgba(28,23,16,0.16), 0 2px 8px rgba(28,23,16,0.08)' }}
+      className="relative bg-cream border border-sepia rounded-sm shadow-card overflow-hidden cursor-pointer transition-all duration-300"
     >
-      {/* Gold top line */}
-      <div style={{
-        position: 'absolute',
-        top: 0, left: 0, right: 0,
-        height: '1px',
-        background: 'linear-gradient(90deg, transparent, var(--color-gold), transparent)',
-        opacity: 0.5
-      }} />
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
 
-      <div style={{ padding: 'var(--space-lg)' }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 'var(--space-md)',
-          marginBottom: 'var(--space-md)'
-        }}>
-          {/* Avatar */}
-          <div style={{
-            position: 'relative',
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            flexShrink: 0,
-            border: '2px solid var(--color-sepia)',
-            backgroundColor: 'var(--color-sepia)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <span style={{ fontSize: '24px', fontFamily: 'var(--font-display)', color: 'var(--color-parchment)' }}>
+      <div className="p-8">
+        <div className="flex items-start gap-4 mb-4">
+          <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-sepia bg-sepia flex items-center justify-center">
+            <span className="text-2xl font-display text-parchment">
               {personName.charAt(0).toUpperCase()}
             </span>
           </div>
 
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 style={{
-              fontSize: 'var(--text-lg)',
-              fontFamily: 'var(--font-display)',
-              marginBottom: '4px',
-              color: 'var(--color-ink)'
-            }}>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-display mb-1 text-ink">
               {personName}
             </h3>
             
-            {/* Category Badge */}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '3px 10px',
-              backgroundColor: colors.bg,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.65rem',
-              fontFamily: 'var(--font-ui)',
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: colors.text
-            }}>
+            <div 
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-sm text-[0.65rem] font-ui tracking-widest uppercase"
+              style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
+            >
               {person.category?.toLowerCase() === 'family' && <Home size={10} />}
               {person.category?.toLowerCase() === 'friends' && <Heart size={10} />}
               {person.category?.toLowerCase() === 'colleagues' && <Briefcase size={10} />}
@@ -115,30 +65,12 @@ function PersonCard({ person, onClick, index }) {
           </div>
         </div>
 
-        {/* Bio */}
-        {personBio && (
-          <p style={{
-            fontSize: 'var(--text-sm)',
-            color: 'var(--color-ink-soft)',
-            marginBottom: 'var(--space-md)',
-            lineHeight: 1.6,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
-          }}>
+        {personBio ? (
+          <p className="text-sm text-ink-soft mb-4 line-clamp-2 leading-relaxed">
             {personBio}
           </p>
-        )}
-
-        {/* Empty state message */}
-        {!personBio && (
-          <p style={{
-            fontSize: 'var(--text-sm)',
-            color: 'var(--color-ink-muted)',
-            fontStyle: 'italic',
-            marginBottom: 'var(--space-md)'
-          }}>
+        ) : (
+          <p className="text-sm text-ink-muted italic mb-4">
             No description yet
           </p>
         )}
@@ -150,6 +82,7 @@ function PersonCard({ person, onClick, index }) {
 function AddPersonModal({ isOpen, onClose, onPersonAdded, token }) {
   const [form, setForm] = useState({ name: '', category: 'friends', bio: '' })
   const [loading, setLoading] = useState(false)
+  const [hoverButton, setHoverButton] = useState(false)
 
   if (!isOpen) return null
 
@@ -198,17 +131,7 @@ function AddPersonModal({ isOpen, onClose, onPersonAdded, token }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(28, 23, 16, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: 'var(--space-md)'
-        }}
+        className="fixed inset-0 bg-[rgba(28,23,16,0.5)] backdrop-blur-sm flex items-center justify-center z-[1000] p-4"
       >
         <motion.div
           initial={{ opacity: 0, y: 20, rotateY: -5 }}
@@ -216,57 +139,21 @@ function AddPersonModal({ isOpen, onClose, onPersonAdded, token }) {
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           onClick={(e) => e.stopPropagation()}
-          style={{
-            width: '100%',
-            maxWidth: '480px',
-            backgroundColor: 'var(--color-cream)',
-            border: '1px solid var(--color-sepia)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-lg)',
-            overflow: 'hidden'
-          }}
+          className="w-full max-w-[480px] bg-cream border border-sepia rounded-md shadow-lg overflow-hidden"
         >
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 'var(--space-lg)',
-            borderBottom: '1px solid var(--color-sepia)'
-          }}>
-            <h2 style={{ fontSize: 'var(--text-xl)' }}>Add Someone New</h2>
+          <div className="flex items-center justify-between p-8 border-b border-sepia">
+            <h2 className="font-display italic text-xl">Add Someone New</h2>
             <button
               onClick={onClose}
-              style={{
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'none',
-                border: 'none',
-                color: 'var(--color-ink-muted)',
-                cursor: 'pointer',
-                borderRadius: 'var(--radius-sm)',
-                transition: 'color var(--duration-fast)'
-              }}
+              className="w-8 h-8 flex items-center justify-center bg-transparent border-none text-ink-muted cursor-pointer rounded-sm transition-colors duration-150 hover:text-ink"
             >
               <X size={18} />
             </button>
           </div>
 
-          {/* Body */}
-          <div style={{ padding: 'var(--space-lg)' }}>
-            <div style={{ marginBottom: 'var(--space-md)' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: 'var(--space-xs)',
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-ui)',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--color-ink-soft)'
-              }}>
+          <div className="p-8">
+            <div className="mb-4">
+              <label className="block mb-1 text-xs font-ui tracking-widest uppercase text-ink-soft">
                 Name
               </label>
               <input
@@ -274,52 +161,24 @@ function AddPersonModal({ isOpen, onClose, onPersonAdded, token }) {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Enter their name"
-                style={{
-                  width: '100%',
-                  padding: '12px 0',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderBottom: '1px solid var(--color-sepia)',
-                  borderRadius: 0,
-                  color: 'var(--color-ink)',
-                  fontFamily: 'var(--font-body)',
-                  fontSize: 'var(--text-base)',
-                  outline: 'none'
-                }}
+                className="w-full py-3 bg-transparent border-b border-sepia text-ink font-body text-base outline-none focus:border-gold transition-colors duration-150"
               />
             </div>
 
-            <div style={{ marginBottom: 'var(--space-md)' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: 'var(--space-xs)',
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-ui)',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--color-ink-soft)'
-              }}>
+            <div className="mb-4">
+              <label className="block mb-1 text-xs font-ui tracking-widest uppercase text-ink-soft">
                 Relationship
               </label>
-              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <div className="flex gap-2">
                 {CATEGORIES.slice(1).map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setForm({ ...form, category: cat.id })}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      border: `1px solid ${form.category === cat.id ? 'var(--color-gold)' : 'var(--color-sepia)'}`,
-                      borderRadius: 'var(--radius-sm)',
-                      backgroundColor: form.category === cat.id ? 'rgba(184, 150, 62, 0.1)' : 'transparent',
-                      color: form.category === cat.id ? 'var(--color-gold)' : 'var(--color-ink-muted)',
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: 'var(--text-xs)',
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      cursor: 'pointer',
-                      transition: 'all var(--duration-fast)'
-                    }}
+                    className={`flex-1 px-2 py-2.5 rounded-sm text-xs font-ui tracking-widest uppercase cursor-pointer transition-all duration-150 ${
+                      form.category === cat.id 
+                        ? 'border border-gold bg-[rgba(184,150,62,0.1)] text-gold' 
+                        : 'border border-sepia text-ink-muted'
+                    }`}
                   >
                     {cat.label}
                   </button>
@@ -327,16 +186,8 @@ function AddPersonModal({ isOpen, onClose, onPersonAdded, token }) {
               </div>
             </div>
 
-            <div style={{ marginBottom: 'var(--space-lg)' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: 'var(--space-xs)',
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-ui)',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--color-ink-soft)'
-              }}>
+            <div className="mb-8">
+              <label className="block mb-1 text-xs font-ui tracking-widest uppercase text-ink-soft">
                 Short Bio
               </label>
               <textarea
@@ -344,47 +195,17 @@ function AddPersonModal({ isOpen, onClose, onPersonAdded, token }) {
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 placeholder="How do you know them?"
                 rows={3}
-                style={{
-                  width: '100%',
-                  padding: '12px 0',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderBottom: '1px solid var(--color-sepia)',
-                  borderRadius: 0,
-                  color: 'var(--color-ink)',
-                  fontFamily: 'var(--font-body)',
-                  fontSize: 'var(--text-base)',
-                  outline: 'none',
-                  resize: 'none',
-                  lineHeight: 1.6
-                }}
+                className="w-full py-3 bg-transparent border-b border-sepia text-ink font-body text-base outline-none resize-none leading-relaxed focus:border-gold transition-colors duration-150"
               />
             </div>
 
             <button
               onClick={handleAdd}
               disabled={loading}
-              style={{
-                width: '100%',
-                padding: '14px',
-                backgroundColor: 'var(--color-ink)',
-                color: 'var(--color-parchment)',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                fontFamily: 'var(--font-ui)',
-                fontSize: 'var(--text-xs)',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                cursor: loading ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                transition: 'background-color var(--duration-fast)',
-                opacity: loading ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = 'var(--color-gold)' }}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-ink)'}
+              onMouseEnter={() => setHoverButton(true)}
+              onMouseLeave={() => setHoverButton(false)}
+              className={`w-full px-4 py-3.5 ${hoverButton && !loading ? 'bg-gold' : 'bg-ink'} text-parchment border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-wait flex items-center justify-center gap-2 transition-all duration-150`}
+              style={{ opacity: loading ? 0.7 : 1 }}
             >
               <Plus size={16} />
               <span>{loading ? 'Adding...' : 'Add to Your Circle'}</span>
@@ -404,6 +225,8 @@ export default function Dashboard({ onLogout, onPersonClick, onSearchClick, onGr
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedPerson, setSelectedPerson] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [searchFocus, setSearchFocus] = useState(false)
+  const [navHoverAdd, setNavHoverAdd] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -444,136 +267,53 @@ export default function Dashboard({ onLogout, onPersonClick, onSearchClick, onGr
   const userName = localStorage.getItem('memoir_user') || 'Friend'
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-parchment)' }}>
-      {/* Top Navigation */}
-      <nav style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        borderBottom: '1px solid var(--color-sepia)',
-        backgroundColor: 'rgba(247, 241, 232, 0.92)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)'
-      }}>
-        <div style={{
-          maxWidth: '1400px',
-          margin: '0 auto',
-          padding: 'var(--space-md) var(--space-lg)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-lg)'
-        }}>
-          {/* Logo */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-sm)'
-          }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              backgroundColor: 'var(--color-ink)',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <span style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '18px',
-                fontStyle: 'italic',
-                color: 'var(--color-parchment)'
-              }}>
+    <div className="min-h-screen bg-parchment">
+      <nav className="sticky top-0 z-[100] border-b border-sepia bg-[rgba(247,241,232,0.92)] backdrop-blur-12">
+        <div className="max-w-[1400px] mx-auto px-8 py-4 flex items-center gap-8">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 bg-ink rounded-sm flex items-center justify-center">
+              <span className="font-display italic text-lg text-parchment">
                 M
               </span>
             </div>
-            <span style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'var(--text-xl)',
-              fontStyle: 'italic',
-              color: 'var(--color-ink)'
-            }}>
+            <span className="font-display italic text-xl text-ink">
               Memoir
             </span>
           </div>
 
-          {/* Search */}
-          <div style={{
-            flex: 1,
-            maxWidth: '400px',
-            position: 'relative'
-          }}>
-            <Search size={16} style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--color-ink-muted)'
-            }} />
+          <div className="flex-1 max-w-[400px] relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocus(true)}
+              onBlur={() => setSearchFocus(false)}
               placeholder="Search your circle..."
-              style={{
-                width: '100%',
-                padding: '10px 12px 10px 40px',
-                backgroundColor: 'var(--color-cream)',
-                border: '1px solid var(--color-sepia)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--color-ink)',
-                fontFamily: 'var(--font-body)',
-                fontSize: 'var(--text-sm)',
-                outline: 'none',
-                transition: 'border-color var(--duration-fast)'
-              }}
-              onFocus={(e) => e.target.style.borderColor = 'var(--color-gold)'}
-              onBlur={(e) => e.target.style.borderColor = 'var(--color-sepia)'}
+              className={`w-full pl-10 pr-3 py-2.5 bg-cream border ${searchFocus ? 'border-gold' : 'border-sepia'} rounded-sm text-ink font-body text-sm outline-none transition-colors duration-150`}
             />
           </div>
 
-          {/* Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            <button onClick={onSearchClick} style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 16px', backgroundColor: 'var(--color-cream)', color: 'var(--color-ink)',
-              border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-sm)',
-              fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', letterSpacing: '0.1em', textTransform: 'uppercase',
-              cursor: 'pointer'
-            }}>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={onSearchClick} 
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-cream text-ink border border-sepia rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer"
+            >
               <Search size={14} />
               Search
             </button>
-            <button onClick={onGraphClick} style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 16px', backgroundColor: 'var(--color-cream)', color: 'var(--color-ink)',
-              border: '1px solid var(--color-sepia)', borderRadius: 'var(--radius-sm)',
-              fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', letterSpacing: '0.1em', textTransform: 'uppercase',
-              cursor: 'pointer'
-            }}>
+            <button 
+              onClick={onGraphClick} 
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-cream text-ink border border-sepia rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer"
+            >
               <Sparkles size={14} />
               Graph
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '10px 20px',
-                backgroundColor: 'var(--color-ink)',
-                color: 'var(--color-parchment)',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                fontFamily: 'var(--font-ui)',
-                fontSize: 'var(--text-xs)',
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'background-color var(--duration-fast)'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-gold)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-ink)'}
+              onMouseEnter={() => setNavHoverAdd(true)}
+              onMouseLeave={() => setNavHoverAdd(false)}
+              className={`flex items-center gap-1.5 px-5 py-2.5 ${navHoverAdd ? 'bg-gold' : 'bg-ink'} text-parchment border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer transition-colors duration-150`}
             >
               <Plus size={14} />
               <span>Add Person</span>
@@ -581,19 +321,7 @@ export default function Dashboard({ onLogout, onPersonClick, onSearchClick, onGr
 
             <button
               onClick={onLogout}
-              style={{
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'none',
-                border: '1px solid var(--color-sepia)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--color-ink-muted)',
-                cursor: 'pointer',
-                transition: 'all var(--duration-fast)'
-              }}
+              className="w-9 h-9 flex items-center justify-center bg-transparent border border-sepia rounded-sm text-ink-muted cursor-pointer transition-all duration-150 hover:text-ink"
               title="Sign out"
             >
               <LogOut size={16} />
@@ -602,49 +330,26 @@ export default function Dashboard({ onLogout, onPersonClick, onSearchClick, onGr
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        padding: 'var(--space-xl) var(--space-lg)'
-      }}>
-        {/* Header */}
+      <main className="max-w-[1400px] mx-auto px-8 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          style={{ marginBottom: 'var(--space-xl)' }}
+          className="mb-16"
         >
-          <h1 style={{
-            fontSize: 'var(--text-3xl)',
-            fontStyle: 'italic',
-            marginBottom: 'var(--space-sm)',
-            color: 'var(--color-ink)'
-          }}>
+          <h1 className="font-display italic text-[2.8rem] mb-2 text-ink">
             Your Circle
           </h1>
-          <p style={{
-            fontSize: 'var(--text-base)',
-            color: 'var(--color-ink-muted)'
-          }}>
+          <p className="text-base text-ink-muted">
             {filteredPeople.length} {filteredPeople.length === 1 ? 'person' : 'people'} in your life
           </p>
         </motion.div>
 
-        {/* Category Filter */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          style={{
-            display: 'flex',
-            gap: 'var(--space-sm)',
-            marginBottom: 'var(--space-xl)',
-            padding: '4px',
-            backgroundColor: 'var(--color-cream)',
-            borderRadius: 'var(--radius-md)',
-            width: 'fit-content'
-          }}
+          className="flex gap-2 mb-16 p-1 bg-cream rounded-md w-fit"
         >
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon
@@ -653,22 +358,9 @@ export default function Dashboard({ onLogout, onPersonClick, onSearchClick, onGr
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: isActive ? 'var(--color-ink)' : 'transparent',
-                  color: isActive ? 'var(--color-parchment)' : 'var(--color-ink-muted)',
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: 'var(--text-xs)',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  transition: 'all var(--duration-fast)'
-                }}
+                className={`flex items-center gap-1.5 px-5 py-2.5 border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer transition-all duration-150 ${
+                  isActive ? 'bg-ink text-parchment' : 'bg-transparent text-ink-muted'
+                }`}
               >
                 <Icon size={14} />
                 {cat.label}
@@ -677,44 +369,22 @@ export default function Dashboard({ onLogout, onPersonClick, onSearchClick, onGr
           })}
         </motion.div>
 
-        {/* Loading State */}
         {loading ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            style={{
-              textAlign: 'center',
-              padding: 'var(--space-2xl) var(--space-lg)'
-            }}
+            className="text-center py-24"
           >
-            <div style={{
-              width: '80px',
-              height: '80px',
-              margin: '0 auto var(--space-lg)',
-              backgroundColor: 'var(--color-cream)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Sparkles size={32} style={{ color: 'var(--color-sepia)' }} />
+            <div className="w-20 h-20 mx-auto mb-8 bg-cream rounded-full flex items-center justify-center">
+              <Sparkles size={32} className="text-sepia" />
             </div>
-            <h3 style={{
-              fontSize: 'var(--text-xl)',
-              marginBottom: 'var(--space-sm)',
-              color: 'var(--color-ink)'
-            }}>
+            <h3 className="font-display italic text-xl mb-2 text-ink">
               Loading your circle...
             </h3>
           </motion.div>
         ) : filteredPeople.length > 0 ? (
           <div 
-            className="stagger-children"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-              gap: 'var(--space-lg)'
-            }}
+            className="stagger-children grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-8"
           >
             {filteredPeople.map((person, index) => (
               <PersonCard
@@ -729,56 +399,22 @@ export default function Dashboard({ onLogout, onPersonClick, onSearchClick, onGr
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            style={{
-              textAlign: 'center',
-              padding: 'var(--space-2xl) var(--space-lg)'
-            }}
+            className="text-center py-24"
           >
-            <div style={{
-              width: '80px',
-              height: '80px',
-              margin: '0 auto var(--space-lg)',
-              backgroundColor: 'var(--color-cream)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Users size={32} style={{ color: 'var(--color-sepia)' }} />
+            <div className="w-20 h-20 mx-auto mb-8 bg-cream rounded-full flex items-center justify-center">
+              <Users size={32} className="text-sepia" />
             </div>
-            <h3 style={{
-              fontSize: 'var(--text-xl)',
-              marginBottom: 'var(--space-sm)',
-              color: 'var(--color-ink)'
-            }}>
+            <h3 className="font-display italic text-xl mb-2 text-ink">
               No one found
             </h3>
-            <p style={{
-              fontSize: 'var(--text-base)',
-              color: 'var(--color-ink-muted)',
-              marginBottom: 'var(--space-lg)'
-            }}>
+            <p className="text-base text-ink-muted mb-8">
               {searchQuery 
                 ? `No results for "${searchQuery}"`
                 : 'Start building your circle by adding someone special'}
             </p>
             <button
               onClick={() => setShowAddModal(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '12px 24px',
-                backgroundColor: 'var(--color-ink)',
-                color: 'var(--color-parchment)',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                fontFamily: 'var(--font-ui)',
-                fontSize: 'var(--text-xs)',
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                cursor: 'pointer'
-              }}
+              className="inline-flex items-center gap-1.5 px-6 py-3 bg-ink text-parchment border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-pointer"
             >
               <Plus size={14} />
               Add Your First Person
@@ -787,7 +423,6 @@ export default function Dashboard({ onLogout, onPersonClick, onSearchClick, onGr
         )}
       </main>
 
-      {/* Add Person Modal */}
       <AddPersonModal 
         isOpen={showAddModal} 
         onClose={() => setShowAddModal(false)}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react'
+import { User, Lock, ArrowRight, Sparkles } from 'lucide-react'
 import { cn, postJSON } from '../lib/utils'
 
 export default function Login({ onLogin }) {
@@ -12,6 +12,8 @@ export default function Login({ onLogin }) {
     username: '',
     password: ''
   })
+  const [focusedField, setFocusedField] = useState(null)
+  const [hoverButton, setHoverButton] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -39,112 +41,34 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      backgroundColor: 'var(--color-parchment)'
-    }}
-    className="max-md:grid-cols-1"
-    >
-      {/* Left Panel - Hero */}
-      <div style={{
-        position: 'relative',
-        padding: 'var(--space-xl)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        overflow: 'hidden'
-      }}
-      className="max-md:hidden"
-      >
-        {/* Decorative Elements */}
-        <div style={{
-          position: 'absolute',
-          top: '10%',
-          right: '5%',
-          width: '300px',
-          height: '300px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, var(--color-gold) 0%, transparent 70%)',
-          opacity: 0.08
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '15%',
-          left: '10%',
-          width: '200px',
-          height: '200px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, var(--color-sepia) 0%, transparent 70%)',
-          opacity: 0.1
-        }} />
+    <div className="min-h-screen grid grid-cols-2 bg-parchment max-md:grid-cols-1">
+      <div className="relative p-16 flex flex-col justify-center overflow-hidden max-md:hidden">
+        <div className="absolute top-[10%] right-[5%] w-[300px] h-[300px] rounded-full bg-radial from-gold to-transparent opacity-[0.08]" />
+        <div className="absolute bottom-[15%] left-[10%] w-[200px] h-[200px] rounded-full bg-radial from-sepia to-transparent opacity-10" />
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          style={{ position: 'relative', zIndex: 1 }}
+          className="relative z-10"
         >
-          {/* Badge */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            border: '1px solid var(--color-sepia)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: 'var(--space-lg)',
-            color: 'var(--color-ink-muted)',
-            fontSize: 'var(--text-xs)',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            fontFamily: 'var(--font-ui)'
-          }}>
-            <Sparkles size={14} style={{ color: 'var(--color-gold)' }} />
+          <div className="inline-flex items-center gap-2 px-4 py-2 border border-sepia rounded-md mb-8 text-ink-muted text-xs font-ui tracking-widest uppercase">
+            <Sparkles size={14} className="text-gold" />
             <span>Memory Preservation</span>
           </div>
 
-          {/* Title */}
-          <h1 className="hero-title" style={{
-            fontSize: 'clamp(2.5rem, 4vw, 3.5rem)',
-            fontStyle: 'italic',
-            marginBottom: 'var(--space-md)',
-            color: 'var(--color-ink)',
-            maxWidth: '500px'
-          }}>
+          <h1 className="hero-title font-display italic text-[clamp(2.5rem,4vw,3.5rem)] mb-4 text-ink max-w-[500px]">
             Every relationship has a story
           </h1>
 
-          {/* Subtitle */}
-          <p style={{
-            fontSize: 'var(--text-lg)',
-            color: 'var(--color-ink-soft)',
-            maxWidth: '400px',
-            marginBottom: 'var(--space-xl)',
-            lineHeight: 1.7
-          }}>
+          <p className="text-lg text-ink-soft max-w-[400px] mb-16 leading-relaxed">
             Remember yours. Capture the moments, preserve the connections, 
             and cherish the people who shape your life.
           </p>
 
-          {/* Features */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 'var(--space-sm)'
-          }}>
+          <div className="flex flex-wrap gap-2">
             {['Photos & Audio', 'Relationship Map', 'Memory Timeline'].map((feature) => (
-              <div key={feature} style={{
-                padding: '8px 14px',
-                border: '1px solid var(--color-sepia)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-ui)',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'var(--color-ink-muted)'
-              }}>
+              <div key={feature} className="px-3 py-2 border border-sepia rounded-sm text-xs font-ui tracking-widest uppercase text-ink-muted">
                 {feature}
               </div>
             ))}
@@ -152,227 +76,92 @@ export default function Login({ onLogin }) {
         </motion.div>
       </div>
 
-      {/* Right Panel - Form */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-lg)',
-        backgroundColor: 'var(--color-cream)'
-      }}>
+      <div className="flex items-center justify-center p-8 bg-cream">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-          style={{
-            width: '100%',
-            maxWidth: '400px'
-          }}
+          className="w-full max-w-[400px]"
         >
-          {/* Logo */}
-          <div style={{
-            textAlign: 'center',
-            marginBottom: 'var(--space-lg)'
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              margin: '0 auto var(--space-md)',
-              backgroundColor: 'var(--color-ink)',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <span style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '28px',
-                fontStyle: 'italic',
-                color: 'var(--color-parchment)'
-              }}>
-                M
-              </span>
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 mx-auto mb-4 bg-ink rounded-md flex items-center justify-center">
+              <span className="font-display italic text-[28px] text-parchment">M</span>
             </div>
-            <h2 style={{
-              fontSize: 'var(--text-xl)',
-              marginBottom: '4px'
-            }}>
+            <h2 className="font-display italic text-xl mb-1">
               {isRegister ? 'Create Account' : 'Welcome Back'}
             </h2>
-            <p style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-ink-muted)'
-            }}>
+            <p className="text-sm text-ink-muted">
               {isRegister 
                 ? 'Begin your memory preservation journey' 
                 : 'Continue preserving your memories'}
             </p>
           </div>
 
-          {/* Tabs */}
-          <div style={{
-            display: 'flex',
-            gap: 'var(--space-xs)',
-            padding: '4px',
-            backgroundColor: 'var(--color-dust)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: 'var(--space-lg)'
-          }}>
+          <div className="flex gap-1 p-1 bg-dust rounded-md mb-8">
             <button
               onClick={() => setIsRegister(false)}
-              style={{
-                flex: 1,
-                padding: '12px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                backgroundColor: !isRegister ? 'var(--color-ink)' : 'transparent',
-                color: !isRegister ? 'var(--color-parchment)' : 'var(--color-ink-muted)',
-                fontFamily: 'var(--font-ui)',
-                fontSize: 'var(--text-xs)',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'all var(--duration-fast) var(--ease-out)'
-              }}
+              className={`flex-1 px-3 py-3 rounded-sm border-none font-ui text-xs tracking-widest uppercase cursor-pointer transition-all duration-150 ${!isRegister ? 'bg-ink text-parchment' : 'bg-transparent text-ink-muted'}`}
             >
               Sign In
             </button>
             <button
               onClick={() => setIsRegister(true)}
-              style={{
-                flex: 1,
-                padding: '12px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                backgroundColor: isRegister ? 'var(--color-ink)' : 'transparent',
-                color: isRegister ? 'var(--color-parchment)' : 'var(--color-ink-muted)',
-                fontFamily: 'var(--font-ui)',
-                fontSize: 'var(--text-xs)',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'all var(--duration-fast) var(--ease-out)'
-              }}
+              className={`flex-1 px-3 py-3 rounded-sm border-none font-ui text-xs tracking-widest uppercase cursor-pointer transition-all duration-150 ${isRegister ? 'bg-ink text-parchment' : 'bg-transparent text-ink-muted'}`}
             >
               Sign Up
             </button>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit}>
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                style={{
-                  padding: 'var(--space-sm) var(--space-md)',
-                  marginBottom: 'var(--space-md)',
-                  backgroundColor: 'rgba(180, 60, 60, 0.1)',
-                  border: '1px solid rgba(180, 60, 60, 0.3)',
-                  borderRadius: 'var(--radius-sm)',
-                  color: '#8B3A3A',
-                  fontSize: 'var(--text-sm)'
-                }}
+                className="px-4 py-3 mb-4 bg-[rgba(180,60,60,0.1)] border border-[rgba(180,60,60,0.3)] rounded-sm text-[#8B3A3A] text-sm"
               >
                 {error}
               </motion.div>
             )}
 
-            <div style={{ marginBottom: 'var(--space-md)' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: 'var(--space-xs)',
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-ui)',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--color-ink-soft)'
-              }}>
+            <div className="mb-4">
+              <label className="block mb-1 text-xs font-ui tracking-widest uppercase text-ink-soft">
                 Username
               </label>
-              <div style={{ position: 'relative' }}>
-                <User size={16} style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--color-ink-muted)'
-                }} />
+              <div className="relative">
+                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
                   type="text"
                   value={form.username}
                   onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  onFocus={() => setFocusedField('username')}
+                  onBlur={() => setFocusedField(null)}
                   placeholder="Enter your username"
                   required
-                  style={{
-                    width: '100%',
-                    padding: '14px 14px 14px 40px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderBottom: '1px solid var(--color-sepia)',
-                    borderRadius: 0,
-                    color: 'var(--color-ink)',
-                    fontFamily: 'var(--font-body)',
-                    fontSize: 'var(--text-base)',
-                    transition: 'border-color var(--duration-fast)',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => e.target.style.borderBottomColor = 'var(--color-gold)'}
-                  onBlur={(e) => e.target.style.borderBottomColor = 'var(--color-sepia)'}
+                  className={`w-full pl-10 pr-0 py-3 bg-transparent border-b ${focusedField === 'username' ? 'border-gold' : 'border-sepia'} text-ink font-body text-base outline-none transition-colors duration-150`}
                 />
               </div>
             </div>
 
-            <div style={{ marginBottom: 'var(--space-lg)' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: 'var(--space-xs)',
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-ui)',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--color-ink-soft)'
-              }}>
+            <div className="mb-8">
+              <label className="block mb-1 text-xs font-ui tracking-widest uppercase text-ink-soft">
                 Password
               </label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={16} style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--color-ink-muted)'
-                }} />
+              <div className="relative">
+                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
                   type="password"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
                   placeholder="Enter your password"
                   required
                   minLength={isRegister ? 8 : 1}
-                  style={{
-                    width: '100%',
-                    padding: '14px 14px 14px 40px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderBottom: '1px solid var(--color-sepia)',
-                    borderRadius: 0,
-                    color: 'var(--color-ink)',
-                    fontFamily: 'var(--font-body)',
-                    fontSize: 'var(--text-base)',
-                    transition: 'border-color var(--duration-fast)',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => e.target.style.borderBottomColor = 'var(--color-gold)'}
-                  onBlur={(e) => e.target.style.borderBottomColor = 'var(--color-sepia)'}
+                  className={`w-full pl-10 pr-0 py-3 bg-transparent border-b ${focusedField === 'password' ? 'border-gold' : 'border-sepia'} text-ink font-body text-base outline-none transition-colors duration-150`}
                 />
               </div>
               {isRegister && (
-                <p style={{
-                  marginTop: 'var(--space-xs)',
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--color-ink-muted)'
-                }}>
+                <p className="mt-1 text-xs text-ink-muted">
                   Password must be at least 8 characters
                 </p>
               )}
@@ -381,33 +170,10 @@ export default function Login({ onLogin }) {
             <button
               type="submit"
               disabled={isLoading}
-              style={{
-                width: '100%',
-                padding: '14px 28px',
-                backgroundColor: 'var(--color-ink)',
-                color: 'var(--color-parchment)',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                fontFamily: 'var(--font-ui)',
-                fontSize: 'var(--text-xs)',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                cursor: isLoading ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                transition: 'all var(--duration-base) var(--ease-out)',
-                opacity: isLoading ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!isLoading) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-gold)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-ink)'
-              }}
+              onMouseEnter={() => setHoverButton(true)}
+              onMouseLeave={() => setHoverButton(false)}
+              className={`w-full px-6 py-3 ${hoverButton && !isLoading ? 'bg-gold' : 'bg-ink'} text-parchment border-none rounded-sm font-ui text-xs tracking-widest uppercase cursor-wait flex items-center justify-center gap-2 transition-all duration-300`}
+              style={{ opacity: isLoading ? 0.7 : 1 }}
             >
               {isLoading ? (
                 <span>Please wait...</span>
@@ -420,25 +186,11 @@ export default function Login({ onLogin }) {
             </button>
           </form>
 
-          <p style={{
-            marginTop: 'var(--space-lg)',
-            textAlign: 'center',
-            fontSize: 'var(--text-sm)',
-            color: 'var(--color-ink-muted)'
-          }}>
+          <p className="mt-8 text-center text-sm text-ink-muted">
             {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
               onClick={() => setIsRegister(!isRegister)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--color-gold)',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontSize: 'inherit',
-                textDecoration: 'underline',
-                textUnderlineOffset: '2px'
-              }}
+              className="bg-none border-none text-gold cursor-pointer font-inherit text-inherit underline underline-offset-2"
             >
               {isRegister ? 'Sign in' : 'Sign up'}
             </button>
