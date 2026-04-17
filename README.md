@@ -48,6 +48,40 @@ Think of it as a personal CRM meets memory journal, built for human relationship
 ```
 Memoir/
 ├── backend/
+│   ├── routes/
+│   │   └── main.py          # FastAPI app entry point
+│   ├── database/
+│   │   ├── models.py        # SQLAlchemy ORM models
+│   │   └── config.py        # Database configuration
+│   ├── rag/
+│   │   ├── main.py          # RAG implementation
+│   │   ├── embeddings.py    # Embedding utilities
+│   │   └── vector_store.py  # Vector storage
+│   ├── ai/
+│   └── __init__.py
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── PersonDetail.jsx
+│   │   │   ├── SearchPage.jsx
+│   │   │   └── GraphPage.jsx
+│   │   ├── lib/
+│   │   │   └── utils.js     # Utility functions
+│   │   ├── App.jsx          # Main app component
+│   │   ├── main.jsx         # React entry point
+│   │   └── index.css        # Tailwind CSS styles
+│   ├── package.json
+│   └── vite.config.js
+├── migrate_database.py
+├── migrate_memories.py
+├── requirements.txt
+├── render.yaml
+└── README.md
+```
+Memoir/
+├── backend/
 │   ├── main.py              # FastAPI app entry point
 │   ├── models.py            # SQLAlchemy ORM models
 │   ├── schemas.py           # Pydantic request/response schemas
@@ -125,17 +159,36 @@ API docs available at `http://localhost:8000/docs`
 
 ## API Endpoints
 
+### Authentication
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/sign_up` | Create new account |
 | POST | `/login` | Sign in |
+
+### Categories
+| Method | Endpoint | Description |
+|---|---|---|
 | GET | `/home/categories` | List all categories |
+| POST | `/home/category` | Create a category |
+
+### People
+| Method | Endpoint | Description |
+|---|---|---|
 | GET | `/home/category/{id}/people` | Get people in category |
 | POST | `/home/person` | Add a new person |
-| GET | `/home/person/{id}/memories` | Get person's memories |
-| POST | `/home/person/{id}/memory` | Add memory to person |
+| GET | `/home/person/{id}/files` | Get person's files |
 | POST | `/home/person/{id}/upload` | Upload photo |
 | GET | `/home/person/{id}/pdf` | Download PDF memoir |
+
+### Memories
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/home/person/{id}/memories` | Get person's memories |
+| POST | `/home/person/{id}/memory` | Add memory to person |
+
+### Search
+| Method | Endpoint | Description |
+|---|---|---|
 | POST | `/home/rag/query` | AI search memories |
 
 ---
