@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root {
+@theme {
   --color-parchment: #F7F1E8;
   --color-cream: #EDE5D5;
   --color-ink: #1C1710;
@@ -10,44 +10,21 @@
   --color-gold: #B8963E;
   --color-gold-light: #D4B86A;
   --color-dust: #D9CFC0;
-  --color-shadow: rgba(28, 23, 16, 0.12);
 
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'EB Garamond', Georgia, serif;
   --font-ui: 'Jost', sans-serif;
   --font-mono: 'DM Mono', monospace;
 
-  --text-xs: 0.72rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.2rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 2rem;
-  --text-3xl: 2.8rem;
-  --text-4xl: 4rem;
-
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 32px;
-  --space-xl: 64px;
-
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 8px;
 
-  --shadow-sm: 0 1px 4px var(--color-shadow);
-  --shadow-md: 0 4px 20px var(--color-shadow), 0 1px 4px rgba(28,23,16,0.06);
-  --shadow-lg: 0 12px 48px rgba(28,23,16,0.16), 0 2px 8px rgba(28,23,16,0.08);
   --shadow-card: 0 2px 0 var(--color-sepia), 0 8px 32px rgba(28,23,16,0.10);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-inout: cubic-bezier(0.83, 0, 0.17, 1);
-  --duration-fast: 150ms;
-  --duration-base: 300ms;
-  --duration-slow: 600ms;
-  --duration-reveal: 900ms;
 }
 
 *, *::before, *::after {
@@ -63,7 +40,7 @@ html {
 
 body {
   font-family: var(--font-body);
-  font-size: var(--text-base);
+  font-size: 1rem;
   line-height: 1.75;
   letter-spacing: 0.01em;
   background-color: var(--color-parchment);
@@ -128,37 +105,20 @@ img {
   height: auto;
 }
 
-h1, h2, h3, h4, h5, h6 {
+.font-display {
   font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
 }
 
-h1 {
-  font-size: var(--text-4xl);
-  font-style: italic;
+.font-body {
+  font-family: var(--font-body);
 }
 
-h2 {
-  font-size: var(--text-3xl);
-}
-
-h3 {
-  font-size: var(--text-xl);
-}
-
-.label, nav, button, .tag {
+.font-ui {
   font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
-.date, .meta {
+.font-mono {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--color-ink-muted);
 }
 
 @keyframes fadeRise {
@@ -203,6 +163,10 @@ h3 {
   }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .hero-title {
   animation: inkReveal 1.2s var(--ease-out) forwards;
 }
@@ -223,7 +187,7 @@ h3 {
 .stagger-children > * {
   opacity: 0;
   transform: translateY(12px);
-  animation: fadeRise var(--duration-reveal) var(--ease-out) forwards;
+  animation: fadeRise 900ms var(--ease-out) forwards;
 }
 
 .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
