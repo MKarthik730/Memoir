@@ -7,9 +7,8 @@ services:
     env: python
     region: oregon
     plan: free
-    rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn routes.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn backend.routes.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /home
     envVars:
       - key: DATABASE_URL

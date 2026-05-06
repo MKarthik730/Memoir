@@ -31,4 +31,4 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Import Base from models to ensure tables are created correctly
 from database.models import Base
 
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine) if not os.getenv("RENDER") else None
