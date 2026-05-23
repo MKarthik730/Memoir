@@ -1,48 +1,54 @@
 # Memoir
 
-> A personal memory vault that preserves your relationships and shared experiences — with an interactive knowledge graph to visualize how people and memories connect.
+A personal memory vault that preserves your relationships and shared 
+experiences — with an interactive knowledge graph to visualize how 
+people and memories connect.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green?style=flat-square&logo=fastapi)
-![React](https://img.shields.io/badge/React-18-blue?style=flat-square&logo=react)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.2-38bdf8?style=flat-square&logo=tailwindcss)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=flat-square&logo=postgresql)
-![Framer Motion](https://img.shields.io/badge/Framer%20Motion-12.38-pink?style=flat-square)
-
----
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-latest-green)
+![React](https://img.shields.io/badge/React-18-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-latest-blue)
 
 ## What is Memoir?
 
-Memoir helps you preserve the people in your life and the memories you've shared with them. You can store photos and text entries linked to specific people — and explore those connections through a dynamic relationship graph.
+Memoir helps you preserve the people in your life and the memories 
+you've shared with them. Store photos and text entries linked to 
+specific people, and explore those connections through a dynamic 
+relationship graph.
 
-Think of it as a **personal CRM meets memory journal**, built for human relationships.
+Think of it as a personal CRM meets memory journal, built for 
+human relationships.
 
 ---
+## Workflow
+
+![Memoir Workflow](docs/memoir-workflow.svg)
 
 ## Features
 
 - **Memory Storage** — Add text and photos tied to people in your life
-- **Relationship Graph** — Interactive force-directed graph showing how people connect
-- **People Management** — Track relationships by category (Family, Friends, Colleagues)
+- **Relationship Graph** — Interactive force-directed graph showing 
+  how people connect
+- **People Management** — Track relationships by category 
+  (Family, Friends, Colleagues)
 - **AI Search** — Natural language search through your memories using RAG
 - **PDF Export** — Generate beautiful PDF memoirs for any person
 - **REST API** — Clean FastAPI backend with full CRUD operations
-- **Persistent Storage** — PostgreSQL with SQLAlchemy ORM for reliable data modeling
+- **Persistent Storage** — PostgreSQL with SQLAlchemy ORM
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | FastAPI, Python 3.11 |
-| Database | PostgreSQL, SQLAlchemy |
+| Layer    | Technology                          |
+|----------|-------------------------------------|
+| Backend  | FastAPI, Python 3.11                |
+| Database | PostgreSQL, SQLAlchemy              |
 | Frontend | React 18, Tailwind CSS 4, Framer Motion |
-| Icons | Lucide React |
-| API | RESTful with Pydantic validation |
+| Icons    | Lucide React                        |
+| API      | RESTful with Pydantic validation    |
 
 ---
-
 ## Project Structure
 
 ```
@@ -62,7 +68,6 @@ Memoir/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Dashboard.jsx
-│   │   │   ├── Login.jsx
 │   │   │   ├── PersonDetail.jsx
 │   │   │   ├── SearchPage.jsx
 │   │   │   └── GraphPage.jsx
@@ -77,7 +82,6 @@ Memoir/
 ├── render.yaml
 └── README.md
 ```
-
 ---
 
 ## Getting Started
@@ -108,90 +112,85 @@ npm install
 
 Create a `.env` file in the project root:
 
-```bash
+```env
 DATABASE_URL=postgresql://user:password@localhost:5432/memoir_db
 ```
 
 ### Run
 
 ```bash
-# Terminal 1 - Backend
+# Terminal 1 — Backend
 cd backend
 uvicorn main:app --reload
 
-# Terminal 2 - Frontend
+# Terminal 2 — Frontend
 cd frontend
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.  
-API docs available at `http://localhost:8000/docs`
+Open [http://localhost:5173](http://localhost:5173) in your browser.  
+API docs available at [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## API Endpoints
+## API Reference
 
 ### Authentication
 
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/sign_up` | Create new account |
-| POST | `/login` | Sign in |
+| Method | Endpoint   | Description      |
+|--------|------------|------------------|
+| POST   | /sign_up   | Create account   |
+| POST   | /login     | Sign in          |
 
 ### Categories
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/home/categories` | List all categories |
-| POST | `/home/category` | Create a category |
+| Method | Endpoint              | Description         |
+|--------|-----------------------|---------------------|
+| GET    | /home/categories      | List all categories |
+| POST   | /home/category        | Create a category   |
 
 ### People
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/home/category/{id}/people` | Get people in category |
-| POST | `/home/person` | Add a new person |
-| GET | `/home/person/{id}/files` | Get person's files |
-| POST | `/home/person/{id}/upload` | Upload photo |
-| GET | `/home/person/{id}/pdf` | Download PDF memoir |
+| Method | Endpoint                    | Description          |
+|--------|-----------------------------|----------------------|
+| GET    | /home/category/{id}/people  | Get people in category |
+| POST   | /home/person                | Add a new person     |
+| GET    | /home/person/{id}/files     | Get person's files   |
+| POST   | /home/person/{id}/upload    | Upload photo         |
+| GET    | /home/person/{id}/pdf       | Download PDF memoir  |
 
 ### Memories
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/home/person/{id}/memories` | Get person's memories |
-| POST | `/home/person/{id}/memory` | Add memory to person |
+| Method | Endpoint                      | Description            |
+|--------|-------------------------------|------------------------|
+| GET    | /home/person/{id}/memories    | Get person's memories  |
+| POST   | /home/person/{id}/memory      | Add memory to person   |
 
 ### Search
 
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/home/rag/query` | AI search memories |
+| Method | Endpoint          | Description          |
+|--------|-------------------|----------------------|
+| POST   | /home/rag/query   | AI search memories   |
 
 ---
 
-## What I Learned
-
-- Building React SPAs with component-based architecture
-- Styling with Tailwind CSS while maintaining design consistency
-- Designing relational schemas for graph-like data (people ↔ memories many-to-many)
-- FastAPI dependency injection for database session management
-- SQLAlchemy relationship modeling with backref
-- Implementing smooth animations with Framer Motion
-
----
-
-## Future Improvements
+## Roadmap
 
 - [ ] Audio notes storage
 - [ ] Timeline view sorted by date
 - [ ] Mobile-responsive refinements
 - [ ] Tags and filtering system
-- [ ] Sharing/collaboration features
+- [ ] Sharing and collaboration features
 
 ---
 
 ## Author
 
 **Karthik Motupalli** — [@MKarthik730](https://github.com/MKarthik730)  
-CS Student, ANITS Vizag | [LinkedIn](https://www.linkedin.com/in/karthik-motupalli-0b6951318)
+CS Student, ANITS Vizag
+
+---
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
