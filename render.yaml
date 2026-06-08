@@ -8,7 +8,7 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements.txt && mkdir -p uploads
+    buildCommand: pip install -r requirements.txt && (pip install -r requirements-ai.txt || echo "Optional search deps unavailable, using keyword fallback") && mkdir -p uploads
     startCommand: uvicorn backend.routes.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
@@ -24,6 +24,7 @@ services:
         value: "http://localhost:5173, https://memoir-frontend.onrender.com"
       - key: UPLOAD_DIR
         value: ./uploads
+
 
   - type: web
     name: memoir-frontend
