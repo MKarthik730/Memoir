@@ -1,30 +1,30 @@
 @import "tailwindcss";
 
+:root {
+  --cream: #FAF7F2;
+  --warm-white: #F5F0E8;
+  --mahogany: #4A1C0A;
+  --dusty-rose: #C4857A;
+  --gold: #B8975A;
+  --ink: #2C1810;
+  --muted: #8B7355;
+  --card-shadow: 0 4px 24px rgba(44, 24, 16, 0.08);
+  --card-shadow-hover: 0 12px 40px rgba(44, 24, 16, 0.16);
+  --sidebar-width: 220px;
+}
+
 @theme {
-  --color-parchment: #F7F1E8;
-  --color-cream: #EDE5D5;
-  --color-ink: #1C1710;
-  --color-ink-soft: #4A4035;
-  --color-ink-muted: #8C7B6B;
-  --color-sepia: #C4A882;
-  --color-gold: #B8963E;
-  --color-gold-light: #D4B86A;
-  --color-dust: #D9CFC0;
-
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-body: 'EB Garamond', Georgia, serif;
-  --font-ui: 'Jost', sans-serif;
-  --font-mono: 'DM Mono', monospace;
-
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
-
-  --shadow-card: 0 2px 0 var(--color-sepia), 0 8px 32px rgba(28,23,16,0.10);
-
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --ease-inout: cubic-bezier(0.83, 0, 0.17, 1);
+  --color-cream: #FAF7F2;
+  --color-warm-white: #F5F0E8;
+  --color-mahogany: #4A1C0A;
+  --color-dusty-rose: #C4857A;
+  --color-gold: #B8975A;
+  --color-ink: #2C1810;
+  --color-muted: #8B7355;
+  --color-danger: #C45A5A;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Lora', Georgia, serif;
+  --font-ui: 'DM Sans', sans-serif;
 }
 
 *, *::before, *::after {
@@ -40,11 +40,10 @@ html {
 
 body {
   font-family: var(--font-body);
-  font-size: 1rem;
-  line-height: 1.75;
-  letter-spacing: 0.01em;
-  background-color: var(--color-parchment);
-  color: var(--color-ink);
+  font-size: 16px;
+  line-height: 1.7;
+  background-color: var(--cream);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -55,14 +54,13 @@ body::before {
   position: fixed;
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.025;
+  opacity: 0.04;
   pointer-events: none;
   z-index: 9999;
 }
 
 ::selection {
-  background: var(--color-gold);
-  color: var(--color-parchment);
+  background: rgba(196, 133, 122, 0.3);
 }
 
 ::-webkit-scrollbar {
@@ -71,138 +69,183 @@ body::before {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-parchment);
+  background: var(--warm-white);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-sepia);
+  background: var(--gold);
   border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gold);
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  outline: none;
-}
-
-input, textarea, select {
-  font-family: inherit;
-  outline: none;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-.font-display {
+h1, h2 {
   font-family: var(--font-display);
+  color: var(--ink);
 }
 
-.font-body {
+h3, h4 {
+  font-family: var(--font-display);
+  color: var(--mahogany);
+}
+
+p, .text-body {
   font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
 }
 
-.font-ui {
+label, button, nav, .font-ui {
   font-family: var(--font-ui);
 }
 
-.font-mono {
-  font-family: var(--font-mono);
+.date-text, .contributor-name {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--muted);
+  font-size: 14px;
 }
 
-@keyframes fadeRise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Button styles */
+.btn-primary {
+  background-color: var(--dusty-rose);
+  color: white;
+  font-family: var(--font-ui);
+  border-radius: 6px;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.15s;
 }
 
-@keyframes inkReveal {
-  from {
-    opacity: 0;
-    filter: blur(4px);
-    letter-spacing: 0.2em;
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    letter-spacing: -0.02em;
-  }
+.btn-primary:hover {
+  filter: brightness(1.08);
 }
 
-@keyframes drawLine {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
+.btn-primary:active {
+  transform: scale(0.97);
 }
 
+.btn-secondary {
+  background: transparent;
+  border: 1.5px solid var(--gold);
+  color: var(--gold);
+  font-family: var(--font-ui);
+  border-radius: 6px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.15s;
+}
+
+.btn-secondary:hover {
+  filter: brightness(1.08);
+}
+
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+.btn-danger {
+  background: transparent;
+  border: 1.5px solid var(--danger);
+  color: var(--danger);
+  font-family: var(--font-ui);
+  border-radius: 6px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+/* Form inputs */
+input, textarea, select {
+  border: 1.5px solid rgba(184, 151, 90, 0.3);
+  background: var(--warm-white);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(184, 151, 90, 0.15);
+}
+
+textarea {
+  font-family: var(--font-body);
+}
+
+input, select {
+  font-family: var(--font-ui);
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--warm-white) 25%, #EDE8E0 50%, var(--warm-white) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+/* Card styles */
+.card {
+  background: var(--cream);
+  border: 1px solid rgba(184, 151, 90, 0.2);
+  border-left: 4px solid var(--gold);
+  box-shadow: var(--card-shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+/* Toast notifications */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--cream);
+  color: var(--ink);
+  border-left: 4px solid;
+  padding: 16px 24px;
+  border-radius: 6px;
+  box-shadow: var(--card-shadow-hover);
+  z-index: 10000;
+  max-width: 400px;
+}
+
+.toast-success {
+  border-left-color: var(--gold);
+}
+
+.toast-error {
+  border-left-color: var(--danger);
+}
+
+/* Graph node pulse */
 @keyframes nodePulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(184, 150, 62, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(184, 150, 62, 0);
-  }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* Fade in animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.hero-title {
-  animation: inkReveal 1.2s var(--ease-out) forwards;
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
 }
 
-.underline-gold::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  height: 1px;
-  width: 100%;
-  background: var(--color-gold);
-  transform: scaleX(0);
-  transform-origin: left;
-  animation: drawLine 0.8s var(--ease-out) 0.6s forwards;
+/* Pulse animation for loading */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-.stagger-children > * {
-  opacity: 0;
-  transform: translateY(12px);
-  animation: fadeRise 900ms var(--ease-out) forwards;
-}
-
-.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2) { animation-delay: 80ms; }
-.stagger-children > *:nth-child(3) { animation-delay: 160ms; }
-.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
-.stagger-children > *:nth-child(5) { animation-delay: 320ms; }
-.stagger-children > *:nth-child(6) { animation-delay: 400ms; }
-.stagger-children > *:nth-child(7) { animation-delay: 480ms; }
-.stagger-children > *:nth-child(8) { animation-delay: 560ms; }
-.stagger-children > *:nth-child(9) { animation-delay: 640ms; }
-.stagger-children > *:nth-child(10) { animation-delay: 720ms; }
-.stagger-children > *:nth-child(11) { animation-delay: 800ms; }
-.stagger-children > *:nth-child(12) { animation-delay: 880ms; }
-
-.graph-node:hover {
-  animation: nodePulse 1.6s ease infinite;
+.animate-pulse-slow {
+  animation: pulse 2s ease-in-out infinite;
 }

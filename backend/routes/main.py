@@ -1,1868 +1,767 @@
-import sys
 import os
-
-# Add backend directory to path for imports
-backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
-
+import uuid
 import logging
+import shutil
+from datetime import datetime, timedelta, date
+from typing import Optional, List
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Query
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
+from sqlalchemy import text, or_
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from dotenv import load_dotenv
+
+from backend.database.models import (
+    Base, User, Family, FamilyMember, Person, Relationship, Memory, MemoryPhoto,
+    MemberRole, RelationshipTag,
+    UserCreate, UserLogin, UserResponse, LoginResponse, FamilyCreate, FamilyResponse,
+    PersonCreate, PersonResponse, PersonDetailResponse,
+    RelationshipCreate, RelationshipResponse,
+    MemoryCreate, MemoryResponse, SearchQuery, UploadResponse,
 )
+from backend.database.config import engine, SessionLocal, get_db, check_pgvector, init_db, PGVECTOR_AVAILABLE
+
+load_dotenv()
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-from datetime import datetime, timedelta, timezone
-from jose import JWTError, jwt
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from passlib.context import CryptContext
-import asyncio
-import re
-import threading
-from typing import Optional, List
-from pydantic import BaseModel, Field
-from io import BytesIO
+# ─── Security ─────────────────────────────────────────────────────────────────
 
-from fastapi.responses import StreamingResponse
-
-from database.models import (
-    User,
-    UserData,
-    UserResponse,
-    RegistrationResponse,
-    Base,
-    FileStore,
-    FileResponse,
-    LoginResponse,
-    CategoryResponse,
-    FileUploadResponse,
-    Category,
-    Person,
-    CategoryData,
-    PersonData,
-    PersonResponse,
-    Memory,
-    MemoryData,
-    MemoryResponse,
-    PersonSummary,
-    PersonSummaryData,
-    PersonSummaryResponse,
-    RelationshipSuggestion,
-)
-from fastapi.middleware.cors import CORSMiddleware
-from database.config import SessionLocal, engine
-from fastapi.staticfiles import StaticFiles
-
-try:
-    from ai import (
-        SentimentAnalyzer,
-        MemorySummarizer,
-        RelationshipSuggester,
-        EMOTION_COLORS,
-    )
-except Exception:
-    SentimentAnalyzer = None
-    MemorySummarizer = None
-    RelationshipSuggester = None
-    EMOTION_COLORS = {}
-
-try:
-    from rag.rag_model import RAGModel
-except Exception:
-    RAGModel = None
-
-try:
-    from pypdf import PdfReader
-except Exception:
-    PdfReader = None
-
-RAG_EMBEDDING_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "all-mpnet-base-v2")
-_RAG_MODEL_INSTANCE = None
-_RAG_MODEL_LOCK = threading.Lock()
+SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-change-in-production")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-app = FastAPI()
 security = HTTPBearer()
 
-Base.metadata.create_all(bind=engine)
+# ─── App Setup ────────────────────────────────────────────────────────────────
 
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Testing database connection...")
-    try:
-        from database.config import engine
-
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        logger.info("Database connection successful")
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-
-
-from sqlalchemy import text
-
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-expires_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+app = FastAPI(title="Memoir API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[orig.strip() for orig in CORS_ORIGINS.split(",")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Process-Time"],
-    max_age=3600,
 )
 
-# Serve static files at /static prefix
-import os
-
-frontend_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "frontend",
-)
-print(f"Frontend path: {frontend_path}")
+# Static files for uploads
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# ─── Startup ──────────────────────────────────────────────────────────────────
+
+@app.on_event("startup")
+async def startup():
+    init_db()
+    logger.info("Database initialized")
 
 
-async def hash_password(password: str) -> str:
-    password_bytes = password.encode("utf-8")[:72]
-    logger.info(
-        f"Password length before truncate: {len(password)}, after: {len(password_bytes)}"
-    )
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, pwd_context.hash, password_bytes)
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password.encode("utf-8")[:72])
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    password_bytes = plain_password.encode("utf-8")[:72]
-    return pwd_context.verify(password_bytes, hashed_password)
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain.encode("utf-8")[:72], hashed)
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, "HS256")
-    logger.info(f"Token created for user: {data.get('sub')}")
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User:
     token = credentials.credentials
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        logger.info("Token signature verified successfully")
-
-        exp = payload.get("exp")
-        if exp is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token missing expiration",
-            )
-
-        current_time = datetime.now(timezone.utc).timestamp()
-        if current_time > exp:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired"
-            )
-
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
-        if user_id is None or not isinstance(user_id, int) or user_id <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid user_id in token",
-            )
-
-        username = payload.get("sub")
-        if (
-            username is None
-            or not isinstance(username, str)
-            or len(username.strip()) == 0
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username in token",
-            )
-
-        logger.info(f"Token verified for: {username} (ID: {user_id})")
-        return {"user_id": user_id, "username": username}
-
-    except JWTError as e:
-        logger.error(f"JWT verification failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected token error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token verification failed"
-        )
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
-ALLOWED_EXTENSIONS = {
-    "audio": {"mp3", "wav", "flac", "aac", "m4a", "ogg"},
-    "video": {"mp4", "avi", "mov", "mkv", "flv", "wmv", "webm"},
-    "image": {"jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"},
-    "document": {"pdf", "txt", "docx", "xlsx", "pptx"},
-}
-
-MAX_FILE_SIZE = 100 * 1024 * 1024
-
-
-class RAGQueryRequest(BaseModel):
-    question: str = Field(..., min_length=2, max_length=2000)
-    top_k: int = Field(default=5, ge=1, le=15)
+def save_upload(file: UploadFile) -> str:
+    """Save uploaded file to UPLOAD_DIR and return the URL path."""
+    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else ""
+    filename = f"{uuid.uuid4()}_{file.filename}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return f"/uploads/{filename}"
 
 
-def build_person_pdf_buffer(person: Person, db) -> BytesIO:
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-    from reportlab.lib.units import inch
-    from PIL import Image as PILImage
-
-    files = (
-        db.query(FileStore)
-        .filter(FileStore.person_id == person.id)
-        .order_by(FileStore.created_at.asc())
-        .all()
-    )
-    memories = (
-        db.query(Memory)
-        .filter(Memory.person_id == person.id)
-        .order_by(Memory.created_at.asc())
-        .all()
-    )
-
-    items = []
-    for file in files:
-        items.append(
-            {
-                "type": "file",
-                "file_name": file.file_name,
-                "file_type": file.file_type,
-                "file_data": file.file_data,
-                "description": file.description,
-                "created_at": file.created_at,
-            }
-        )
-    for memory in memories:
-        items.append(
-            {
-                "type": "memory",
-                "content": memory.content,
-                "created_at": memory.created_at,
-            }
-        )
-
-    items.sort(key=lambda x: x.get("created_at") or datetime.min)
-
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    styles = getSampleStyleSheet()
-
-    title_style = ParagraphStyle(
-        "PersonTitle",
-        parent=styles["Heading1"],
-        fontSize=22,
-        spaceAfter=18,
-    )
-    subtitle_style = ParagraphStyle(
-        "PersonSubTitle",
-        parent=styles["Heading3"],
-        fontSize=12,
-        spaceAfter=16,
-        textColor="gray",
-    )
-    section_title_style = ParagraphStyle(
-        "SectionTitle",
-        parent=styles["Heading2"],
-        fontSize=14,
-        spaceAfter=8,
-    )
-    date_style = ParagraphStyle(
-        "DateStyle",
-        parent=styles["Normal"],
-        fontSize=9,
-        textColor="gray",
-        spaceAfter=8,
-    )
-    content_style = ParagraphStyle(
-        "ContentStyle",
-        parent=styles["Normal"],
-        fontSize=11,
-        spaceAfter=16,
-    )
-
-    story = []
-    story.append(Paragraph(f"Memoir - {person.person_name}", title_style))
-    story.append(Paragraph("Memories and images", subtitle_style))
-    story.append(Spacer(1, 0.2 * inch))
-
-    if not items:
-        story.append(Paragraph("No memories or images added yet.", content_style))
-
-    for item in items:
-        date_str = "Unknown date"
-        if item.get("created_at"):
-            date_str = item["created_at"].strftime("%B %d, %Y at %I:%M %p")
-
-        if item["type"] == "memory":
-            story.append(Paragraph("Memory", section_title_style))
-            story.append(Paragraph(date_str, date_style))
-            story.append(
-                Paragraph(item["content"].replace("\n", "<br/>"), content_style)
-            )
-        elif item["type"] == "file" and item["file_type"].startswith("image/"):
-            story.append(Paragraph(f"Image - {item['file_name']}", section_title_style))
-            story.append(Paragraph(date_str, date_style))
-            try:
-                img_buffer = BytesIO(item["file_data"])
-                pil_img = PILImage.open(img_buffer)
-                max_width = 6 * inch
-                max_height = 4 * inch
-                width, height = pil_img.size
-                if width > max_width or height > max_height:
-                    ratio = min(max_width / width, max_height / height)
-                    pil_img = pil_img.resize(
-                        (int(width * ratio), int(height * ratio)),
-                        PILImage.Resampling.LANCZOS,
-                    )
-
-                png_buffer = BytesIO()
-                pil_img.save(png_buffer, format="PNG")
-                png_buffer.seek(0)
-
-                rl_img = Image(png_buffer)
-                rl_img.hAlign = "CENTER"
-                story.append(rl_img)
-                story.append(Spacer(1, 0.15 * inch))
-                if item.get("description"):
-                    story.append(
-                        Paragraph(f"Description: {item['description']}", content_style)
-                    )
-                else:
-                    story.append(Spacer(1, 0.08 * inch))
-            except Exception as img_err:
-                logger.error(
-                    f"Failed to add image '{item['file_name']}' to person PDF: {img_err}"
-                )
-                story.append(Paragraph("[Image could not be rendered]", content_style))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
+def serialize_memory(memory: Memory, db: Session) -> dict:
+    """Serialize a memory object with photos and contributor info."""
+    photos = db.query(MemoryPhoto).filter(MemoryPhoto.memory_id == memory.id).order_by(MemoryPhoto.display_order).all()
+    contributor = db.query(User).filter(User.id == memory.created_by_user_id).first()
+    person = db.query(Person).filter(Person.id == memory.person_id).first()
+    return {
+        "id": str(memory.id),
+        "person_id": str(memory.person_id),
+        "family_id": str(memory.family_id),
+        "title": memory.title,
+        "story_text": memory.story_text,
+        "memory_date": memory.memory_date.isoformat() if memory.memory_date else None,
+        "voice_note_url": memory.voice_note_url,
+        "created_by_user_id": str(memory.created_by_user_id),
+        "created_at": memory.created_at.isoformat() if memory.created_at else None,
+        "photos": [{"id": str(p.id), "photo_url": p.photo_url, "caption": p.caption, "display_order": p.display_order} for p in photos],
+        "contributor": {"name": contributor.name, "avatar_url": contributor.avatar_url} if contributor else None,
+        "person_name": person.name if person else None,
+    }
 
 
-def get_user_rag_documents(user_id: int, db) -> List[dict]:
-    def clean_text(value: str) -> str:
-        return re.sub(r"\s+", " ", (value or "")).strip()
-
-    def chunk_text(value: str, chunk_size: int = 900, overlap: int = 120) -> List[str]:
-        text = clean_text(value)
-        if not text:
-            return []
-        if len(text) <= chunk_size:
-            return [text]
-
-        chunks = []
-        start = 0
-        text_len = len(text)
-        while start < text_len:
-            end = min(start + chunk_size, text_len)
-            chunks.append(text[start:end])
-            if end == text_len:
-                break
-            start = max(end - overlap, start + 1)
-        return chunks
-
-    def extract_pdf_text(pdf_bytes: bytes) -> str:
-        if PdfReader is None:
-            return ""
-        try:
-            reader = PdfReader(BytesIO(pdf_bytes))
-            pages = []
-            for page in reader.pages:
-                page_text = page.extract_text() or ""
-                if page_text.strip():
-                    pages.append(page_text)
-            return "\n".join(pages)
-        except Exception:
-            return ""
-
-    docs: List[dict] = []
-
-    memories = (
-        db.query(Memory)
-        .join(Person)
-        .join(Category)
-        .filter(Category.user_id == user_id)
-        .all()
-    )
-    for memory in memories:
-        for idx, chunk in enumerate(chunk_text(memory.content)):
-            docs.append(
-                {
-                    "text": chunk,
-                    "metadata": {
-                        "type": "memory",
-                        "chunk_index": idx,
-                        "person_id": memory.person_id,
-                        "person_name": memory.person.person_name,
-                        "category_name": memory.person.category.cat_name,
-                        "created_at": memory.created_at.isoformat()
-                        if memory.created_at
-                        else None,
-                    },
-                }
-            )
-
-    files = (
-        db.query(FileStore)
-        .join(Person)
-        .join(Category)
-        .filter(Category.user_id == user_id)
-        .all()
-    )
-    for file in files:
-        if file.description:
-            docs.append(
-                {
-                    "text": clean_text(file.description),
-                    "metadata": {
-                        "type": "file_description",
-                        "file_name": file.file_name,
-                        "file_type": file.file_type,
-                        "person_id": file.person_id,
-                        "person_name": file.person.person_name,
-                        "category_name": file.person.category.cat_name,
-                        "created_at": file.created_at.isoformat()
-                        if file.created_at
-                        else None,
-                    },
-                }
-            )
-
-        if file.file_type in ("text/plain", "application/json"):
-            try:
-                decoded = clean_text(file.file_data.decode("utf-8", errors="ignore"))
-                for idx, chunk in enumerate(chunk_text(decoded)):
-                    docs.append(
-                        {
-                            "text": chunk,
-                            "metadata": {
-                                "type": "text_file",
-                                "chunk_index": idx,
-                                "file_name": file.file_name,
-                                "file_type": file.file_type,
-                                "person_id": file.person_id,
-                                "person_name": file.person.person_name,
-                                "category_name": file.person.category.cat_name,
-                                "created_at": file.created_at.isoformat()
-                                if file.created_at
-                                else None,
-                            },
-                        }
-                    )
-            except Exception:
-                pass
-
-        if file.file_type == "application/pdf" or file.file_name.lower().endswith(
-            ".pdf"
-        ):
-            pdf_text = extract_pdf_text(file.file_data)
-            for idx, chunk in enumerate(chunk_text(pdf_text)):
-                docs.append(
-                    {
-                        "text": chunk,
-                        "metadata": {
-                            "type": "pdf_file",
-                            "chunk_index": idx,
-                            "file_name": file.file_name,
-                            "file_type": file.file_type,
-                            "person_id": file.person_id,
-                            "person_name": file.person.person_name,
-                            "category_name": file.person.category.cat_name,
-                            "created_at": file.created_at.isoformat()
-                            if file.created_at
-                            else None,
-                        },
-                    }
-                )
-
-    return docs
+def serialize_person(person: Person, db: Session) -> dict:
+    """Serialize a person with memory count."""
+    memory_count = db.query(Memory).filter(Memory.person_id == person.id).count()
+    return {
+        "id": str(person.id),
+        "family_id": str(person.family_id),
+        "name": person.name,
+        "relationship_tag": person.relationship_tag.value if person.relationship_tag else None,
+        "photo_url": person.photo_url,
+        "dob": person.dob.isoformat() if person.dob else None,
+        "bio": person.bio,
+        "created_by": str(person.created_by),
+        "created_at": person.created_at.isoformat() if person.created_at else None,
+        "memory_count": memory_count,
+    }
 
 
-def get_rag_model_instance():
-    global _RAG_MODEL_INSTANCE
-    if RAGModel is None:
-        return None
-    if _RAG_MODEL_INSTANCE is not None:
-        return _RAG_MODEL_INSTANCE
-
-    with _RAG_MODEL_LOCK:
-        if _RAG_MODEL_INSTANCE is None:
-            _RAG_MODEL_INSTANCE = RAGModel(embedding_model=RAG_EMBEDDING_MODEL)
-    return _RAG_MODEL_INSTANCE
-
-
-def synthesize_answer(question: str, retrieved_docs: List) -> str:
-    query_terms = [
-        t for t in re.findall(r"[a-zA-Z0-9]+", question.lower()) if len(t) > 2
-    ]
-
-    candidates = []
-    for doc in retrieved_docs:
-        text = (getattr(doc, "text", "") or "").strip()
-        if not text:
-            continue
-        sentences = re.split(r"(?<=[.!?])\s+", text)
-        for sentence in sentences:
-            line = sentence.strip()
-            if not line:
-                continue
-            score = sum(1 for token in query_terms if token in line.lower())
-            candidates.append((score, line))
-
-    if not candidates:
-        return "No relevant context found for this question in your memories and uploaded files."
-
-    candidates.sort(key=lambda x: x[0], reverse=True)
-    selected = []
-    seen = set()
-    for _, sentence in candidates:
-        normalized = sentence.lower()
-        if normalized in seen:
-            continue
-        seen.add(normalized)
-        selected.append(sentence)
-        if len(selected) >= 4:
-            break
-
-    return "\n\n".join(selected)
-
-
-def get_file_category(filename: str) -> Optional[str]:
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    for category, extensions in ALLOWED_EXTENSIONS.items():
-        if ext in extensions:
-            return category
-    return None
-
-
-def validate_file(file: UploadFile) -> tuple[bool, str]:
-    if file.size and file.size > MAX_FILE_SIZE:
-        return False, f"File too large. Max: {MAX_FILE_SIZE / 1024 / 1024:.0f}MB"
-
-    category = get_file_category(file.filename)
-    if not category:
-        return False, "File type not allowed"
-
-    return True, "valid"
-
-
-@app.get("/home")
-async def home():
-    return {"message": "Memoir API - Home page"}
-
-
-@app.post("/sign_up", response_model=RegistrationResponse)
-async def sign_up(data: UserData, db=Depends(get_db)):
-    logger.info(f"Sign up attempt for username: {data.name}")
-    existing_user = db.query(User).filter(User.name == data.name).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered",
-        )
+def get_embedding(text: str) -> Optional[list]:
+    """Generate embedding for text using sentence-transformers. Returns None if unavailable."""
     try:
-        hashed = await hash_password(data.password[:72])
-        user = User(name=data.name, password=hashed)
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+        return model.encode(text).tolist()
+    except Exception as e:
+        logger.warning(f"Embedding generation failed: {e}")
+        return None
+
+
+# ─── Auth Routes ──────────────────────────────────────────────────────────────
+
+@app.post("/auth/signup", response_model=LoginResponse)
+async def signup(data: UserCreate, db: Session = Depends(get_db)):
+    logger.info(f"Signup attempt: {data.email}")
+    
+    existing = db.query(User).filter(User.email == data.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    try:
+        user = User(
+            id=uuid.uuid4(),
+            email=data.email,
+            password_hash=hash_password(data.password),
+            name=data.name,
+        )
         db.add(user)
         db.commit()
         db.refresh(user)
-
-        access_token = create_access_token(
-            data={"sub": user.name, "user_id": user.id},
-            expires_delta=timedelta(minutes=expires_minutes),
+        
+        token = create_access_token({"user_id": str(user.id), "sub": user.email})
+        
+        return LoginResponse(
+            access_token=token,
+            token_type="bearer",
+            user=UserResponse(id=str(user.id), name=user.name, email=user.email, avatar_url=user.avatar_url)
         )
-
-        logger.info(f"User created successfully: {user.name} (ID: {user.id})")
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user_id": user.id,
-            "username": user.name,
-        }
     except Exception as e:
         db.rollback()
-        logger.error(f"Sign up failed: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error creating user: {str(e)}",
-        )
+        logger.error(f"Signup failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
 
-@app.post("/login", response_model=LoginResponse)
-async def login(data: UserData, db=Depends(get_db)):
-    logger.info(f"Login attempt for username: {data.name}")
-    if not data.name or not data.password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username and password required",
-        )
-    user = db.query(User).filter(User.name == data.name).first()
-    if not user or not verify_password(data.password, user.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-        )
-    access_token = create_access_token(
-        data={"sub": user.name, "user_id": user.id},
-        expires_delta=timedelta(minutes=expires_minutes),
+@app.post("/auth/login", response_model=LoginResponse)
+async def login(data: UserLogin, db: Session = Depends(get_db)):
+    logger.info(f"Login attempt: {data.email}")
+    
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user or not verify_password(data.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    token = create_access_token({"user_id": str(user.id), "sub": user.email})
+    
+    return LoginResponse(
+        access_token=token,
+        token_type="bearer",
+        user=UserResponse(id=str(user.id), name=user.name, email=user.email, avatar_url=user.avatar_url)
     )
-    logger.info(f"Login successful for user: {user.name} (ID: {user.id})")
+
+
+@app.get("/auth/me", response_model=UserResponse)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return UserResponse(id=str(current_user.id), name=current_user.name, email=current_user.email, avatar_url=current_user.avatar_url)
+
+
+# ─── Family Routes ────────────────────────────────────────────────────────────
+
+@app.post("/family", response_model=FamilyResponse)
+async def create_family(data: FamilyCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    family = Family(
+        id=uuid.uuid4(),
+        name=data.name,
+        created_by=current_user.id,
+    )
+    db.add(family)
+    db.flush()
+    
+    member = FamilyMember(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        family_id=family.id,
+        role=MemberRole.admin,
+    )
+    db.add(member)
+    db.commit()
+    db.refresh(family)
+    
+    return _serialize_family(family, db)
+
+
+def _serialize_family(family, db):
+    members = db.query(FamilyMember).filter(FamilyMember.family_id == family.id).all()
+    member_list = []
+    for m in members:
+        user = db.query(User).filter(User.id == m.user_id).first()
+        if user:
+            member_list.append({
+                "id": str(m.id),
+                "name": user.name,
+                "avatar_url": user.avatar_url,
+                "role": m.role.value,
+            })
+    
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user_id": user.id,
-        "username": user.name,
+        "id": str(family.id),
+        "name": family.name,
+        "cover_photo_url": family.cover_photo_url,
+        "invite_token": str(family.invite_token),
+        "created_by": str(family.created_by),
+        "created_at": family.created_at.isoformat() if family.created_at else None,
+        "members": member_list,
     }
 
 
-@app.post("/home/category", response_model=CategoryResponse)
-async def create_category(
-    data: CategoryData, token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Create a new category for the authenticated user"""
-    user_id = token_data["user_id"]
+@app.get("/family/{family_id}")
+async def get_family(family_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    family = db.query(Family).filter(Family.id == family_id).first()
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    # Check membership
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    return _serialize_family(family, db)
 
-    # Check if category already exists for this user
-    existing = (
-        db.query(Category)
-        .filter(Category.cat_name == data.cat_name, Category.user_id == user_id)
-        .first()
-    )
 
+@app.get("/family/{family_id}/invite-link")
+async def get_invite_link(family_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    family = db.query(Family).filter(Family.id == family_id).first()
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    return {"invite_url": f"http://localhost:5173/join/{family.invite_token}"}
+
+
+@app.post("/family/join/{invite_token}")
+async def join_family(invite_token: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    family = db.query(Family).filter(Family.invite_token == invite_token).first()
+    if not family:
+        raise HTTPException(status_code=404, detail="Invalid invite token")
+    
+    existing = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family.id, FamilyMember.user_id == current_user.id
+    ).first()
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Category already exists"
-        )
-
-    try:
-        cat_obj = Category(cat_name=data.cat_name, user_id=user_id)
-        db.add(cat_obj)
-        db.commit()
-        db.refresh(cat_obj)
-        logger.info(f"Category created: {cat_obj.cat_name} (ID: {cat_obj.id})")
-        return cat_obj
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Category creation failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating category",
-        )
-
-
-@app.get("/home/categories", response_model=List[CategoryResponse])
-async def get_categories(token_data: dict = Depends(verify_token), db=Depends(get_db)):
-    """Get all categories for the authenticated user"""
-    user_id = token_data["user_id"]
-    categories = db.query(Category).filter(Category.user_id == user_id).all()
-    logger.info(f"Retrieved {len(categories)} categories for user {user_id}")
-    return categories
-
-
-@app.delete("/home/category/{category_id}")
-async def delete_category(
-    category_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Delete a category (and all its people and files)"""
-    user_id = token_data["user_id"]
-
-    category = (
-        db.query(Category)
-        .filter(Category.id == category_id, Category.user_id == user_id)
-        .first()
+        raise HTTPException(status_code=400, detail="Already a member of this family")
+    
+    member = FamilyMember(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        family_id=family.id,
+        role=MemberRole.member,
     )
-
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
-        )
-
-    try:
-        db.delete(category)
-        db.commit()
-        logger.info(f"Category deleted: {category.cat_name} (ID: {category_id})")
-        return {"message": f"Category '{category.cat_name}' deleted successfully"}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Category deletion failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e)}")
+    db.add(member)
+    db.commit()
+    
+    return _serialize_family(family, db)
 
 
-@app.post("/home/person", response_model=PersonResponse)
+@app.get("/user/families")
+async def get_user_families(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    memberships = db.query(FamilyMember).filter(FamilyMember.user_id == current_user.id).all()
+    families = []
+    for m in memberships:
+        family = db.query(Family).filter(Family.id == m.family_id).first()
+        if family:
+            families.append(_serialize_family(family, db))
+    return families
+
+
+# ─── People Routes ────────────────────────────────────────────────────────────
+
+@app.get("/family/{family_id}/people")
+async def get_people(family_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Verify membership
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    people = db.query(Person).filter(Person.family_id == family_id).order_by(Person.created_at.desc()).all()
+    return [serialize_person(p, db) for p in people]
+
+
+@app.post("/family/{family_id}/people")
 async def create_person(
-    data: PersonData, token_data: dict = Depends(verify_token), db=Depends(get_db)
+    family_id: str,
+    name: str = Form(...),
+    relationship_tag: Optional[str] = Form(None),
+    dob: Optional[str] = Form(None),
+    bio: Optional[str] = Form(None),
+    photo: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    """Create a new person in a category"""
-    user_id = token_data["user_id"]
-
-    # Verify category belongs to user
-    category = (
-        db.query(Category)
-        .filter(Category.id == data.category_id, Category.user_id == user_id)
-        .first()
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    # Parse relationship tag enum
+    tag_enum = None
+    if relationship_tag:
+        try:
+            tag_enum = RelationshipTag(relationship_tag)
+        except ValueError:
+            tag_enum = RelationshipTag.Other
+    
+    # Parse DOB
+    dob_date = None
+    if dob:
+        try:
+            dob_date = date.fromisoformat(dob)
+        except ValueError:
+            pass
+    
+    photo_url = None
+    if photo:
+        photo_url = save_upload(photo)
+    
+    person = Person(
+        id=uuid.uuid4(),
+        family_id=family_id,
+        name=name,
+        relationship_tag=tag_enum,
+        photo_url=photo_url,
+        dob=dob_date,
+        bio=bio,
+        created_by=current_user.id,
     )
-
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found or doesn't belong to you",
-        )
-
-    try:
-        person_obj = Person(person_name=data.person_name, category_id=data.category_id)
-        db.add(person_obj)
-        db.commit()
-        db.refresh(person_obj)
-        logger.info(f"Person created: {person_obj.person_name} (ID: {person_obj.id})")
-        return person_obj
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Person creation failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating person",
-        )
+    db.add(person)
+    db.commit()
+    db.refresh(person)
+    
+    return serialize_person(person, db)
 
 
-@app.get("/home/category/{category_id}/people", response_model=List[PersonResponse])
-async def get_people_in_category(
-    category_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Get all people in a specific category"""
-    user_id = token_data["user_id"]
-
-    # Verify category belongs to user
-    category = (
-        db.query(Category)
-        .filter(Category.id == category_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
-        )
-
-    people = db.query(Person).filter(Person.category_id == category_id).all()
-    logger.info(f"Retrieved {len(people)} people for category {category_id}")
-    return people
-
-
-@app.delete("/home/person/{person_id}")
-async def delete_person(
-    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Delete a person (and all their files)"""
-    user_id = token_data["user_id"]
-
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
-        )
-
-    try:
-        db.delete(person)
-        db.commit()
-        logger.info(f"Person deleted: {person.person_name} (ID: {person_id})")
-        return {"message": f"Person '{person.person_name}' deleted successfully"}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Person deletion failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e)}")
-
-
-# FILE ENDPOINTS (Hierarchical - Person-based)
-
-
-@app.post("/home/person/{person_id}/upload", response_model=FileUploadResponse)
-async def upload_file_to_person(
-    person_id: int,
-    file: UploadFile = File(...),
-    description: Optional[str] = None,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Upload a file to a specific person"""
-    user_id = token_data["user_id"]
-
-    # Verify person belongs to user's category
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Person not found or doesn't belong to you",
-        )
-
-    is_valid, message = validate_file(file)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=message)
-
-    try:
-        data = await file.read()
-        filesize = len(data)
-
-        obj_file = FileStore(
-            file_name=file.filename,
-            file_data=data,
-            file_type=file.content_type or "application/octet-stream",
-            description=description,
-            person_id=person_id,
-        )
-        db.add(obj_file)
-        db.commit()
-        db.refresh(obj_file)
-
-        logger.info(f"File uploaded: {obj_file.file_name} to person {person_id}")
-
-        return {
-            "id": obj_file.id,
-            "file_name": obj_file.file_name,
-            "file_size": filesize,
-            "file_type": obj_file.file_type,
-            "person_id": person_id,
-            "message": "File uploaded successfully",
-        }
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Upload failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-
-
-@app.get("/home/person/{person_id}/files", response_model=List[FileResponse])
-async def get_person_files(
-    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Get all files for a specific person"""
-    user_id = token_data["user_id"]
-
-    # Verify person belongs to user
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
-        )
-
-    files = db.query(FileStore).filter(FileStore.person_id == person_id).all()
-    logger.info(f"Retrieved {len(files)} files for person {person_id}")
-    return files
-
-
-@app.delete("/home/person/{person_id}/files/{file_id}")
-async def delete_person_file(
-    person_id: int,
-    file_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Delete a specific file from a person"""
-    user_id = token_data["user_id"]
-
-    # Verify person belongs to user
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
-        )
-
-    # Get the file
-    db_file = (
-        db.query(FileStore)
-        .filter(FileStore.id == file_id, FileStore.person_id == person_id)
-        .first()
-    )
-
-    if not db_file:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    try:
-        db.delete(db_file)
-        db.commit()
-        logger.info(f"File deleted: {db_file.file_name} (ID: {file_id})")
-        return {"message": f"File '{db_file.file_name}' deleted successfully"}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"File deletion failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e)}")
-
-
-# Memory endpoints
-@app.post("/home/person/{person_id}/memory", response_model=MemoryResponse)
-async def create_memory(
-    person_id: int,
-    memory_data: MemoryData,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Create a new memory for a person with automatic emotion analysis"""
-    user_id = token_data["user_id"]
-
-    # Verify the person belongs to the user
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
+@app.get("/people/{person_id}")
+async def get_person(person_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    person = db.query(Person).filter(Person.id == person_id).first()
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Verify membership
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == person.family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    memories = db.query(Memory).filter(Memory.person_id == person_id).order_by(Memory.memory_date.desc().nullslast(), Memory.created_at.desc()).all()
+    
+    result = serialize_person(person, db)
+    result["memories"] = [serialize_memory(m, db) for m in memories]
+    return result
 
-    # Analyze emotion
-    emotion_tag = None
-    emotion_confidence = None
-    if SentimentAnalyzer:
+
+@app.patch("/people/{person_id}")
+async def update_person(
+    person_id: str,
+    name: Optional[str] = Form(None),
+    relationship_tag: Optional[str] = Form(None),
+    dob: Optional[str] = Form(None),
+    bio: Optional[str] = Form(None),
+    photo: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    person = db.query(Person).filter(Person.id == person_id).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Verify membership
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == person.family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    if name:
+        person.name = name
+    if relationship_tag:
         try:
-            analyzer = SentimentAnalyzer()
-            result = analyzer.analyze(memory_data.content)
-            emotion_tag = result.emotion
-            emotion_confidence = result.confidence
-        except Exception as e:
-            logger.warning(f"Emotion analysis failed: {str(e)}")
+            person.relationship_tag = RelationshipTag(relationship_tag)
+        except ValueError:
+            pass
+    if dob:
+        try:
+            person.dob = date.fromisoformat(dob)
+        except ValueError:
+            pass
+    if bio is not None:
+        person.bio = bio
+    if photo:
+        person.photo_url = save_upload(photo)
+    
+    db.commit()
+    db.refresh(person)
+    return serialize_person(person, db)
 
-    # Create the memory with emotion data
-    memory = Memory(
-        content=memory_data.content,
-        person_id=person_id,
-        emotion_tag=emotion_tag,
-        emotion_confidence=str(emotion_confidence) if emotion_confidence else None,
+
+# ─── Relationship Routes ──────────────────────────────────────────────────────
+
+@app.post("/family/{family_id}/relationships")
+async def create_relationship(
+    family_id: str,
+    data: RelationshipCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    # Verify both people exist in this family
+    person_a = db.query(Person).filter(Person.id == data.person_a_id, Person.family_id == family_id).first()
+    person_b = db.query(Person).filter(Person.id == data.person_b_id, Person.family_id == family_id).first()
+    if not person_a or not person_b:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    existing = db.query(Relationship).filter(
+        or_(
+            (Relationship.person_a_id == data.person_a_id) & (Relationship.person_b_id == data.person_b_id),
+            (Relationship.person_a_id == data.person_b_id) & (Relationship.person_b_id == data.person_a_id),
+        )
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Relationship already exists")
+    
+    rel = Relationship(
+        id=uuid.uuid4(),
+        family_id=family_id,
+        person_a_id=data.person_a_id,
+        person_b_id=data.person_b_id,
+        label=data.label,
     )
+    db.add(rel)
+    db.commit()
+    db.refresh(rel)
+    
+    return {
+        "id": str(rel.id),
+        "person_a": {"id": str(person_a.id), "name": person_a.name},
+        "person_b": {"id": str(person_b.id), "name": person_b.name},
+        "label": rel.label,
+    }
 
+
+@app.get("/family/{family_id}/relationships")
+async def get_relationships(family_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    rels = db.query(Relationship).filter(Relationship.family_id == family_id).all()
+    result = []
+    for rel in rels:
+        person_a = db.query(Person).filter(Person.id == rel.person_a_id).first()
+        person_b = db.query(Person).filter(Person.id == rel.person_b_id).first()
+        result.append({
+            "id": str(rel.id),
+            "person_a": {"id": str(person_a.id), "name": person_a.name} if person_a else {},
+            "person_b": {"id": str(person_b.id), "name": person_b.name} if person_b else {},
+            "label": rel.label,
+        })
+    return result
+
+
+@app.delete("/relationships/{relationship_id}")
+async def delete_relationship(relationship_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rel = db.query(Relationship).filter(Relationship.id == relationship_id).first()
+    if not rel:
+        raise HTTPException(status_code=404, detail="Relationship not found")
+    
+    # Verify membership
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == rel.family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    db.delete(rel)
+    db.commit()
+    return {"message": "Relationship deleted"}
+
+
+# ─── Memory Routes ────────────────────────────────────────────────────────────
+
+@app.post("/people/{person_id}/memories")
+async def create_memory(
+    person_id: str,
+    title: str = Form(...),
+    story_text: Optional[str] = Form(None),
+    memory_date: Optional[str] = Form(None),
+    photos: List[UploadFile] = File(default=[]),
+    voice_note: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    person = db.query(Person).filter(Person.id == person_id).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Verify membership
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == person.family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    # Parse date
+    mem_date = None
+    if memory_date:
+        try:
+            mem_date = date.fromisoformat(memory_date)
+        except ValueError:
+            pass
+    
+    # Save voice note
+    voice_note_url = None
+    if voice_note and voice_note.filename:
+        voice_note_url = save_upload(voice_note)
+    
+    # Generate embedding
+    embedding_text = f"{title} {story_text or ''}"
+    embedding = get_embedding(embedding_text)
+    # Store as JSON string if pgvector is not available (PGVECTOR_AVAILABLE is imported from config at top of file)
+    embedding_value = embedding if PGVECTOR_AVAILABLE else (str(embedding) if embedding else None)
+    
+    memory = Memory(
+        id=uuid.uuid4(),
+        person_id=person_id,
+        family_id=person.family_id,
+        title=title,
+        story_text=story_text,
+        memory_date=mem_date,
+        voice_note_url=voice_note_url,
+        created_by_user_id=current_user.id,
+        embedding=embedding_value,
+    )
     db.add(memory)
+    db.flush()
+    
+    # Save photos
+    for i, photo in enumerate(photos):
+        if photo.filename:
+            photo_url = save_upload(photo)
+            mp = MemoryPhoto(
+                id=uuid.uuid4(),
+                memory_id=memory.id,
+                photo_url=photo_url,
+                display_order=i,
+            )
+            db.add(mp)
+    
     db.commit()
     db.refresh(memory)
+    
+    return serialize_memory(memory, db)
 
-    return MemoryResponse.model_validate(memory)
 
-
-@app.get("/home/person/{person_id}/memories", response_model=List[MemoryResponse])
-async def get_memories(
-    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Get all memories for a person"""
-    user_id = token_data["user_id"]
-
-    # Verify the person belongs to the user
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
+@app.get("/people/{person_id}/memories")
+async def get_person_memories(person_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    person = db.query(Person).filter(Person.id == person_id).first()
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
+    
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == person.family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    memories = db.query(Memory).filter(Memory.person_id == person_id).order_by(Memory.memory_date.desc().nullslast(), Memory.created_at.desc()).all()
+    return [serialize_memory(m, db) for m in memories]
 
-    memories = (
-        db.query(Memory)
-        .filter(Memory.person_id == person_id)
-        .order_by(Memory.created_at.desc())
-        .all()
-    )
 
-    return [MemoryResponse.from_orm(memory) for memory in memories]
-
-
-@app.delete("/home/person/{person_id}/memories/{memory_id}")
-async def delete_memory(
-    person_id: int,
-    memory_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Delete a memory from a person"""
-    user_id = token_data["user_id"]
-
-    # Verify the person belongs to the user
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(status_code=404, detail="Person not found")
-
-    # Find and delete the memory
-    memory = (
-        db.query(Memory)
-        .filter(Memory.id == memory_id, Memory.person_id == person_id)
-        .first()
-    )
-
+@app.get("/memories/{memory_id}/public")
+async def get_public_memory(memory_id: str, db: Session = Depends(get_db)):
+    """No auth required - for sharing."""
+    memory = db.query(Memory).filter(Memory.id == memory_id).first()
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
+    
+    person = db.query(Person).filter(Person.id == memory.person_id).first()
+    family = db.query(Family).filter(Family.id == memory.family_id).first()
+    
+    result = serialize_memory(memory, db)
+    result["family_name"] = family.name if family else None
+    result["person_name"] = person.name if person else None
+    return result
 
+
+@app.delete("/memories/{memory_id}")
+async def delete_memory(memory_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    memory = db.query(Memory).filter(Memory.id == memory_id).first()
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    
+    # Only creator or family admin can delete
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == memory.family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    if memory.created_by_user_id != current_user.id and member.role != MemberRole.admin:
+        raise HTTPException(status_code=403, detail="Only the creator or family admin can delete")
+    
     db.delete(memory)
     db.commit()
-
-    return {"message": "Memory deleted successfully"}
-
-
-@app.get("/home/person/{person_id}/files/{file_id}/download")
-async def download_file(
-    person_id: int,
-    file_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Download a file"""
-    user_id = token_data["user_id"]
-
-    # Verify the person belongs to the user
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(status_code=404, detail="Person not found")
-
-    # Get the file
-    db_file = (
-        db.query(FileStore)
-        .filter(FileStore.id == file_id, FileStore.person_id == person_id)
-        .first()
-    )
-
-    if not db_file:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    # Return file data
-    from fastapi.responses import StreamingResponse
-    import io
-
-    file_data = io.BytesIO(db_file.file_data)
-
-    # For images, serve inline; for other files, force download
-    if db_file.file_type.startswith("image/"):
-        return StreamingResponse(file_data, media_type=db_file.file_type)
-    else:
-        return StreamingResponse(
-            file_data,
-            media_type=db_file.file_type,
-            headers={
-                "Content-Disposition": f"attachment; filename={db_file.file_name}"
-            },
-        )
+    return {"message": "Memory deleted"}
 
 
-@app.get("/home/user/all-content")
-async def get_all_user_content(
-    token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Get all files and memories for the user across all categories and people"""
-    user_id = token_data["user_id"]
+# ─── Search Route ─────────────────────────────────────────────────────────────
 
-    # Get all files
-    files = (
-        db.query(FileStore)
-        .join(Person)
-        .join(Category)
-        .filter(Category.user_id == user_id)
-        .order_by(FileStore.created_at.desc())
-        .all()
-    )
-
-    # Get all memories
-    memories = (
-        db.query(Memory)
-        .join(Person)
-        .join(Category)
-        .filter(Category.user_id == user_id)
-        .order_by(Memory.created_at.desc())
-        .all()
-    )
-
-    # Combine and sort by date
-    all_content = []
-
-    for file in files:
-        all_content.append(
-            {
-                "id": file.id,
-                "type": "file",
-                "file_name": file.file_name,
-                "file_type": file.file_type,
-                "description": file.description,
-                "person_name": file.person.person_name,
-                "category_name": file.person.category.cat_name,
-                "created_at": file.created_at.isoformat() if file.created_at else None,
-                "person_id": file.person_id,
-            }
-        )
-
-    for memory in memories:
-        all_content.append(
-            {
-                "id": memory.id,
-                "type": "memory",
-                "content": memory.content,
-                "person_name": memory.person.person_name,
-                "category_name": memory.person.category.cat_name,
-                "created_at": memory.created_at.isoformat()
-                if memory.created_at
-                else None,
-                "person_id": memory.person_id,
-            }
-        )
-
-    # Sort by creation date (newest first)
-    all_content.sort(key=lambda x: x["created_at"] or "", reverse=True)
-
-    return {"user_id": user_id, "total_items": len(all_content), "content": all_content}
-
-
-@app.get("/home/user/memories/pdf")
-async def generate_memories_pdf(
-    token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Generate a PDF containing all user memories and images"""
-    user_id = token_data["user_id"]
-
-    # Get all files
-    files = (
-        db.query(FileStore)
-        .join(Person)
-        .join(Category)
-        .filter(Category.user_id == user_id)
-        .order_by(FileStore.created_at.asc())
-        .all()
-    )
-
-    # Get all memories
-    memories = (
-        db.query(Memory)
-        .join(Person)
-        .join(Category)
-        .filter(Category.user_id == user_id)
-        .order_by(Memory.created_at.asc())
-        .all()
-    )
-
-    # Combine and sort by date
-    all_content = []
-
-    for file in files:
-        all_content.append(
-            {
-                "id": file.id,
-                "type": "file",
-                "file_name": file.file_name,
-                "file_type": file.file_type,
-                "file_data": file.file_data,
-                "description": file.description,
-                "person_name": file.person.person_name,
-                "category_name": file.person.category.cat_name,
-                "created_at": file.created_at,
-                "person_id": file.person_id,
-            }
-        )
-
-    for memory in memories:
-        all_content.append(
-            {
-                "id": memory.id,
-                "type": "memory",
-                "content": memory.content,
-                "person_name": memory.person.person_name,
-                "category_name": memory.person.category.cat_name,
-                "created_at": memory.created_at,
-                "person_id": memory.person_id,
-            }
-        )
-
-    # Sort by creation date (oldest first for PDF)
-    all_content.sort(key=lambda x: x["created_at"] or datetime.min)
-
-    if not all_content:
-        raise HTTPException(status_code=404, detail="No content found")
-
-    # Generate PDF
-    try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.platypus import (
-            SimpleDocTemplate,
-            Paragraph,
-            Spacer,
-            PageBreak,
-            Image as RLImage,
-        )
-        from reportlab.lib.units import inch
-        from io import BytesIO
-        from PIL import Image as PILImage
-
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
-        styles = getSampleStyleSheet()
-
-        # Custom styles
-        title_style = ParagraphStyle(
-            "CustomTitle",
-            parent=styles["Heading1"],
-            fontSize=24,
-            spaceAfter=30,
-        )
-
-        memory_title_style = ParagraphStyle(
-            "MemoryTitle",
-            parent=styles["Heading2"],
-            fontSize=16,
-            spaceAfter=10,
-        )
-
-        date_style = ParagraphStyle(
-            "DateStyle",
-            parent=styles["Normal"],
-            fontSize=10,
-            textColor="gray",
-            spaceAfter=15,
-        )
-
-        content_style = ParagraphStyle(
-            "ContentStyle",
-            parent=styles["Normal"],
-            fontSize=12,
-            spaceAfter=20,
-        )
-
-        story = []
-
-        # Title
-        story.append(Paragraph("My Memoir Collection", title_style))
-        story.append(Spacer(1, 0.5 * inch))
-
-        for item in all_content:
-            # Item header
-            person_info = f"{item['category_name']} - {item['person_name']}"
-            story.append(Paragraph(person_info, memory_title_style))
-
-            # Date
-            date_str = (
-                item["created_at"].strftime("%B %d, %Y at %I:%M %p")
-                if item["created_at"]
-                else "Unknown date"
-            )
-            story.append(Paragraph(date_str, date_style))
-
-            if item["type"] == "memory":
-                # Content
-                story.append(
-                    Paragraph(item["content"].replace("\n", "<br/>"), content_style)
-                )
-            elif item["type"] == "file" and item["file_type"].startswith("image/"):
-                # Image
-                try:
-                    img_buffer = BytesIO(item["file_data"])
-                    pil_img = PILImage.open(img_buffer)
-                    # Resize if too large
-                    max_width = 6 * inch
-                    max_height = 4 * inch
-                    width, height = pil_img.size
-                    if width > max_width or height > max_height:
-                        ratio = min(max_width / width, max_height / height)
-                        new_width = width * ratio
-                        new_height = height * ratio
-                        pil_img = pil_img.resize(
-                            (int(new_width), int(new_height)),
-                            PILImage.Resampling.LANCZOS,
-                        )
-
-                    img_buffer = BytesIO()
-                    pil_img.save(img_buffer, format="PNG")
-                    img_buffer.seek(0)
-
-                    rl_img = RLImage(img_buffer)
-                    rl_img.hAlign = "CENTER"
-                    story.append(rl_img)
-                    story.append(Spacer(1, 0.2 * inch))
-
-                    if item.get("description"):
-                        story.append(
-                            Paragraph(
-                                f"Description: {item['description']}", content_style
-                            )
-                        )
-                except Exception as e:
-                    logger.error(f"Failed to add image {item['id']}: {str(e)}")
-                    story.append(
-                        Paragraph(f"[Image: {item['file_name']}]", content_style)
-                    )
-
-            # Separator
-            story.append(Spacer(1, 0.3 * inch))
-
-        doc.build(story)
-        buffer.seek(0)
-
-        return StreamingResponse(
-            buffer,
-            media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=memories.pdf"},
-        )
-
-    except ImportError:
-        raise HTTPException(
-            status_code=500,
-            detail="PDF generation not available. Please install reportlab and pillow: pip install reportlab pillow",
-        )
-    except Exception as e:
-        logger.error(f"PDF generation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
-
-
-@app.get("/home/person/{person_id}/pdf")
-async def generate_person_pdf_download(
-    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    user_id = token_data["user_id"]
-
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(status_code=404, detail="Person not found")
-
-    try:
-        pdf_buffer = build_person_pdf_buffer(person, db)
-        safe_name = person.person_name.replace(" ", "_")
-        return StreamingResponse(
-            pdf_buffer,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"attachment; filename={safe_name}_memoir.pdf"
-            },
-        )
-    except Exception as e:
-        logger.error(f"Person PDF generation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Person PDF generation failed: {str(e)}"
-        )
-
-
-@app.get("/home/person/{person_id}/pdf/view")
-async def generate_person_pdf_inline(
-    person_id: int, token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    user_id = token_data["user_id"]
-
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(status_code=404, detail="Person not found")
-
-    try:
-        pdf_buffer = build_person_pdf_buffer(person, db)
-        return StreamingResponse(
-            pdf_buffer,
-            media_type="application/pdf",
-            headers={"Content-Disposition": "inline; filename=person_memoir.pdf"},
-        )
-    except Exception as e:
-        logger.error(f"Person inline PDF generation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Person inline PDF generation failed: {str(e)}"
-        )
-
-
-@app.post("/home/rag/query")
-async def rag_query(
-    payload: RAGQueryRequest,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    user_id = token_data["user_id"]
-    docs = get_user_rag_documents(user_id, db)
-
-    if not docs:
-        return {
-            "answer": "No memories or document text found yet. Add memories or text files to query your data.",
-            "sources": [],
-            "query": payload.question,
-        }
-
-    question = payload.question.strip()
-    top_k = min(payload.top_k, len(docs))
-
-    rag_model = get_rag_model_instance()
-    if rag_model is not None:
+@app.post("/family/{family_id}/search")
+async def search_family(family_id: str, data: SearchQuery, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    
+    query_text = data.query
+    results = []
+    
+    # Try pgvector semantic search first
+    pgvector_ok = PGVECTOR_AVAILABLE and check_pgvector()
+    
+    if pgvector_ok:
         try:
-            rag_model.documents = []
-            rag_model.vector_store = rag_model.vector_store.__class__(
-                rag_model.embedding_model.get_dimension()
-            )
-            rag_model.add_documents(
-                [d["text"] for d in docs], [d["metadata"] for d in docs]
-            )
-            result = rag_model.query(question, top_k=top_k)
-
-            retrieved = result.get("retrieved_documents", [])
-            answer = synthesize_answer(question, retrieved)
-            return {
-                "answer": answer,
-                "sources": result.get("sources", []),
-                "query": question,
-            }
+            embedding = get_embedding(query_text)
+            if embedding:
+                embedding_str = "[" + ",".join(str(v) for v in embedding) + "]"
+                sql = text("""
+                    SELECT m.id, m.title, m.story_text, m.memory_date, p.name as person_name,
+                           1 - (m.embedding <=> :embedding) as score
+                    FROM memories m
+                    JOIN people p ON p.id = m.person_id
+                    WHERE m.family_id = :family_id AND m.embedding IS NOT NULL
+                    ORDER BY m.embedding <=> :embedding
+                    LIMIT 20
+                """)
+                rows = db.execute(sql, {"embedding": embedding_str, "family_id": family_id}).fetchall()
+                for row in rows:
+                    results.append({
+                        "memory": {
+                            "id": str(row[0]),
+                            "title": row[1],
+                            "story_text": row[2],
+                            "memory_date": row[3].isoformat() if row[3] else None,
+                        },
+                        "person_name": row[4],
+                        "score": float(row[5]) if row[5] else 0,
+                    })
         except Exception as e:
-            logger.warning(f"RAG model unavailable, using fallback retrieval: {str(e)}")
-
-    query_terms = [t for t in question.lower().split() if len(t) > 2]
-    ranked = []
-    for d in docs:
-        text_l = d["text"].lower()
-        score = sum(1 for t in query_terms if t in text_l)
-        ranked.append((score, d))
-
-    ranked.sort(key=lambda x: x[0], reverse=True)
-    selected = [item[1] for item in ranked[:top_k]]
-
-    answer_parts = [s["text"][:320] for s in selected if s.get("text")]
-    answer = (
-        "\n\n".join(answer_parts)
-        if answer_parts
-        else "No relevant context found for this question."
-    )
-    return {
-        "answer": answer,
-        "sources": [s.get("metadata", {}) for s in selected],
-        "query": question,
-    }
-
-
-@app.get("/home/user/structure")
-async def get_user_structure(
-    token_data: dict = Depends(verify_token), db=Depends(get_db)
-):
-    """Get the complete hierarchical structure for the user"""
-    user_id = token_data["user_id"]
-
-    categories = db.query(Category).filter(Category.user_id == user_id).all()
-
-    structure = []
-    for category in categories:
-        people = db.query(Person).filter(Person.category_id == category.id).all()
-
-        people_data = []
-        for person in people:
-            files = db.query(FileStore).filter(FileStore.person_id == person.id).all()
-            memories = db.query(Memory).filter(Memory.person_id == person.id).all()
-            people_data.append(
-                {
-                    "id": person.id,
-                    "name": person.person_name,
-                    "file_count": len(files),
-                    "memory_count": len(memories),
-                    "files": [
-                        {
-                            "id": f.id,
-                            "file_name": f.file_name,
-                            "file_type": f.file_type,
-                            "description": f.description,
-                            "created_at": f.created_at.isoformat()
-                            if f.created_at
-                            else None,
-                        }
-                        for f in files
-                    ],
-                    "memories": [
-                        {
-                            "id": m.id,
-                            "content": m.content,
-                            "created_at": m.created_at.isoformat()
-                            if m.created_at
-                            else None,
-                        }
-                        for m in memories
-                    ],
-                }
+            logger.warning(f"Vector search failed, falling back to ILIKE: {e}")
+            pgvector_ok = False
+    
+    # Fallback: ILIKE search
+    if not pgvector_ok:
+        memories = db.query(Memory).filter(
+            Memory.family_id == family_id,
+            or_(
+                Memory.title.ilike(f"%{query_text}%"),
+                Memory.story_text.ilike(f"%{query_text}%"),
             )
-
-        structure.append(
-            {
-                "id": category.id,
-                "name": category.cat_name,
-                "people_count": len(people),
-                "people": people_data,
-            }
-        )
-
-    return {"user_id": user_id, "categories": structure}
-
-
-@app.post("/home/person/{person_id}/summary")
-async def generate_person_summary(
-    person_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Generate AI summary for a person's memories"""
-    user_id = token_data["user_id"]
-
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(status_code=404, detail="Person not found")
-
-    memories = db.query(Memory).filter(Memory.person_id == person_id).all()
-
-    if not memories:
-        return {
-            "summary": f"No memories recorded for {person.person_name} yet.",
-            "key_topics": "",
-        }
-
-    if not MemorySummarizer:
-        return {"error": "Summarization service not available"}, 503
-
-    try:
-        summarizer = MemorySummarizer()
-        memory_contents = [m.content for m in memories]
-        result = summarizer.summarize(memory_contents, person.person_name)
-
-        existing_summary = (
-            db.query(PersonSummary).filter(PersonSummary.person_id == person_id).first()
-        )
-
-        if existing_summary:
-            existing_summary.summary = result["summary"]
-            existing_summary.key_topics = result["key_topics"]
-            existing_summary.last_summary_at = datetime.utcnow()
-        else:
-            new_summary = PersonSummary(
-                person_id=person_id,
-                summary=result["summary"],
-                key_topics=result["key_topics"],
-            )
-            db.add(new_summary)
-
-        db.commit()
-
-        return result
-    except Exception as e:
-        logger.error(f"Summary generation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Summary generation failed: {str(e)}"
-        )
-
-
-@app.get("/home/person/{person_id}/summary")
-async def get_person_summary(
-    person_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Get existing AI summary for a person"""
-    user_id = token_data["user_id"]
-
-    person = (
-        db.query(Person)
-        .join(Category)
-        .filter(Person.id == person_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not person:
-        raise HTTPException(status_code=404, detail="Person not found")
-
-    summary = (
-        db.query(PersonSummary).filter(PersonSummary.person_id == person_id).first()
-    )
-
-    if not summary:
-        return {
-            "summary": None,
-            "key_topics": None,
-            "message": "No summary generated yet",
-        }
-
-    return {
-        "summary": summary.summary,
-        "key_topics": summary.key_topics,
-        "last_summary_at": summary.last_summary_at.isoformat()
-        if summary.last_summary_at
-        else None,
-    }
-
-
-@app.get("/home/user/relationship-suggestions")
-async def get_relationship_suggestions(
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-    min_confidence: float = 0.3,
-):
-    """Get AI-suggested relationships between people"""
-    user_id = token_data["user_id"]
-
-    if not RelationshipSuggester or not SentimentAnalyzer:
-        return {
-            "suggestions": [],
-            "message": "Relationship suggestion service not available",
-        }
-
-    persons = db.query(Person).join(Category).filter(Category.user_id == user_id).all()
-
-    if len(persons) < 2:
-        return {
-            "suggestions": [],
-            "message": "Need at least 2 people to suggest relationships",
-        }
-
-    try:
-        suggester = RelationshipSuggester()
-        persons_data = []
-
-        for person in persons:
-            memories = db.query(Memory).filter(Memory.person_id == person.id).all()
-            emotion_tags = [m.emotion_tag for m in memories if m.emotion_tag]
-
-            analyzer = SentimentAnalyzer()
-            topics = []
-            for memory in memories:
-                result = analyzer.analyze(memory.content)
-                if result.emotion:
-                    topics.append(result.emotion)
-
-            persons_data.append(
-                {
-                    "id": person.id,
-                    "name": person.person_name,
-                    "emotion_tags": list(set(emotion_tags)),
-                    "topics": list(set(topics)),
-                }
-            )
-
-        suggestions = suggester.suggest_relationships(persons_data, min_confidence)
-        return {"suggestions": suggestions}
-
-    except Exception as e:
-        logger.error(f"Relationship suggestion failed: {str(e)}")
-        return {"suggestions": [], "error": str(e)}
-
-
-@app.get("/home/user/emotion-stats")
-async def get_emotion_stats(
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Get emotion statistics across all user memories"""
-    user_id = token_data["user_id"]
-
-    memories = (
-        db.query(Memory)
-        .join(Person)
-        .join(Category)
-        .filter(Category.user_id == user_id)
-        .all()
-    )
-
-    emotion_counts = {}
-    emotion_by_person = {}
-
-    for memory in memories:
-        if memory.emotion_tag:
-            emotion_counts[memory.emotion_tag] = (
-                emotion_counts.get(memory.emotion_tag, 0) + 1
-            )
-
-            person_name = memory.person.person_name
-            if person_name not in emotion_by_person:
-                emotion_by_person[person_name] = {}
-            emotion_by_person[person_name][memory.emotion_tag] = (
-                emotion_by_person[person_name].get(memory.emotion_tag, 0) + 1
-            )
-
-    return {
-        "total_memories": len(memories),
-        "emotion_distribution": emotion_counts,
-        "emotion_by_person": emotion_by_person,
-        "emotion_colors": EMOTION_COLORS if EMOTION_COLORS else {},
-    }
-
-
-@app.post("/home/memory/{memory_id}/analyze")
-async def analyze_memory_emotion(
-    memory_id: int,
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Re-analyze a memory's emotion (useful for updating old memories)"""
-    user_id = token_data["user_id"]
-
-    memory = (
-        db.query(Memory)
-        .join(Person)
-        .join(Category)
-        .filter(Memory.id == memory_id, Category.user_id == user_id)
-        .first()
-    )
-
-    if not memory:
-        raise HTTPException(status_code=404, detail="Memory not found")
-
-    if not SentimentAnalyzer:
-        return {"error": "Sentiment analysis service not available"}, 503
-
-    try:
-        analyzer = SentimentAnalyzer()
-        result = analyzer.analyze(memory.content)
-
-        memory.emotion_tag = result.emotion
-        memory.emotion_confidence = str(result.confidence)
-        db.commit()
-
-        return {
-            "emotion_tag": result.emotion,
-            "confidence": result.confidence,
-            "color": result.color,
-        }
-    except Exception as e:
-        logger.error(f"Memory emotion analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
-
-
-@app.post("/home/user/batch-analyze")
-async def batch_analyze_memories(
-    token_data: dict = Depends(verify_token),
-    db=Depends(get_db),
-):
-    """Analyze emotions for all unanalyzed memories"""
-    user_id = token_data["user_id"]
-
-    memories = (
-        db.query(Memory)
-        .join(Person)
-        .join(Category)
-        .filter(
-            Category.user_id == user_id,
-            Memory.emotion_tag == None,
-        )
-        .all()
-    )
-
-    if not memories:
-        return {"analyzed": 0, "message": "No memories to analyze"}
-
-    if not SentimentAnalyzer:
-        return {"analyzed": 0, "error": "Sentiment analysis service not available"}, 503
-
-    analyzed_count = 0
-    try:
-        analyzer = SentimentAnalyzer()
-
+        ).order_by(Memory.memory_date.desc().nullslast()).limit(20).all()
+        
         for memory in memories:
-            result = analyzer.analyze(memory.content)
-            memory.emotion_tag = result.emotion
-            memory.emotion_confidence = str(result.confidence)
-            analyzed_count += 1
-
-        db.commit()
-        return {
-            "analyzed": analyzed_count,
-            "message": f"Successfully analyzed {analyzed_count} memories",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Batch analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+            person = db.query(Person).filter(Person.id == memory.person_id).first()
+            results.append({
+                "memory": {
+                    "id": str(memory.id),
+                    "title": memory.title,
+                    "story_text": memory.story_text,
+                    "memory_date": memory.memory_date.isoformat() if memory.memory_date else None,
+                },
+                "person_name": person.name if person else "Unknown",
+                "score": 0.5,
+            })
+    
+    return results
 
 
-@app.get("/{full_path:path}")
-async def serve_frontend_or_static(full_path: str):
-    """Serve frontend or static files for non-API routes"""
-    import os
+# ─── File Upload Route ────────────────────────────────────────────────────────
 
-    frontend_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "frontend",
-    )
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    url = save_upload(file)
+    return {"url": url}
 
-    # Skip API routes
-    if full_path.startswith("home/") or full_path.startswith("api/"):
-        raise HTTPException(status_code=404, detail="Not Found")
 
-    # Check if it's a file in frontend directory
-    file_path = os.path.join(frontend_path, full_path)
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        from fastapi.responses import FileResponse
+# ─── Health Check ─────────────────────────────────────────────────────────────
 
-        return FileResponse(file_path)
-
-    # Serve index.html for SPA routing
-    index_path = os.path.join(frontend_path, "index.html")
-    if os.path.exists(index_path):
-        from fastapi.responses import FileResponse
-
-        return FileResponse(index_path)
-
-    raise HTTPException(status_code=404, detail="Not Found")
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "pgvector": PGVECTOR_AVAILABLE and check_pgvector()}
