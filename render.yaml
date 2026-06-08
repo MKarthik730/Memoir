@@ -8,7 +8,7 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build && cd .. && mkdir -p uploads
     startCommand: uvicorn backend.routes.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
@@ -21,6 +21,20 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "10080"
       - key: CORS_ORIGINS
-        value: https://memoir-frontend.onrender.com
+        value: "http://localhost:5173, https://memoir-frontend.onrender.com"
       - key: UPLOAD_DIR
         value: ./uploads
+      - key: VITE_API_URL
+        value: ""
+
+  - type: web
+    name: memoir-frontend
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: VITE_API_URL
+        value: https://memoir-api.onrender.com
