@@ -1,292 +1,312 @@
-from sqlalchemy import Column, String, Integer, LargeBinary, DateTime, ForeignKey
+import uuid
+from datetime import datetime
+from typing import Optional, List
+from sqlalchemy import (
+    Column, String, Integer, Text, DateTime, Date, ForeignKey, Enum,
+    UniqueConstraint, Index, Float, LargeBinary, TypeDecorator
+)
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base, relationship
 from pydantic import BaseModel, Field
-from datetime import datetime
-from typing import Optional
+import enum
+
+# Try to import pgvector Vector type - gracefully handle if unavailable
+PGVECTOR_AVAILABLE = False
+try:
+    from pgvector.sqlalchemy import Vector
+    PGVECTOR_AVAILABLE = True
+except ImportError:
+    Vector = None
+
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+    Uses PostgreSQL UUID when available, otherwise stores as String(36).
+    Accepts both uuid.UUID objects and strings as input.
+    """
+    impl = String(36)
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(UUID())
+        return dialect.type_descriptor(String(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == "postgresql":
+            # PostgreSQL UUID type accepts uuid.UUID objects directly
+            if isinstance(value, str):
+                return uuid.UUID(value)
+            return value
+        # SQLite: store as string
+        if isinstance(value, uuid.UUID):
+            return str(value)
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None or dialect.name == "postgresql":
+            return value
+        # SQLite: convert back to uuid.UUID
+        if isinstance(value, str):
+            return uuid.UUID(value)
+        return value
+
 
 Base = declarative_base()
 
+# ─── Enums ───────────────────────────────────────────────────────────────────
+
+class MemberRole(str, enum.Enum):
+    admin = "admin"
+    member = "member"
+
+class RelationshipTag(str, enum.Enum):
+    Grandparent = "Grandparent"
+    Parent = "Parent"
+    Sibling = "Sibling"
+    Child = "Child"
+    Uncle_Aunt = "Uncle/Aunt"
+    Spouse = "Spouse"
+    Friend = "Friend"
+    Other = "Other"
+
+# ─── SQLAlchemy Models ───────────────────────────────────────────────────────
 
 class User(Base):
-    """Root level - Each user has their own categories"""
-
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False, unique=True, index=True)
-    password = Column(String, nullable=False)
-
-    categories = relationship(
-        "Category", back_populates="user", cascade="all, delete-orphan"
-    )
-
-    def __repr__(self):
-        return f"<User(id={self.id}, name='{self.name}')>"
-
-
-class Category(Base):
-    """Second level - Categories belong to users"""
-
-    __tablename__ = "category"
-
-    id = Column(Integer, primary_key=True, index=True)
-    cat_name = Column(String, nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    email = Column(String, unique=True, nullable=False, index=True)
+    password_hash = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    avatar_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    user = relationship("User", back_populates="categories")
-    people = relationship(
-        "Person", back_populates="category", cascade="all, delete-orphan"
-    )
+    family_members = relationship("FamilyMember", back_populates="user")
 
-    def __repr__(self):
-        return f"<Category(id={self.id}, cat_name='{self.cat_name}', user_id={self.user_id})>"
+class Family(Base):
+    __tablename__ = "families"
 
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    cover_photo_url = Column(String, nullable=True)
+    invite_token = Column(GUID(), unique=True, default=uuid.uuid4)
+    created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    members = relationship("FamilyMember", back_populates="family", cascade="all, delete-orphan")
+    people = relationship("Person", back_populates="family", cascade="all, delete-orphan")
+    relationships = relationship("Relationship", back_populates="family", cascade="all, delete-orphan")
+    memories = relationship("Memory", back_populates="family", cascade="all, delete-orphan")
+
+class FamilyMember(Base):
+    __tablename__ = "family_members"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    family_id = Column(GUID(), ForeignKey("families.id"), nullable=False)
+    role = Column(Enum(MemberRole), default=MemberRole.member)
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "family_id"),)
+
+    user = relationship("User", back_populates="family_members")
+    family = relationship("Family", back_populates="members")
 
 class Person(Base):
-    """Third level - People belong to categories"""
+    __tablename__ = "people"
 
-    __tablename__ = "persons"
-
-    id = Column(Integer, primary_key=True, index=True)
-    person_name = Column(String, nullable=False, index=True)
-    category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    family_id = Column(GUID(), ForeignKey("families.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    relationship_tag = Column(Enum(RelationshipTag), nullable=True)
+    photo_url = Column(String, nullable=True)
+    dob = Column(Date, nullable=True)
+    bio = Column(Text, nullable=True)
+    created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    category = relationship("Category", back_populates="people")
-    files = relationship(
-        "FileStore", back_populates="person", cascade="all, delete-orphan"
-    )
-    memories = relationship(
-        "Memory", back_populates="person", cascade="all, delete-orphan"
-    )
-    summary = relationship(
-        "PersonSummary",
-        back_populates="person",
-        uselist=False,
-        cascade="all, delete-orphan",
-    )
+    family = relationship("Family", back_populates="people")
+    memories = relationship("Memory", back_populates="person", cascade="all, delete-orphan")
+    relationships_a = relationship("Relationship", foreign_keys="[Relationship.person_a_id]", back_populates="person_a", cascade="all, delete-orphan")
+    relationships_b = relationship("Relationship", foreign_keys="[Relationship.person_b_id]", back_populates="person_b", cascade="all, delete-orphan")
 
-    def __repr__(self):
-        return f"<Person(id={self.id}, person_name='{self.person_name}', category_id={self.category_id})>"
+class Relationship(Base):
+    __tablename__ = "relationships"
 
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    family_id = Column(GUID(), ForeignKey("families.id"), nullable=False)
+    person_a_id = Column(GUID(), ForeignKey("people.id"), nullable=False)
+    person_b_id = Column(GUID(), ForeignKey("people.id"), nullable=False)
+    label = Column(String, nullable=True)
 
-class FileStore(Base):
-    """Fourth level - Files belong to persons"""
+    __table_args__ = (UniqueConstraint("person_a_id", "person_b_id"),)
 
-    __tablename__ = "filestore"
-
-    id = Column(Integer, primary_key=True, index=True)
-    file_name = Column(String, nullable=False, index=True)
-    file_data = Column(LargeBinary, nullable=False)
-    file_type = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    person_id = Column(Integer, ForeignKey("persons.id"), nullable=False, index=True)
-
-    person = relationship("Person", back_populates="files")
-
-    def __repr__(self):
-        return f"<FileStore(id={self.id}, file_name='{self.file_name}', person_id={self.person_id})>"
-
+    family = relationship("Family", back_populates="relationships")
+    person_a = relationship("Person", foreign_keys=[person_a_id], back_populates="relationships_a")
+    person_b = relationship("Person", foreign_keys=[person_b_id], back_populates="relationships_b")
 
 class Memory(Base):
-    """Fourth level - Text memories belong to persons"""
-
     __tablename__ = "memories"
 
-    id = Column(Integer, primary_key=True, index=True)
-    content = Column(String, nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    person_id = Column(GUID(), ForeignKey("people.id"), nullable=False, index=True)
+    family_id = Column(GUID(), ForeignKey("families.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    story_text = Column(Text, nullable=True)
+    memory_date = Column(Date, nullable=True)
+    voice_note_url = Column(String, nullable=True)
+    created_by_user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-
-    person_id = Column(Integer, ForeignKey("persons.id"), nullable=False, index=True)
+    # embedding column - VECTOR(384) for pgvector, null fallback for SQLite
+    if PGVECTOR_AVAILABLE and Vector:
+        embedding = Column(Vector(384), nullable=True)
+    else:
+        embedding = Column(Text, nullable=True)
 
     person = relationship("Person", back_populates="memories")
+    family = relationship("Family", back_populates="memories")
+    photos = relationship("MemoryPhoto", back_populates="memory", cascade="all, delete-orphan")
 
-    emotion_tag = Column(String, nullable=True)
-    emotion_confidence = Column(String, nullable=True)
+class MemoryPhoto(Base):
+    __tablename__ = "memory_photos"
 
-    def __repr__(self):
-        return f"<Memory(id={self.id}, person_id={self.person_id}, created_at={self.created_at})>"
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    memory_id = Column(GUID(), ForeignKey("memories.id"), nullable=False, index=True)
+    photo_url = Column(String, nullable=False)
+    caption = Column(String, nullable=True)
+    display_order = Column(Integer, default=0)
 
-
-class PersonSummary(Base):
-    """AI-generated summary for a person"""
-
-    __tablename__ = "person_summaries"
-
-    id = Column(Integer, primary_key=True, index=True)
-    person_id = Column(
-        Integer, ForeignKey("persons.id"), nullable=False, unique=True, index=True
-    )
-    summary = Column(String, nullable=False)
-    key_topics = Column(String, nullable=True)
-    last_summary_at = Column(DateTime, default=datetime.utcnow)
-
-    person = relationship("Person", back_populates="summary")
-
-    def __repr__(self):
-        return f"<PersonSummary(person_id={self.person_id})>"
+    memory = relationship("Memory", back_populates="photos")
 
 
-# Pydantic Models
-class UserData(BaseModel):
-    name: str = Field(..., min_length=3, max_length=50, description="Username")
-    password: str = Field(
-        ..., min_length=8, description="Password (minimum 8 characters)"
-    )
+# ─── Pydantic Schemas ────────────────────────────────────────────────────────
 
-    class Config:
-        from_attributes = True
-
-
-class UserResponse(BaseModel):
-    id: int
+class UserCreate(BaseModel):
+    email: str
+    password: str
     name: str
 
-    class Config:
-        from_attributes = True
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
-
-class CategoryData(BaseModel):
-    cat_name: str = Field(
-        ..., min_length=1, max_length=100, description="Category name"
-    )
-
-    class Config:
-        from_attributes = True
-
-
-class CategoryResponse(BaseModel):
-    id: int
-    cat_name: str
-    user_id: int
-    created_at: Optional[datetime] = None
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    avatar_url: Optional[str] = None
 
     class Config:
         from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
-
-
-class PersonData(BaseModel):
-    person_name: str = Field(
-        ..., min_length=1, max_length=100, description="Person name"
-    )
-    category_id: int = Field(..., description="Category ID this person belongs to")
-
-    class Config:
-        from_attributes = True
-
-
-class PersonResponse(BaseModel):
-    id: int
-    person_name: str
-    category_id: int
-    created_at: Optional[datetime] = None
-    summary: Optional["PersonSummaryResponse"] = None
-
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
-
-
-class FileResponse(BaseModel):
-    id: int
-    file_name: str
-    file_type: str
-    description: Optional[str] = None
-    created_at: Optional[datetime] = None
-    person_id: int
-
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
-
 
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str
-    user_id: int
-    username: str
+    user: UserResponse
 
+class FamilyCreate(BaseModel):
+    name: str
 
-class RegistrationResponse(BaseModel):
-    access_token: str
-    token_type: str
-    user_id: int
-    username: str
-
-
-class FileUploadResponse(BaseModel):
-    id: int
-    file_name: str
-    file_size: int
-    file_type: str
-    person_id: int
-    message: str
-
-
-class MemoryData(BaseModel):
-    content: str = Field(
-        ..., min_length=1, max_length=1000, description="Memory content"
-    )
+class FamilyResponse(BaseModel):
+    id: str
+    name: str
+    cover_photo_url: Optional[str] = None
+    invite_token: str
+    created_by: str
+    created_at: Optional[datetime] = None
+    members: List[dict] = []
 
     class Config:
         from_attributes = True
 
+class FamilyMemberResponse(BaseModel):
+    id: str
+    name: str
+    avatar_url: Optional[str] = None
+    role: str
+
+class PersonCreate(BaseModel):
+    name: str
+    relationship_tag: Optional[str] = None
+    dob: Optional[str] = None
+    bio: Optional[str] = None
+
+class PersonResponse(BaseModel):
+    id: str
+    family_id: str
+    name: str
+    relationship_tag: Optional[str] = None
+    photo_url: Optional[str] = None
+    dob: Optional[str] = None
+    bio: Optional[str] = None
+    created_by: str
+    created_at: Optional[datetime] = None
+    memory_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+class PersonDetailResponse(BaseModel):
+    id: str
+    family_id: str
+    name: str
+    relationship_tag: Optional[str] = None
+    photo_url: Optional[str] = None
+    dob: Optional[str] = None
+    bio: Optional[str] = None
+    created_by: str
+    created_at: Optional[datetime] = None
+    memories: List[dict] = []
+
+    class Config:
+        from_attributes = True
+
+class RelationshipCreate(BaseModel):
+    person_a_id: str
+    person_b_id: str
+    label: str
+
+class RelationshipResponse(BaseModel):
+    id: str
+    person_a: dict
+    person_b: dict
+    label: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class MemoryCreate(BaseModel):
+    title: str
+    story_text: Optional[str] = None
+    memory_date: Optional[str] = None
 
 class MemoryResponse(BaseModel):
-    id: int
-    content: str
+    id: str
+    person_id: str
+    family_id: str
+    title: str
+    story_text: Optional[str] = None
+    memory_date: Optional[str] = None
+    voice_note_url: Optional[str] = None
+    created_by_user_id: str
     created_at: Optional[datetime] = None
-    person_id: int
-    emotion_tag: Optional[str] = None
-    emotion_confidence: Optional[float] = None
-
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
-
-
-class PersonSummaryData(BaseModel):
-    summary: str = Field(
-        ..., min_length=1, max_length=2000, description="AI-generated summary"
-    )
-    key_topics: Optional[str] = None
+    photos: List[dict] = []
+    contributor: Optional[dict] = None
+    person_name: Optional[str] = None
 
     class Config:
         from_attributes = True
 
+class SearchQuery(BaseModel):
+    query: str = Field(..., min_length=1)
 
-class PersonSummaryResponse(BaseModel):
-    id: int
-    person_id: int
-    summary: str
-    key_topics: Optional[str] = None
-    last_summary_at: Optional[datetime] = None
+class SearchResult(BaseModel):
+    memory: dict
+    person_name: str
+    score: float
 
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
-
-
-class EmotionAnalysisResult(BaseModel):
-    emotion_tag: str
-    confidence: float
-    original_text: str
-
-
-class RelationshipSuggestion(BaseModel):
-    person1_id: int
-    person1_name: str
-    person2_id: int
-    person2_name: str
-    reason: str
-    confidence: float
-
-
-class RAGQueryRequest(BaseModel):
-    query: str = Field(
-        ..., min_length=1, max_length=500, description="Natural language query"
-    )
+class UploadResponse(BaseModel):
+    url: str

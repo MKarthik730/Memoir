@@ -48,5 +48,17 @@ build/
 dist/
 *.egg-info/
 
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/public/
+
+# Uploads
+uploads/
+
+# Windows
+nul
+
 # Git
 .git/

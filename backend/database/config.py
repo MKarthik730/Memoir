@@ -1,34 +1,68 @@
-from sqlalchemy import create_engine
+import os
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
-db_url = os.getenv("DATABASE_URL") or os.getenv("DB_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./memoir.db")
 
-if not db_url:
-    db_url = "sqlite:///./memoir.db"
-    print("WARNING: Using SQLite database. Set DATABASE_URL for production.")
+# Detect if pgvector is available
+PGVECTOR_AVAILABLE = False
+if DATABASE_URL.startswith("postgresql"):
+    try:
+        from pgvector.sqlalchemy import Vector
+        PGVECTOR_AVAILABLE = True
+    except ImportError:
+        PGVECTOR_AVAILABLE = False
 
-if db_url.startswith("postgresql"):
+# Create engine
+if DATABASE_URL.startswith("postgresql"):
     engine = create_engine(
-        db_url,
+        DATABASE_URL,
         poolclass=NullPool,
-        connect_args={"sslmode": "prefer"},
+        connect_args={"sslmode": "prefer"} if "sslmode" not in DATABASE_URL else {},
     )
 else:
     engine = create_engine(
-        db_url,
-        connect_args={"check_same_thread": False}
-        if db_url.startswith("sqlite")
-        else {},
+        DATABASE_URL,
+        connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Import Base from models to ensure tables are created correctly
-from database.models import Base
 
-Base.metadata.create_all(bind=engine) if not os.getenv("RENDER") else None
+def check_pgvector():
+    """Check if pgvector extension is available in PostgreSQL."""
+    if not DATABASE_URL.startswith("postgresql"):
+        return False
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT * FROM pg_extension WHERE extname = 'vector'"))
+            return result.fetchone() is not None
+    except Exception:
+        return False
+
+
+def init_db():
+    """Create all tables."""
+    from backend.database.models import Base
+    Base.metadata.create_all(bind=engine)
+    
+    # Try to enable pgvector extension
+    if DATABASE_URL.startswith("postgresql"):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                conn.commit()
+        except Exception:
+            pass  # Graceful fallback
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

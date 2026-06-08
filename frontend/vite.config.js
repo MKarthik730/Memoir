@@ -5,10 +5,17 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    port: 5173,
     proxy: {
-      '/sign_up': 'http://localhost:8000',
-      '/login': 'http://localhost:8000',
-      '/home': 'http://localhost:8000',
+      '/auth': 'http://localhost:8000',
+      '/family': 'http://localhost:8000',
+      '/people': 'http://localhost:8000',
+      '/memories': 'http://localhost:8000',
+      '/upload': 'http://localhost:8000',
+      '/user': 'http://localhost:8000',
+      '/relationships': 'http://localhost:8000',
+      '/uploads': 'http://localhost:8000',
+      '/health': 'http://localhost:8000',
     },
   },
 })
