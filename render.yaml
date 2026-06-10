@@ -1,5 +1,6 @@
 # Render Blueprint Specification
-# Deploy Memoir to Render
+# Deploy Memoir to Render — Family Memory Vault
+# https://render.com
 
 services:
   - type: web
@@ -7,16 +8,36 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && (pip install -r requirements-ai.txt || echo "Optional search deps unavailable, using keyword fallback") && mkdir -p uploads
     startCommand: uvicorn backend.routes.main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /home
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         sync: false
       - key: SECRET_KEY
         generateValue: true
+      - key: ALGORITHM
+        value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: "1440"
-      - key: RAG_EMBEDDING_MODEL
-        value: "all-MiniLM-L6-v2"
-      - fromGroup: memoir-secrets
+        value: "10080"
+      - key: CORS_ORIGINS
+        value: "http://localhost:5173, https://memoir-frontend.onrender.com"
+      - key: UPLOAD_DIR
+        value: ./uploads
+
+
+  - type: web
+    name: memoir-frontend
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    pullRequestPreviewsEnabled: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://memoir-api.onrender.com

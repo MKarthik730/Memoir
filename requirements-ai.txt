@@ -1,0 +1,6 @@
+# Optional AI/vector search dependencies (~500MB with PyTorch)
+# Fails gracefully on Render's free tier — falls back to keyword search
+# pip install -r requirements-ai.txt
+
+sentence-transformers==2.7.0
+pgvector==0.2.5

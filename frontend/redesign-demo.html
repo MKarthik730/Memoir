@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memoir — UI Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f8f8f8;
+  --surface: #ffffff;
+  --border: #e8e8e8;
+  --text: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --text-muted: #9a9a9a;
+  --accent: #7C6A5E;
+  --accent-hover: #6B5A4F;
+  --accent-light: rgba(124, 106, 94, 0.08);
+  --accent-lighter: rgba(124, 106, 94, 0.04);
+  --danger: #d32f2f;
+  --sidebar-width: 240px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.1);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+::selection { background: rgba(124, 106, 94, 0.2); }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+/* Layout */
+.app-layout { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 100;
+}
+.sidebar-header {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text);
+  text-decoration: none;
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-logo-icon {
+  width: 32px; height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-style: italic;
+}
+.sidebar-nav { flex: 1; padding: 12px 10px; }
+.sidebar-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 14px; font-weight: 450;
+  cursor: pointer; transition: all 0.15s;
+  text-decoration: none;
+  margin-bottom: 2px;
+}
+.sidebar-nav-item:hover { background: var(--accent-lighter); color: var(--text); }
+.sidebar-nav-item.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 500;
+}
+.sidebar-nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+.sidebar-nav-item.active svg { opacity: 1; }
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-member-avatars {
+  display: flex; gap: 6px; align-items: center;
+  margin-bottom: 8px;
+}
+.sidebar-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; color: white;
+  border: 2px solid var(--surface);
+}
+.sidebar-avatar-more {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text-muted);
+  border: 2px solid var(--surface);
+}
+.sidebar-member-label {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+/* Main content */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+}
+
+/* Auth pages */
+.auth-page {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+  margin-left: 0;
+}
+.auth-container {
+  width: 100%; max-width: 400px;
+  padding: 40px;
+}
+.auth-logo {
+  text-align: center; margin-bottom: 32px;
+}
+.auth-logo-icon {
+  width: 48px; height: 48px;
+  background: var(--accent);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  color: white;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-style: italic;
+}
+.auth-logo h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--text);
+  font-weight: 400;
+}
+.auth-logo p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.auth-tabs {
+  display: flex;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  margin-bottom: 24px;
+}
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  border: none; background: transparent;
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 13px; font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.auth-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.form-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 106, 94, 0.1);
+}
+.form-input::placeholder { color: #bbb; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+  text-decoration: none;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  width: 100%;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.btn-outline:hover { background: var(--accent-light); }
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+}
+.btn-ghost:hover { background: var(--accent-lighter); color: var(--text); }
+.btn-sm { padding: 8px 14px; font-size: 13px; }
+.auth-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.auth-footer a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.auth-footer a:hover { text-decoration: underline; }
+.auth-error {
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* Page header */
+.page-header {
+  padding: 28px 32px 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.page-header-left {}
+.page-header-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--text);
+}
+.page-header-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.page-header-actions {
+  display: flex; align-items: center; gap: 8px;
+}
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s;
+  color: var(--text-secondary);
+}
+.icon-btn:hover { background: var(--bg); color: var(--text); }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* Cards grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 24px 32px;
+}
+.member-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+.member-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.member-card-top {
+  display: flex; align-items: flex-start; gap: 14px;
+  margin-bottom: 12px;
+}
+.member-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 20px; color: white;
+  flex-shrink: 0;
+}
+.member-info { flex: 1; min-width: 0; }
+.member-name {
+  font-size: 16px; font-weight: 600;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.member-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px; font-weight: 500;
+  margin-top: 4px;
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.member-memory-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  display: flex; align-items: center; gap: 4px;
+}
+.member-bio {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Profile Header */
+.profile-header {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #e8e0da 0%, #d4c9c0 100%);
+}
+.profile-header-content {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 32px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.15));
+  display: flex; align-items: flex-end; justify-content: space-between;
+}
+.profile-header-left { display: flex; align-items: center; gap: 20px; }
+.profile-header-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 32px; color: white;
+  border: 3px solid rgba(255,255,255,0.8);
+  flex-shrink: 0;
+}
+.profile-header-name {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: white;
+  font-weight: 400;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.profile-header-role {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px; font-weight: 500;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  backdrop-filter: blur(4px);
+  margin-top: 4px;
+}
+.profile-header-actions {
+  display: flex; gap: 8px;
+}
+
+/* Memories section */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 32px 0;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--text);
+}
+.memories-list {
+  padding: 20px 32px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.memory-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.memory-title {
+  font-size: 16px; font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.memory-date {
+  font-size: 12px; color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.memory-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.memory-photos {
+  display: flex; gap: 8px;
+  margin-top: 12px;
+}
+.memory-photo-thumb {
+  width: 56px; height: 56px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.memory-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.memory-contributor {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-muted);
+}
+.memory-contributor-avatar {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 600; color: white;
+}
+.memory-share-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #25D366;
+  background: rgba(37, 211, 102, 0.08);
+  transition: all 0.15s;
+}
+.memory-share-btn:hover { background: rgba(37, 211, 102, 0.15); }
+
+/* Search page */
+.search-page { padding: 32px; }
+.search-bar-wrapper {
+  max-width: 600px; margin: 0 auto 60px;
+}
+.search-input-container {
+  position: relative;
+}
+.search-input-icon {
+  position: absolute; left: 16px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  padding: 16px 16px 16px 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 106, 94, 0.1);
+}
+.search-empty-state {
+  text-align: center;
+  padding: 80px 20px;
+}
+.search-empty-icon {
+  width: 64px; height: 64px;
+  margin: 0 auto 20px;
+  color: #d0d0d0;
+}
+.search-empty-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text);
+  margin-bottom: 6px;
+  font-weight: 400;
+}
+.search-empty-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* Graph view */
+.graph-page { padding: 0; position: relative; height: calc(100vh - 80px); }
+.graph-canvas {
+  width: 100%; height: 100%;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.graph-controls {
+  position: absolute;
+  right: 20px; top: 50%;
+  transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 6px;
+  z-index: 10;
+}
+.graph-control-btn {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s;
+  color: var(--text-secondary);
+}
+.graph-control-btn:hover { background: var(--bg); color: var(--text); box-shadow: var(--shadow-md); }
+.graph-control-btn svg { width: 18px; height: 18px; }
+.graph-add-btn {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent);
+  color: white;
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s;
+  margin-top: 12px;
+}
+.graph-add-btn:hover { background: var(--accent-hover); box-shadow: var(--shadow-md); }
+.graph-add-btn svg { width: 18px; height: 18px; }
+.graph-node {
+  position: absolute;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.graph-node:hover { transform: scale(1.1); z-index: 20; }
+.graph-node-circle {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 2px solid white;
+}
+.graph-node-label {
+  text-align: center;
+  font-size: 11px; font-weight: 500;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  white-space: nowrap;
+}
+.graph-line {
+  position: absolute;
+  height: 2px;
+  background: #d0c8c0;
+  transform-origin: 0 50%;
+  z-index: 1;
+}
+.graph-line-label {
+  position: absolute;
+  font-size: 10px;
+  color: var(--text-muted);
+  z-index: 2;
+  background: var(--surface);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.graph-empty-state {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.graph-empty-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text);
+  margin-bottom: 4px;
+  font-weight: 400;
+}
+.graph-empty-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Utility */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.mt-2 { margin-top: 8px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; }
+  .page-header { padding: 20px 16px 0; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .cards-grid { padding: 16px; grid-template-columns: 1fr; }
+  .memories-list { padding: 16px; }
+  .section-header { padding: 16px 16px 0; }
+  .search-page { padding: 20px 16px; }
+  .search-bar-wrapper { margin-bottom: 40px; }
+  .profile-header { height: 200px; }
+  .profile-header-content { padding: 20px; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .profile-header-avatar { width: 56px; height: 56px; font-size: 24px; }
+  .profile-header-name { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ─── SVG Icons ───────────────────────────────────────────────────────────────
+const S = (path) => (props) => <svg xmlns="http://www.w3.org/2000/svg" {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html: path}} />;
+const Icons = {
+  Home: S('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'),
+  Search: S('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
+  Users: S('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+  Share2: S('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>'),
+  UserPlus: S('<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>'),
+  Plus: S('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'),
+  Mail: S('<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>'),
+  Lock: S('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
+  User: S('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+  LogOut: S('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
+  ArrowRight: S('<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>'),
+  MessageCircle: S('<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>'),
+  Image: S('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>'),
+  BookOpen: S('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'),
+  ZoomIn: S('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>'),
+  ZoomOut: S('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>'),
+  RotateCcw: S('<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>'),
+};
+
+// ─── Avatar colors ───────────────────────────────────────────────────────────
+const AVATAR_COLORS = ["#7C6A5E","#8B7A6E","#9B8B7E","#6B9E8A","#A68B7B","#7E8B9B","#8B7E6B","#9E7E8B"];
+const getColor = (name) => AVATAR_COLORS[name ? name.charCodeAt(0) % AVATAR_COLORS.length : 0];
+const getInitials = (name) => name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '?';
+
+// ─── Mock Data ───────────────────────────────────────────────────────────────
+const MOCK_FAMILY = {
+  name: "The Motupalli Family",
+  memberCount: 4,
+  members: [
+    { id: 1, name: "Karthik" },
+    { id: 2, name: "Priya" },
+    { id: 3, name: "Rajan" },
+    { id: 4, name: "Ananya" },
+  ],
+};
+
+const MOCK_PEOPLE = [
+  { id: 1, name: "Dadi", role: "Grandparent", bio: "Born in 1942 in Vizag. A wonderful grandmother.", memories: 3, color: "#7C6A5E" },
+  { id: 2, name: "Thatha", role: "Grandparent", bio: "Born in 1938. A retired school teacher.", memories: 2, color: "#8B7A6E" },
+  { id: 3, name: "Dad", role: "Parent", bio: "A bank manager who loves cricket.", memories: 2, color: "#6B9E8A" },
+  { id: 4, name: "Mom", role: "Parent", bio: "A talented home chef and the heart of the family.", memories: 2, color: "#A68B7B" },
+  { id: 5, name: "Karthik", role: "Child", bio: "Software engineer. Loves photography.", memories: 1, color: "#9B8B7E" },
+];
+
+const MOCK_MEMORIES = [
+  { id: 1, personId: 1, personName: "Dadi", title: "Childhood summers in Vizag", date: "June 1960", text: "I remember running through the narrow lanes of Vizag during summer vacations. The smell of fresh fish from the harbor, the sound of waves crashing against the rocks at RK Beach.", contributor: "Karthik" },
+  { id: 2, personId: 1, personName: "Dadi", title: "Learning to cook family recipes", date: "August 1975", text: "My grandmother taught me her secret recipe for chicken biryani. She said the key was in the patience.", contributor: "Priya" },
+  { id: 3, personId: 2, personName: "Thatha", title: "Building the family home", date: "March 1970", text: "We built this house brick by brick. I designed the layout myself.", contributor: "Karthik" },
+  { id: 4, personId: 3, personName: "Dad", title: "Teaching Karthik to ride a bike", date: "August 2002", text: "I'll never forget the look on his face when he first rode without training wheels.", contributor: "Mom" },
+  { id: 5, personId: 4, personName: "Mom", title: "The great Diwali of 2008", date: "October 2008", text: "That year, I decided to host Diwali for the entire extended family — 35 people!", contributor: "Karthik" },
+  { id: 6, personId: 5, personName: "Karthik", title: "Road trip to Hampi", date: "March 2024", text: "My best friend and I took a road trip to Hampi last summer.", contributor: "Karthik" },
+];
+
+const MOCK_RELATIONSHIPS = [
+  { a: 3, b: 4, label: "Married" },
+  { a: 1, b: 3, label: "Mother-Son" },
+  { a: 2, b: 3, label: "Father-Son" },
+  { a: 3, b: 5, label: "Father-Son" },
+  { a: 4, b: 5, label: "Mother-Son" },
+];
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function Sidebar({ page, setPage, onLogout }) {
+  const family = MOCK_FAMILY;
+  const navItems = [
+    { id: 'home', label: 'Home', icon: Icons.Home },
+    { id: 'search', label: 'Search', icon: Icons.Search },
+    { id: 'graph', label: 'Graph', icon: Icons.Share2 },
+  ];
+
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-header">
+        <a href="#" className="sidebar-logo" onClick={(e) => { e.preventDefault(); setPage('home'); }}>
+          <div className="sidebar-logo-icon">M</div>
+          Memoir
+        </a>
+      </div>
+      <nav className="sidebar-nav">
+        {navItems.map(item => (
+          <div
+            key={item.id}
+            className={`sidebar-nav-item${page === item.id || (page.startsWith('profile') && item.id === 'home') ? ' active' : ''}`}
+            onClick={() => {
+              if (item.id === 'home') setPage('home');
+              else setPage(item.id);
+            }}
+          >
+            <item.icon />
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </nav>
+      <div className="sidebar-footer">
+        <div className="sidebar-member-avatars">
+          {family.members.slice(0, 5).map(m => (
+            <div key={m.id} className="sidebar-avatar" style={{ background: getColor(m.name) }}>
+              {getInitials(m.name)}
+            </div>
+          ))}
+          {family.members.length > 5 && (
+            <div className="sidebar-avatar-more">+{family.members.length - 5}</div>
+          )}
+        </div>
+        <div className="sidebar-member-label">{family.memberCount} members</div>
+        <div style={{ marginTop: 12 }}>
+          <div className="sidebar-nav-item" onClick={onLogout}>
+            <Icons.LogOut />
+            <span>Sign out</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+// ─── Sign In Page ─────────────────────────────────────────────────────────────
+function SignInPage({ onNavigateHome, onSwitchToSignUp }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+    if (!email || !password) { setError('Please fill in all fields'); return; }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      onNavigateHome();
+    }, 800);
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-logo">
+          <div className="auth-logo-icon">M</div>
+          <h1>Memoir</h1>
+          <p>Your family's story, forever.</p>
+        </div>
+        <div className="auth-tabs">
+          <div className="auth-tab active">Sign In</div>
+          <div className="auth-tab" onClick={onSwitchToSignUp} style={{ cursor: 'pointer' }}>Sign Up</div>
+        </div>
+        {error && <div className="auth-error">{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 8 }}>
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+        <div className="auth-footer">
+          <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignUp(); }}>Use your invite link</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Sign Up Page ─────────────────────────────────────────────────────────────
+function SignUpPage({ onNavigateHome, onSwitchToSignIn }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+    if (!name || !email || !password) { setError('Please fill in all fields'); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      onNavigateHome();
+    }, 800);
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-logo">
+          <div className="auth-logo-icon">M</div>
+          <h1>Memoir</h1>
+          <p>Your family's story, forever.</p>
+        </div>
+        <div className="auth-tabs">
+          <div className="auth-tab" onClick={onSwitchToSignIn} style={{ cursor: 'pointer' }}>Sign In</div>
+          <div className="auth-tab active">Sign Up</div>
+        </div>
+        {error && <div className="auth-error">{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Name</label>
+            <input className="form-input" type="text" placeholder="Your full name" value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" placeholder="Min. 8 characters" value={password} onChange={e => setPassword(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Confirm Password</label>
+            <input className="form-input" type="password" placeholder="Re-enter password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 8 }}>
+            {loading ? 'Creating account...' : 'Create Account'}
+          </button>
+        </form>
+        <div className="auth-footer">
+          <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignIn(); }}>Use your invite link</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Member Card ──────────────────────────────────────────────────────────────
+function MemberCard({ person, onClick }) {
+  return (
+    <div className="member-card" onClick={() => onClick(person.id)}>
+      <div className="member-card-top">
+        <div className="member-avatar" style={{ background: getColor(person.name) }}>
+          {getInitials(person.name)}
+        </div>
+        <div className="member-info">
+          <div className="member-name">{person.name}</div>
+          <div className="member-role-badge">{person.role}</div>
+          <div className="member-memory-count">
+            <Icons.Image style={{ width: 12, height: 12 }} />
+            {person.memories} {person.memories === 1 ? 'memory' : 'memories'}
+          </div>
+        </div>
+      </div>
+      {person.bio && <div className="member-bio">{person.bio}</div>}
+    </div>
+  );
+}
+
+// ─── Family Dashboard (Home) ─────────────────────────────────────────────────
+function FamilyDashboard({ onProfileClick, onSearchClick, onGraphClick }) {
+  return (
+    <div className="main-content">
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="page-header-title">The Motupalli Family</div>
+          <div className="page-header-subtitle">{MOCK_PEOPLE.length} family members</div>
+        </div>
+        <div className="page-header-actions">
+          <div className="icon-btn" title="Search" onClick={onSearchClick}><Icons.Search /></div>
+          <div className="icon-btn" title="Graph" onClick={onGraphClick}><Icons.Share2 /></div>
+          <button className="btn btn-primary btn-sm">
+            <Icons.UserPlus style={{ width: 16, height: 16 }} />
+            Add Member
+          </button>
+        </div>
+      </div>
+      <div className="cards-grid">
+        {MOCK_PEOPLE.map(person => (
+          <MemberCard key={person.id} person={person} onClick={onProfileClick} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Member Profile Page ─────────────────────────────────────────────────────
+function MemberProfilePage({ personId, onBack }) {
+  const person = MOCK_PEOPLE.find(p => p.id === personId) || MOCK_PEOPLE[0];
+  const memories = MOCK_MEMORIES.filter(m => m.personId === person.id);
+
+  return (
+    <div className="main-content">
+      {/* Cover Header */}
+      <div className="profile-header">
+        <div className="profile-header-content">
+          <div className="profile-header-left">
+            <div className="profile-header-avatar" style={{ background: getColor(person.name) }}>
+              {getInitials(person.name)}
+            </div>
+            <div>
+              <div className="profile-header-name">{person.name}</div>
+              <div className="profile-header-role">{person.role}</div>
+            </div>
+          </div>
+          <div className="profile-header-actions">
+            <button className="btn btn-primary btn-sm">
+              <Icons.Plus style={{ width: 16, height: 16 }} />
+              Add Memory
+            </button>
+            <button className="btn btn-outline btn-sm" style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: 'white' }}>
+              <Icons.BookOpen style={{ width: 16, height: 16 }} />
+              Memoir Book
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Memories */}
+      <div className="section-header">
+        <div className="section-title">Memories</div>
+        <button className="btn btn-ghost btn-sm" onClick={onBack}>
+          <Icons.ArrowRight style={{ width: 16, height: 16, transform: 'rotate(180deg)' }} />
+          Back
+        </button>
+      </div>
+      <div className="memories-list">
+        {memories.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+            <Icons.Image style={{ width: 48, height: 48, margin: '0 auto 12px', opacity: 0.3 }} />
+            <p>No memories yet. Add the first one.</p>
+          </div>
+        ) : (
+          memories.map(memory => (
+            <div key={memory.id} className="memory-item">
+              <div className="memory-title">{memory.title}</div>
+              <div className="memory-date">{memory.date}</div>
+              <div className="memory-text">{memory.text}</div>
+              <div className="memory-photos">
+                {[1,2,3].map(i => (
+                  <div key={i} className="memory-photo-thumb" style={{
+                    background: `linear-gradient(135deg, ${getColor(person.name)}33, ${getColor(person.name)}11)`
+                  }} />
+                ))}
+              </div>
+              <div className="memory-footer">
+                <div className="memory-contributor">
+                  <div className="memory-contributor-avatar" style={{ background: getColor(memory.contributor) }}>
+                    {getInitials(memory.contributor)}
+                  </div>
+                  {memory.contributor}
+                </div>
+                <button className="memory-share-btn" title="Share to WhatsApp">
+                  <Icons.MessageCircle style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Search Page ──────────────────────────────────────────────────────────────
+function SearchPage() {
+  const [query, setQuery] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (query.trim()) setHasSearched(true);
+  };
+
+  return (
+    <div className="main-content">
+      <div className="search-page">
+        <div className="search-bar-wrapper">
+          <form onSubmit={handleSearch}>
+            <div className="search-input-container">
+              <Icons.Search className="search-input-icon" style={{ width: 20, height: 20 }} />
+              <input
+                className="search-input"
+                type="text"
+                placeholder="Search your family's memories..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
+            </div>
+          </form>
+        </div>
+
+        {hasSearched ? (
+          <div style={{ maxWidth: 600, margin: '0 auto' }}>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 16 }}>
+              No results found for "{query}"
+            </p>
+            <div className="search-empty-state" style={{ padding: '40px 20px' }}>
+              <div className="search-empty-icon" style={{ opacity: 0.5 }}>
+                <Icons.Search style={{ width: 48, height: 48 }} />
+              </div>
+              <div className="search-empty-title">No memories found</div>
+              <div className="search-empty-subtitle">Try different words or browse your family tree.</div>
+            </div>
+          </div>
+        ) : (
+          <div className="search-empty-state">
+            <div className="search-empty-icon">
+              <Icons.Search style={{ width: 64, height: 64 }} />
+            </div>
+            <div className="search-empty-title">Search Your Memories</div>
+            <div className="search-empty-subtitle">
+              Find stories, moments, and memories from your family
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Graph View ──────────────────────────────────────────────────────────────
+function GraphView() {
+  const [scale, setScale] = useState(1);
+  const canvasRef = useRef(null);
+  const [dims, setDims] = useState({ w: 700, h: 460 });
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(entries => {
+      const rect = entries[0].contentRect;
+      setDims({ w: rect.width, h: rect.height });
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const centerX = dims.w / 2, centerY = dims.h / 2;
+  const radius = Math.min(dims.w, dims.h) * 0.3;
+
+  const nodes = useMemo(() => {
+    return MOCK_PEOPLE.map((person, i) => {
+      const angle = (i / MOCK_PEOPLE.length) * 2 * Math.PI - Math.PI / 2;
+      return {
+        ...person,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+      };
+    });
+  }, [centerX, centerY, radius]);
+
+  const edges = useMemo(() => {
+    return MOCK_RELATIONSHIPS.map(rel => {
+      const a = nodes.find(n => n.id === rel.a);
+      const b = nodes.find(n => n.id === rel.b);
+      if (!a || !b) return null;
+      return { ...rel, x1: a.x, y1: a.y, x2: b.x, y2: b.y, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, personA: a, personB: b };
+    }).filter(Boolean);
+  }, [nodes]);
+
+  return (
+    <div className="main-content">
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="page-header-title">Family Graph</div>
+          <div className="page-header-subtitle">{MOCK_PEOPLE.length} members, {MOCK_RELATIONSHIPS.length} connections</div>
+        </div>
+      </div>
+      <div className="graph-page" style={{ padding: '24px 32px' }}>
+        <div className="graph-canvas" ref={canvasRef} style={{ height: 520, position: 'relative', overflow: 'hidden' }}>
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            transform: `scale(${scale})`, transformOrigin: 'center center',
+            transition: 'transform 0.2s ease',
+          }}>
+            {/* SVG lines */}
+            <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+              {edges.map((edge, i) => (
+                <g key={i}>
+                  <line x1={edge.x1} y1={edge.y1} x2={edge.x2} y2={edge.y2} stroke="#d0c8c0" strokeWidth="2" strokeOpacity="0.6" />
+                  <text x={edge.cx} y={edge.cy - 8} textAnchor="middle" fill="#9a9a9a" fontSize="10" fontFamily="DM Sans, sans-serif">{edge.label}</text>
+                </g>
+              ))}
+            </svg>
+            {/* Nodes */}
+            {nodes.map(node => (
+              <div key={node.id} className="graph-node" style={{ position: 'absolute', left: node.x - 24, top: node.y - 24 }}>
+                <div className="graph-node-circle" style={{ background: getColor(node.name) }}>{getInitials(node.name)}</div>
+                <div className="graph-node-label">{node.name}</div>
+              </div>
+            ))}
+          </div>
+
+          {MOCK_PEOPLE.length === 0 && (
+            <div className="graph-empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center' }}>
+              <div className="graph-empty-title">No family members yet</div>
+              <div className="graph-empty-subtitle">Add people and relationships to see your family tree</div>
+            </div>
+          )}
+
+          <div className="graph-controls">
+            <div className="graph-control-btn" onClick={() => setScale(s => Math.min(s + 0.2, 3))}><Icons.ZoomIn /></div>
+            <div className="graph-control-btn" onClick={() => setScale(s => Math.max(s - 0.2, 0.3))}><Icons.ZoomOut /></div>
+            <div className="graph-control-btn" onClick={() => setScale(1)}><Icons.RotateCcw /></div>
+            <div className="graph-add-btn" title="Add Relationship"><Icons.Plus /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main App ────────────────────────────────────────────────────────────────
+function App() {
+  const [authPage, setAuthPage] = useState('signin'); // 'signin' | 'signup'
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [page, setPage] = useState('home');
+  const [selectedPersonId, setSelectedPersonId] = useState(null);
+
+  const handleLogin = () => setIsAuthenticated(true);
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setAuthPage('signin');
+  };
+
+  const handleProfileClick = (personId) => {
+    setSelectedPersonId(personId);
+    setPage('profile');
+  };
+
+  const handleBackToHome = () => setPage('home');
+
+  if (!isAuthenticated) {
+    return authPage === 'signin' ? (
+      <SignInPage onNavigateHome={handleLogin} onSwitchToSignUp={() => setAuthPage('signup')} />
+    ) : (
+      <SignUpPage onNavigateHome={handleLogin} onSwitchToSignIn={() => setAuthPage('signin')} />
+    );
+  }
+
+  if (page === 'profile') {
+    return (
+      <div className="app-layout">
+        <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
+        <MemberProfilePage personId={selectedPersonId} onBack={handleBackToHome} />
+      </div>
+    );
+  }
+
+  if (page === 'search') {
+    return (
+      <div className="app-layout">
+        <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
+        <SearchPage />
+      </div>
+    );
+  }
+
+  if (page === 'graph') {
+    return (
+      <div className="app-layout">
+        <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
+        <GraphView />
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-layout">
+      <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
+      <FamilyDashboard
+        onProfileClick={handleProfileClick}
+        onSearchClick={() => setPage('search')}
+        onGraphClick={() => setPage('graph')}
+      />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { familyAPI, peopleAPI } from '../lib/api';
 import Sidebar from '../components/Sidebar';
 import BottomTabBar from '../components/BottomTabBar';
-import { Plus, Users, Search as SearchIcon, Share2, Loader2, UserPlus } from 'lucide-react';
+import { Plus, Users, Search as SearchIcon, Share2, GitBranch, Loader2, UserPlus } from 'lucide-react';
 
 export default function FamilyHomePage() {
   const { family_id } = useParams();
@@ -117,7 +117,7 @@ export default function FamilyHomePage() {
                 to={`/family/${family_id}/graph`}
                 className="p-2 text-[#8B7355] hover:text-[#B8975A] transition-colors rounded-lg hover:bg-[#F5F0E8]"
               >
-                <Share2 size={18} />
+                <GitBranch size={18} />
               </Link>
             </div>
           </div>
