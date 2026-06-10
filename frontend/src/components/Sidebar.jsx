@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Share2, Search, LogOut, Users } from 'lucide-react';
+import { Home, GitBranch, Search, LogOut } from 'lucide-react';
 
 export default function Sidebar({ family, familyId, activePage }) {
   const navigate = useNavigate();
@@ -51,7 +51,7 @@ export default function Sidebar({ family, familyId, activePage }) {
               : 'text-[#8B7355] hover:bg-[#EDE5D5] hover:text-[#4A1C0A]'
           }`}
         >
-          <Share2 size={18} />
+          <GitBranch size={18} />
           <span>Graph</span>
         </Link>
         <Link

@@ -195,7 +195,7 @@ export default function GraphPage() {
       .attr('fill', d => d.photo_url ? '#B8975A' : '#C4857A')
       .attr('stroke', 'rgba(255,255,255,0.3)')
       .attr('stroke-width', 2)
-      .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))');
+      .style('filter', 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))');
 
     // Node images (clip-path circle)
     node.filter(d => d.photo_url).append('clipPath')
@@ -278,26 +278,26 @@ export default function GraphPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1A0F0A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center">
         <Loader2 size={32} className="animate-spin text-[#B8975A]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1A0F0A] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#FAF7F2] flex flex-col md:flex-row">
       <Sidebar family={family} familyId={family_id} activePage="graph" />
       
-      <div className="flex-1 relative" ref={containerRef}>
+      <div className="flex-1 relative m-4 md:m-6 rounded-xl bg-[#F5F0E8] border border-[rgba(184,151,90,0.2)] overflow-hidden shadow-sm" ref={containerRef} style={{ minHeight: 'calc(100vh - 100px)' }}>
         {/* Controls */}
         <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-          <button onClick={handleZoomIn} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors">
+          <button onClick={handleZoomIn} className="p-2.5 bg-[#F5F0E8] hover:bg-[#EDE5D5] rounded-lg text-[#8B7355] hover:text-[#4A1C0A] transition-colors shadow-sm">
             <ZoomIn size={18} />
           </button>
-          <button onClick={handleZoomOut} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors">
+          <button onClick={handleZoomOut} className="p-2.5 bg-[#F5F0E8] hover:bg-[#EDE5D5] rounded-lg text-[#8B7355] hover:text-[#4A1C0A] transition-colors shadow-sm">
             <ZoomOut size={18} />
           </button>
-          <button onClick={handleReset} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors">
+          <button onClick={handleReset} className="p-2.5 bg-[#F5F0E8] hover:bg-[#EDE5D5] rounded-lg text-[#8B7355] hover:text-[#4A1C0A] transition-colors shadow-sm">
             <RotateCcw size={18} />
           </button>
           <button
@@ -312,11 +312,11 @@ export default function GraphPage() {
         {/* Tooltip */}
         {tooltip && (
           <div
-            className="absolute z-20 px-4 py-3 bg-[#2C1810] border border-[#B8975A] rounded-lg shadow-xl pointer-events-none"
+            className="absolute z-20 px-4 py-3 bg-[#FAF7F2] border border-[#B8975A] rounded-lg shadow-xl pointer-events-none"
             style={{ left: tooltip.x + 15, top: tooltip.y - 10 }}
           >
-            <p className="text-white font-display text-sm">{tooltip.name}</p>
-            <p className="text-[#B8975A] text-xs">{tooltip.count} memories</p>
+            <p className="text-[#2C1810] font-display text-sm">{tooltip.name}</p>
+            <p className="text-[#8B7355] text-xs">{tooltip.count} memories</p>
           </div>
         )}
 
