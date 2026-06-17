@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, GitBranch, Search, LogOut } from 'lucide-react';
+import { Home, Search, Share2, Settings, MessageCircle, LogOut } from 'lucide-react';
+import Avatar from './ui/Avatar';
 
 export default function Sidebar({ family, familyId, activePage }) {
   const navigate = useNavigate();
@@ -14,90 +15,84 @@ export default function Sidebar({ family, familyId, activePage }) {
   const visibleMembers = members.slice(0, 5);
   const remainingCount = members.length - 5;
 
+  const navItems = [
+    { id: 'home', label: 'Home', icon: Home, path: `/family/${familyId}` },
+    { id: 'search', label: 'Search', icon: Search, path: `/family/${familyId}/search` },
+    { id: 'graph', label: 'Graph', icon: Share2, path: `/family/${familyId}/graph` },
+    { id: 'assistant', label: 'Assistant', icon: MessageCircle, path: `/family/${familyId}/assistant` },
+  ];
+
   return (
-    <div className="hidden md:flex flex-col w-[220px] min-h-screen bg-[#F5F0E8] border-r border-[rgba(184,151,90,0.2)] flex-shrink-0">
-      {/* Family Header */}
-      <div className="p-5 border-b border-[rgba(184,151,90,0.15)]">
-        {family?.cover_photo_url ? (
-          <img src={family.cover_photo_url} alt="" className="w-full h-20 object-cover rounded-lg mb-3" />
-        ) : (
-          <div className="w-full h-20 bg-gradient-to-br from-[#B8975A] to-[#C4857A] rounded-lg mb-3 flex items-center justify-center">
-            <span className="font-display italic text-2xl text-white">
-              {family?.name?.charAt(0) || 'M'}
-            </span>
+    <aside
+      className="hidden md:flex flex-col flex-shrink-0 bg-[var(--surface)] border-r border-[var(--border)]"
+      style={{ width: 'var(--sidebar-width)', minHeight: '100vh' }}
+    >
+      {/* Logo */}
+      <div className="px-5 py-6 border-b border-[var(--border)]">
+        <Link to={`/family/${familyId}`} className="flex items-center gap-[10px] no-underline">
+          <div className="w-8 h-8 bg-[var(--accent)] rounded-[var(--radius-sm)] flex items-center justify-center">
+            <span className="font-display italic text-base text-white">M</span>
           </div>
-        )}
-        <h2 className="font-display text-lg text-[#4A1C0A] truncate">{family?.name || 'Family'}</h2>
+          <span className="font-display italic text-lg text-[var(--text)]">Memoir</span>
+        </Link>
       </div>
 
-      {/* Nav Links */}
-      <nav className="flex-1 p-3 space-y-1">
-        <Link
-          to={`/family/${familyId}`}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-ui transition-all ${
-            activePage === 'home'
-              ? 'bg-[#C4857A] text-white'
-              : 'text-[#8B7355] hover:bg-[#EDE5D5] hover:text-[#4A1C0A]'
-          }`}
-        >
-          <Home size={18} />
-          <span>Home</span>
-        </Link>
-        <Link
-          to={`/family/${familyId}/graph`}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-ui transition-all ${
-            activePage === 'graph'
-              ? 'bg-[#C4857A] text-white'
-              : 'text-[#8B7355] hover:bg-[#EDE5D5] hover:text-[#4A1C0A]'
-          }`}
-        >
-          <GitBranch size={18} />
-          <span>Graph</span>
-        </Link>
-        <Link
-          to={`/family/${familyId}/search`}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-ui transition-all ${
-            activePage === 'search'
-              ? 'bg-[#C4857A] text-white'
-              : 'text-[#8B7355] hover:bg-[#EDE5D5] hover:text-[#4A1C0A]'
-          }`}
-        >
-          <Search size={18} />
-          <span>Search</span>
-        </Link>
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-[2px]">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activePage === item.id || (item.id === 'home' && activePage === 'profile');
+          return (
+            <Link
+              key={item.id}
+              to={item.path}
+              className={`flex items-center gap-[10px] px-[14px] py-[10px] rounded-[var(--radius-sm)] text-sm font-medium transition-all no-underline ${
+                isActive
+                  ? 'bg-[var(--accent-light)] text-[var(--accent)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--accent-lighter)] hover:text-[var(--text)]'
+              }`}
+            >
+              <Icon size={18} className="flex-shrink-0 opacity-70" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Members Section */}
-      <div className="p-4 border-t border-[rgba(184,151,90,0.15)]">
-        <p className="text-xs font-ui tracking-wider uppercase text-[#8B7355] mb-3">Members</p>
-        <div className="flex flex-wrap gap-1.5">
-          {visibleMembers.map((member) => (
-            <div
-              key={member.id}
-              className="w-8 h-8 rounded-full bg-[#B8975A] flex items-center justify-center text-xs font-ui text-white"
-              title={member.name}
-            >
-              {member.name?.charAt(0).toUpperCase()}
+      {/* Members + Logout */}
+      <div className="px-5 py-4 border-t border-[var(--border)]">
+        {members.length > 0 && (
+          <>
+            <div className="flex items-center gap-[6px] mb-2">
+              {visibleMembers.map((member) => (
+                <Avatar key={member.id} name={member.name} size={28} />
+              ))}
+              {remainingCount > 0 && (
+                <div className="w-7 h-7 rounded-full bg-[var(--bg)] flex items-center justify-center text-[10px] text-[var(--text-muted)] border-2 border-[var(--surface)]">
+                  +{remainingCount}
+                </div>
+              )}
             </div>
-          ))}
-          {remainingCount > 0 && (
-            <div className="w-8 h-8 rounded-full bg-[#EDE5D5] flex items-center justify-center text-xs font-ui text-[#8B7355]">
-              +{remainingCount}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Logout */}
-      <div className="p-3">
+            <p className="text-[11px] uppercase tracking-[0.5px] font-medium text-[var(--text-muted)] mb-3">
+              {members.length} {members.length === 1 ? 'member' : 'members'}
+            </p>
+          </>
+        )}
+        <Link
+          to="/settings"
+          className="flex items-center gap-[10px] w-full px-[14px] py-[10px] rounded-[var(--radius-sm)] text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-lighter)] hover:text-[var(--text)] transition-all no-underline mb-1"
+        >
+          <Settings size={18} className="flex-shrink-0 opacity-70" />
+          <span>Settings</span>
+        </Link>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-ui text-[#8B7355] hover:bg-[#EDE5D5] hover:text-[#4A1C0A] transition-all w-full"
+          className="flex items-center gap-[10px] w-full px-[14px] py-[10px] rounded-[var(--radius-sm)] text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-lighter)] hover:text-[var(--text)] transition-all no-underline"
         >
-          <LogOut size={18} />
-          <span>Sign Out</span>
+          <LogOut size={18} className="flex-shrink-0 opacity-70" />
+          <span>Sign out</span>
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
