@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { familyAPI } from '../lib/api';
-import { Loader2 } from 'lucide-react';
 
 export default function JoinFamilyPage() {
   const { invite_token } = useParams();
@@ -22,7 +21,6 @@ export default function JoinFamilyPage() {
         navigate(`/family/${family.id}`);
       } catch (err) {
         if (err.response?.status === 400) {
-          // Already a member - try to find the family
           try {
             const families = await familyAPI.getMyFamilies();
             const found = families.find(f => f.invite_token === invite_token);
@@ -31,7 +29,6 @@ export default function JoinFamilyPage() {
               return;
             }
           } catch {}
-          setError('Already a member. Redirecting to dashboard...');
           navigate('/family');
         } else {
           setError(err.response?.data?.detail || 'Invalid invite link');
@@ -45,22 +42,27 @@ export default function JoinFamilyPage() {
 
   if (status === 'error') {
     return (
-      <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="text-6xl mb-6">😕</div>
-          <h1 className="font-display text-3xl text-[#4A1C0A] mb-4">Invalid Invite</h1>
-          <p className="text-[#8B7355] mb-8">{error || 'This invite link is invalid or expired.'}</p>
-          <a href="/login" className="btn-primary">Go to Login</a>
+      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
+        <div className="text-center max-w-md animate-fade-in-up">
+          <div className="w-16 h-16 mx-auto mb-6 bg-[var(--accent)] rounded-[var(--radius-sm)] flex items-center justify-center">
+            <span className="font-display italic text-[28px] text-white">M</span>
+          </div>
+          <h1 className="font-display text-3xl mb-4">Invalid Invite</h1>
+          <p className="text-[var(--text-secondary)] mb-8">{error || 'This invite link is invalid or expired.'}</p>
+          <a href="/login" className="btn btn-primary">Go to Login</a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center">
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
       <div className="text-center">
-        <Loader2 size={32} className="animate-spin text-[#B8975A] mx-auto mb-4" />
-        <p className="font-body italic text-[#8B7355]">Joining family...</p>
+        <svg className="animate-spin mx-auto mb-4" width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="var(--border)" strokeWidth="3" />
+          <path d="M12 2a10 10 0 0 1 10 10" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+        <p className="text-[var(--text-secondary)] text-sm">Joining family...</p>
       </div>
     </div>
   );

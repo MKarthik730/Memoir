@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { familyAPI } from '../lib/api';
-import { Users, ArrowRight } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 export default function CreateFamilyPage() {
   const navigate = useNavigate();
@@ -25,41 +25,40 @@ export default function CreateFamilyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center p-4">
-      <div className="w-full max-w-[440px] bg-[#FAF7F2] rounded-xl shadow-[0_8px_40px_rgba(44,24,16,0.12)] p-10 border border-[rgba(184,151,90,0.2)]">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-[#4A1C0A] rounded-xl flex items-center justify-center">
-            <Users size={28} className="text-[#FAF7F2]" />
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
+      <div className="w-full max-w-[400px] animate-fade-in-up">
+        <div className="text-center mb-10">
+          <div className="w-12 h-12 mx-auto mb-4 bg-[var(--accent)] rounded-[var(--radius-sm)] flex items-center justify-center">
+            <Users size={22} className="text-white" />
           </div>
-          <h1 className="font-display text-[28px] text-[#4A1C0A]">Create Your Family</h1>
-          <p className="font-body italic text-[#8B7355] mt-2">Start your family's story on Memoir</p>
+          <h1 className="font-display text-[28px]">Create Your Family</h1>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Start your family's story on Memoir</p>
         </div>
 
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{error}</div>
-        )}
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-8 shadow-[var(--shadow-sm)]">
+          {error && (
+            <div className="mb-5 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[var(--radius-sm)] text-[var(--danger)] text-[13px]">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-8">
-            <label className="block mb-1.5 text-xs font-ui tracking-wider uppercase text-[#8B7355]">Family Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. The Motupalli Family"
-              required
-              className="w-full px-4 py-3 rounded-lg bg-[#F5F0E8] border border-[rgba(184,151,90,0.3)] focus:border-[#B8975A] focus:shadow-[0_0_0_3px_rgba(184,151,90,0.15)] text-[#2C1810] font-ui text-sm outline-none transition-all"
-            />
-          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group" style={{ marginBottom: 28 }}>
+              <label>Family Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. The Motupalli Family"
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading || !name.trim()}
-            className="w-full py-3 bg-[#C4857A] hover:brightness-110 text-white rounded-lg font-ui text-sm tracking-wider uppercase transition-all active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2"
-          >
-            {loading ? 'Creating...' : <><span>Create Family</span><ArrowRight size={16} /></>}
-          </button>
-        </form>
+            <button type="submit" disabled={loading || !name.trim()} className="btn btn-primary btn-lg w-full">
+              {loading ? 'Creating...' : 'Create Family'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

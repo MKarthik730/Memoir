@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 from backend.database.models import (
     Base, User, Family, FamilyMember, Person, Relationship, Memory, MemoryPhoto,
+    ApiKey, Trip, TripPerson, TripMemory,
     MemberRole, RelationshipTag,
     UserCreate, UserLogin, UserResponse, LoginResponse, FamilyCreate, FamilyResponse,
     PersonCreate, PersonResponse, PersonDetailResponse,
@@ -25,6 +26,15 @@ from backend.database.models import (
     MemoryCreate, MemoryResponse, SearchQuery, UploadResponse,
 )
 from backend.database.config import engine, SessionLocal, get_db, check_pgvector, init_db, PGVECTOR_AVAILABLE
+from backend.utils import encrypt_api_key, decrypt_api_key, mask_api_key, get_user_llm_client
+from backend.rag.vector_store import hybrid_query
+from backend.graph.algorithms import shortest_path, detect_communities, centrality_ranking, build_adjacency_list
+from backend.scheduling.sm2 import sm2_update, get_due_memories, get_today_memories_for_user
+
+from backend.agent import build_agent_response
+
+import json
+from starlette.responses import StreamingResponse
 
 load_dotenv()
 
@@ -750,6 +760,612 @@ async def search_family(family_id: str, data: SearchQuery, current_user: User = 
             })
     
     return results
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 0: API Key Management
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/home/settings/api-key")
+async def set_api_key(
+    provider: str = Form(...),
+    key: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Store an encrypted API key for the user.
+    Only ENCRYPTION_SECRET lives in .env; user provider keys are encrypted at rest.
+    """
+    if provider not in ("anthropic", "groq", "openai"):
+        raise HTTPException(status_code=400, detail="Unsupported provider. Use: anthropic, groq, or openai")
+    if not key.strip():
+        raise HTTPException(status_code=400, detail="Key cannot be empty")
+
+    encrypted = encrypt_api_key(key.strip())
+
+    existing = db.query(ApiKey).filter(
+        ApiKey.user_id == current_user.id,
+        ApiKey.provider == provider,
+    ).first()
+
+    if existing:
+        existing.encrypted_key = encrypted
+    else:
+        new_key = ApiKey(
+            id=uuid.uuid4(),
+            user_id=current_user.id,
+            provider=provider,
+            encrypted_key=encrypted,
+        )
+        db.add(new_key)
+
+    db.commit()
+    return {"message": f"{provider} API key saved", "provider": provider}
+
+
+@app.get("/home/settings/api-key")
+async def get_api_keys(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return providers + masked keys (never the full key)."""
+    keys = db.query(ApiKey).filter(ApiKey.user_id == current_user.id).all()
+    return [
+        {
+            "provider": k.provider,
+            "masked_key": mask_api_key(decrypt_api_key(k.encrypted_key)),
+            "created_at": k.created_at.isoformat() if k.created_at else None,
+        }
+        for k in keys
+    ]
+
+
+@app.delete("/home/settings/api-key")
+async def delete_api_key(
+    provider: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a stored API key for a given provider."""
+    key = db.query(ApiKey).filter(
+        ApiKey.user_id == current_user.id,
+        ApiKey.provider == provider,
+    ).first()
+    if not key:
+        raise HTTPException(status_code=404, detail=f"No {provider} key found")
+    db.delete(key)
+    db.commit()
+    return {"message": f"{provider} API key removed"}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 1: Hybrid Search (RAG)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/home/rag/query")
+async def rag_query(
+    query: str = Form(...),
+    family_id: str = Form(...),
+    mode: str = Form("hybrid"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Hybrid search combining semantic + keyword search with weighted re-rank.
+    Mode: semantic | keyword | hybrid (default).
+    """
+    # Verify membership
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    if mode not in ("semantic", "keyword", "hybrid"):
+        raise HTTPException(status_code=400, detail="Mode must be: semantic, keyword, or hybrid")
+
+    results = hybrid_query(
+        family_id=family_id,
+        query_text=query,
+        db=db,
+        mode=mode,
+        user_id=str(current_user.id),
+    )
+
+    return {"results": results, "mode": mode, "count": len(results)}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 2: Graph Algorithms
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/graph/path")
+async def graph_shortest_path(
+    from_id: str = Query(..., alias="from"),
+    to_id: str = Query(..., alias="to"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """BFS shortest path between two people. O(V + E)."""
+    person_a = db.query(Person).filter(Person.id == from_id).first()
+    person_b = db.query(Person).filter(Person.id == to_id).first()
+    if not person_a or not person_b:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    # Verify membership in same family
+    if person_a.family_id != person_b.family_id:
+        raise HTTPException(status_code=400, detail="People are in different families")
+
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == person_a.family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    family_id = person_a.family_id
+    people = db.query(Person).filter(Person.family_id == family_id).all()
+    rels = db.query(Relationship).filter(Relationship.family_id == family_id).all()
+
+    people_map = {str(p.id): p.name for p in people}
+    rel_list = [{
+        "person_a": {"id": str(r.person_a_id)},
+        "person_b": {"id": str(r.person_b_id)},
+        "label": r.label,
+    } for r in rels]
+    adj = build_adjacency_list(
+        [{"id": str(p.id), "name": p.name} for p in people],
+        rel_list,
+    )
+
+    result = shortest_path(from_id, to_id, adj, people_map)
+    if result is None:
+        return {"path": None, "degree": None, "message": "No path found between these people"}
+    return result
+
+
+@app.get("/graph/communities")
+async def graph_communities(
+    family_id: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Detect communities (connected components) in the family graph. O(E α(V))."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    people = db.query(Person).filter(Person.family_id == family_id).all()
+    rels = db.query(Relationship).filter(Relationship.family_id == family_id).all()
+
+    people_map = {str(p.id): p.name for p in people}
+    rel_list = [{
+        "person_a": {"id": str(r.person_a_id)},
+        "person_b": {"id": str(r.person_b_id)},
+        "label": r.label,
+    } for r in rels]
+    adj = build_adjacency_list(
+        [{"id": str(p.id), "name": p.name} for p in people],
+        rel_list,
+    )
+
+    communities = detect_communities(adj, people_map)
+    return {"communities": communities, "count": len(communities)}
+
+
+@app.get("/graph/centrality")
+async def graph_centrality(
+    family_id: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Rank people by degree centrality. O(V)."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    people = db.query(Person).filter(Person.family_id == family_id).all()
+    rels = db.query(Relationship).filter(Relationship.family_id == family_id).all()
+
+    people_map = {str(p.id): p.name for p in people}
+    rel_list = [{
+        "person_a": {"id": str(r.person_a_id)},
+        "person_b": {"id": str(r.person_b_id)},
+        "label": r.label,
+    } for r in rels]
+    adj = build_adjacency_list(
+        [{"id": str(p.id), "name": p.name} for p in people],
+        rel_list,
+    )
+
+    rankings = centrality_ranking(adj, people_map)
+    return {"rankings": rankings}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 3: Background Jobs
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/home/jobs/{job_id}")
+async def get_job_status_endpoint(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Poll job status from Redis. O(1)."""
+    from backend.jobs import get_job_status as _job_status
+    status = _job_status(job_id)
+    return status
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 4: Memory Timeline / Date Range
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/home/person/{person_id}/memories/range")
+async def get_memories_in_range(
+    person_id: str,
+    start: str = Query(None),
+    end: str = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get memories for a person filtered by date range.
+    Uses Postgres range types for efficient querying when available,
+    with simple comparison fallback.
+    Complexity: O(log n) with B-tree index on memory_date.
+    """
+    person = db.query(Person).filter(Person.id == person_id).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == person.family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    query = db.query(Memory).filter(Memory.person_id == person_id)
+
+    if start:
+        try:
+            start_date = date.fromisoformat(start)
+            query = query.filter(Memory.memory_date >= start_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start date format. Use YYYY-MM-DD")
+
+    if end:
+        try:
+            end_date = date.fromisoformat(end)
+            query = query.filter(Memory.memory_date <= end_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end date format. Use YYYY-MM-DD")
+
+    memories = query.order_by(Memory.memory_date.desc().nullslast(), Memory.created_at.desc()).all()
+    return {"memories": [serialize_memory(m, db) for m in memories], "count": len(memories)}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 5: Memory Resurfacing (SM-2)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/home/resurface/today")
+async def get_resurfacing_today(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get memories due for review today (SM-2 spaced repetition).
+    Returns both scheduled memories and 'On This Day' fallback.
+    """
+    memories = get_today_memories_for_user(str(current_user.id), db)
+    return {"memories": memories, "count": len(memories)}
+
+
+@app.post("/home/resurface/{memory_id}/review")
+async def review_resurfaced_memory(
+    memory_id: str,
+    quality: int = Form(...),  # 0-5 SM-2 quality rating
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Submit an SM-2 review quality rating for a resurfaced memory.
+    Quality: 0-2 = 'let it fade' (fail), 3-5 = 'still meaningful' (pass).
+    """
+    if quality < 0 or quality > 5:
+        raise HTTPException(status_code=400, detail="Quality must be 0-5")
+
+    memory = db.query(Memory).filter(Memory.id == memory_id).first()
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    # Apply SM-2 update
+    result = sm2_update(quality, memory.interval_days, memory.ease_factor)
+
+    memory.last_shown_at = datetime.utcnow()
+    memory.interval_days = result["interval_days"]
+    memory.ease_factor = result["ease_factor"]
+    memory.next_review_at = datetime.fromisoformat(result["next_review_at"].replace("Z", ""))
+
+    db.commit()
+    return {
+        "message": "Review recorded",
+        "quality": quality,
+        "new_interval_days": result["interval_days"],
+        "new_ease_factor": result["ease_factor"],
+        "next_review_at": result["next_review_at"],
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 6: Trips
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/home/trip")
+async def create_trip(
+    name: str = Form(...),
+    family_id: str = Form(...),
+    location: Optional[str] = Form(None),
+    start_date: Optional[str] = Form(None),
+    end_date: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new trip."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    trip = Trip(
+        id=uuid.uuid4(),
+        family_id=family_id,
+        name=name,
+        location=location,
+        start_date=date.fromisoformat(start_date) if start_date else None,
+        end_date=date.fromisoformat(end_date) if end_date else None,
+        notes=notes,
+        created_by=current_user.id,
+    )
+    db.add(trip)
+    db.commit()
+    db.refresh(trip)
+    return {
+        "id": str(trip.id),
+        "name": trip.name,
+        "location": trip.location,
+        "start_date": trip.start_date.isoformat() if trip.start_date else None,
+        "end_date": trip.end_date.isoformat() if trip.end_date else None,
+        "notes": trip.notes,
+    }
+
+
+@app.get("/home/trips")
+async def get_trips(
+    family_id: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all trips for a family."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    trips = db.query(Trip).filter(Trip.family_id == family_id).order_by(Trip.created_at.desc()).all()
+    results = []
+    for t in trips:
+        person_count = db.query(TripPerson).filter(TripPerson.trip_id == t.id).count()
+        memory_count = db.query(TripMemory).filter(TripMemory.trip_id == t.id).count()
+        results.append({
+            "id": str(t.id),
+            "name": t.name,
+            "location": t.location,
+            "start_date": t.start_date.isoformat() if t.start_date else None,
+            "end_date": t.end_date.isoformat() if t.end_date else None,
+            "notes": t.notes,
+            "person_count": person_count,
+            "memory_count": memory_count,
+        })
+    return {"trips": results}
+
+
+@app.get("/home/trip/{trip_id}")
+async def get_trip_detail(
+    trip_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get trip details with associated people and memories."""
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == trip.family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    people = []
+    for tp in db.query(TripPerson).filter(TripPerson.trip_id == trip_id).all():
+        p = db.query(Person).filter(Person.id == tp.person_id).first()
+        if p:
+            people.append({"id": str(p.id), "name": p.name})
+
+    memories = []
+    for tm in db.query(TripMemory).filter(TripMemory.trip_id == trip_id).all():
+        m = db.query(Memory).filter(Memory.id == tm.memory_id).first()
+        if m:
+            memories.append({"id": str(m.id), "title": m.title})
+
+    return {
+        "id": str(trip.id),
+        "name": trip.name,
+        "location": trip.location,
+        "start_date": trip.start_date.isoformat() if trip.start_date else None,
+        "end_date": trip.end_date.isoformat() if trip.end_date else None,
+        "notes": trip.notes,
+        "people": people,
+        "memories": memories,
+    }
+
+
+@app.post("/home/trip/{trip_id}/person")
+async def add_person_to_trip(
+    trip_id: str,
+    person_id: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Add a person to a trip."""
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == trip.family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    existing = db.query(TripPerson).filter(
+        TripPerson.trip_id == trip_id,
+        TripPerson.person_id == person_id,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Person already added to this trip")
+
+    tp = TripPerson(id=uuid.uuid4(), trip_id=trip_id, person_id=person_id)
+    db.add(tp)
+    db.commit()
+    return {"message": "Person added to trip"}
+
+
+@app.post("/home/trip/{trip_id}/memory")
+async def add_memory_to_trip(
+    trip_id: str,
+    memory_id: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Associate a memory with a trip."""
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == trip.family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    existing = db.query(TripMemory).filter(
+        TripMemory.trip_id == trip_id,
+        TripMemory.memory_id == memory_id,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Memory already on this trip")
+
+    tm = TripMemory(id=uuid.uuid4(), trip_id=trip_id, memory_id=memory_id)
+    db.add(tm)
+    db.commit()
+    return {"message": "Memory added to trip"}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 6b: Conversational Assistant (SSE Chat)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/home/assistant/chat")
+async def assistant_chat(
+    message: str = Form(...),
+    family_id: str = Form(...),
+    conversation_id: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Conversational memory assistant endpoint.
+
+    Processes a user message through tool-calling and returns a streamed response.
+    Maintains a short history in Redis per conversation_id (not full persistence).
+
+    Returns SSE stream with:
+      - data: {"type": "token", "content": "..."} — streamed tokens
+      - data: {"type": "suggestions", "content": [...]} — suggestion chips
+      - data: {"type": "done"} — end of stream
+    """
+    # Verify membership
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    # Check if user has an API key for LLM calls
+    api_key_record = db.query(ApiKey).filter(ApiKey.user_id == current_user.id).first()
+
+    agent_result = build_agent_response(
+        user_message=message,
+        user_id=str(current_user.id),
+        family_id=family_id,
+        db=db,
+    )
+
+    async def event_stream():
+        response_text = agent_result.get("response", "I couldn't process that request.")
+
+        # Check if user needs to add an API key for LLM-powered features
+        if not api_key_record and any(
+            kw in message.lower()
+            for kw in ["llm", "gpt", "claude", "ai", "summarize", "analyze"]
+        ):
+            response_text = (
+                "Add your API key in Settings to use AI-powered features. "
+                "You can still search memories and explore relationships!"
+            )
+
+        # Stream the response token by token
+        words = response_text.split(" ")
+        for i, word in enumerate(words):
+            chunk = word + (" " if i < len(words) - 1 else "")
+            yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
+
+        # Send suggestions
+        suggestions = agent_result.get("suggestions", [
+            "Who have I been neglecting?",
+            "Plan something for Mom",
+            "What memories are due for review?",
+            "Tell me about our trips",
+        ])
+        yield f"data: {json.dumps({'type': 'suggestions', 'content': suggestions})}\n\n"
+
+        # Done
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ─── File Upload Route ────────────────────────────────────────────────────────

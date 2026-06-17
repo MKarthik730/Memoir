@@ -166,6 +166,12 @@ class Memory(Base):
     else:
         embedding = Column(Text, nullable=True)
 
+    # SM-2 Spaced Repetition fields (Section 5)
+    last_shown_at = Column(DateTime, nullable=True)
+    interval_days = Column(Integer, default=1)
+    ease_factor = Column(Float, default=2.5)
+    next_review_at = Column(DateTime, nullable=True)
+
     person = relationship("Person", back_populates="memories")
     family = relationship("Family", back_populates="memories")
     photos = relationship("MemoryPhoto", back_populates="memory", cascade="all, delete-orphan")
@@ -180,6 +186,73 @@ class MemoryPhoto(Base):
     display_order = Column(Integer, default=0)
 
     memory = relationship("Memory", back_populates="photos")
+
+
+# ─── NEW: API Keys (Section 0) ─────────────────────────────────────────────
+
+class ApiKey(Base):
+    """Per-user encrypted LLM API keys. Stored encrypted at rest via Fernet.
+    The ENCRYPTION_SECRET env var is the only key-level config in .env.
+    """
+    __tablename__ = "api_keys"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    provider = Column(String, nullable=False)  # anthropic | groq | openai
+    encrypted_key = Column(Text, nullable=False)  # Fernet-encrypted blob
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+    __table_args__ = (UniqueConstraint("user_id", "provider"),)
+
+
+# ─── NEW: Trips (Section 6) ────────────────────────────────────────────────
+
+class Trip(Base):
+    """A trip or journey that groups people and memories together."""
+    __tablename__ = "trips"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    family_id = Column(GUID(), ForeignKey("families.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    location = Column(String, nullable=True)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    family = relationship("Family")
+    creator = relationship("User")
+    people = relationship("TripPerson", back_populates="trip", cascade="all, delete-orphan")
+    memories = relationship("TripMemory", back_populates="trip", cascade="all, delete-orphan")
+
+class TripPerson(Base):
+    """Join table: which people were on a trip."""
+    __tablename__ = "trip_people"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    trip_id = Column(GUID(), ForeignKey("trips.id"), nullable=False)
+    person_id = Column(GUID(), ForeignKey("people.id"), nullable=False)
+
+    __table_args__ = (UniqueConstraint("trip_id", "person_id"),)
+
+    trip = relationship("Trip", back_populates="people")
+    person = relationship("Person")
+
+class TripMemory(Base):
+    """Join table: which memories are associated with a trip."""
+    __tablename__ = "trip_memories"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    trip_id = Column(GUID(), ForeignKey("trips.id"), nullable=False)
+    memory_id = Column(GUID(), ForeignKey("memories.id"), nullable=False)
+
+    __table_args__ = (UniqueConstraint("trip_id", "memory_id"),)
+
+    trip = relationship("Trip", back_populates="memories")
+    memory = relationship("Memory")
 
 
 # ─── Pydantic Schemas ────────────────────────────────────────────────────────

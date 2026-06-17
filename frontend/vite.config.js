@@ -16,6 +16,8 @@ export default defineConfig({
       '/relationships': 'http://localhost:8000',
       '/uploads': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
+      '/home': 'http://localhost:8000',
+      '/graph': 'http://localhost:8000',
     },
   },
 })
