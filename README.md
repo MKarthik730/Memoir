@@ -1,33 +1,38 @@
 # Memoir
 
-> A personal memory vault that preserves your relationships and shared experiences — with an interactive knowledge graph to visualize how people and memories connect.
+> *Your family's story, preserved forever — a private social space for the people who matter most.*
 
-![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green?style=flat-square&logo=fastapi)
-![React](https://img.shields.io/badge/React-18-blue?style=flat-square&logo=react)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.2-38bdf8?style=flat-square&logo=tailwindcss)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=flat-square&logo=postgresql)
-![Framer Motion](https://img.shields.io/badge/Framer%20Motion-12.38-pink?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square)
+![FastAPI](https://img.shields.io/badge/FastAPI-latest-009688?style=flat-square)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-latest-336791?style=flat-square&logo=postgresql)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
 ---
 
 ## What is Memoir?
 
-Memoir helps you preserve the people in your life and the memories you've shared with them. You can store photos and text entries linked to specific people — and explore those connections through a dynamic relationship graph.
+Memoir is a **private family social network** — think Instagram, but invite-only and built for your family.
 
-Think of it as a personal CRM meets memory journal, built for human relationships.
+Post photos, celebrate birthdays, comment in real-time, and preserve memories in a shared family vault. Everything stays within your family — no algorithm, no ads, no strangers.
+
+Built on a warm stationery-inspired design system with an interactive relationship graph, AI-powered memory search, and one-click PDF memoir generation.
 
 ---
 
 ## Features
 
-- **Memory Storage** — Add text and photos tied to people in your life
-- **Relationship Graph** — Interactive force-directed graph showing how people connect
-- **People Management** — Track relationships by category (Family, Friends, Colleagues)
-- **AI Search** — Natural language search through your memories using RAG
-- **PDF Export** — Generate beautiful PDF memoirs for any person
-- **REST API** — Clean FastAPI backend with full CRUD operations
-- **Persistent Storage** — PostgreSQL with SQLAlchemy ORM for reliable data modeling
+| Feature | Description |
+|---|---|
+| 📸 **Family Feed** | Instagram-style feed — post photos, like, comment in real-time |
+| 🎭 **Stories** | 24-hour disappearing photo/video stories with view counters |
+| 🎂 **Birthday & Anniversary Alerts** | Auto-detects upcoming birthdays, one-tap to post a wish |
+| 🔒 **Family Vault** | Role-gated archive for important docs, photos, and videos |
+| 🔔 **Real-time Notifications** | WebSocket-driven likes, comments, tags, and birthday alerts |
+| 🕸️ **Relationship Graph** | Interactive D3.js force graph visualizing how everyone connects |
+| 🧠 **AI Memory Search** | Natural language search across all memories using RAG + pgvector |
+| 📄 **PDF Memoir Export** | One-click beautifully formatted memoir PDF per person |
+| 🔐 **Invite-Only Auth** | No public signup — join via family invite link only |
 
 ---
 
@@ -36,10 +41,15 @@ Think of it as a personal CRM meets memory journal, built for human relationship
 | Layer | Technology |
 |---|---|
 | Backend | FastAPI, Python 3.11 |
-| Database | PostgreSQL, SQLAlchemy |
-| Frontend | React 18, Tailwind CSS 4, Framer Motion |
+| Database | PostgreSQL, SQLAlchemy ORM, pgvector |
+| Cache / Queue | Redis, Celery |
+| Frontend | React 18, Vite 5, Tailwind CSS 4, Framer Motion 11 |
+| Graph | D3.js 7 |
+| Real-time | WebSockets |
+| Media Storage | Cloudflare R2 / AWS S3 |
+| AI / Search | RAG pipeline, sentence-transformers, pgvector |
+| Auth | JWT + bcrypt, role-based (admin / member) |
 | Icons | Lucide React |
-| API | RESTful with Pydantic validation |
 
 ---
 
@@ -49,57 +59,35 @@ Think of it as a personal CRM meets memory journal, built for human relationship
 Memoir/
 ├── backend/
 │   ├── routes/
-│   │   └── main.py          # FastAPI app entry point
+│   │   └── main.py           # All API endpoints (~30 routes)
 │   ├── database/
-│   │   ├── models.py        # SQLAlchemy ORM models
-│   │   └── config.py        # Database configuration
+│   │   ├── models.py         # SQLAlchemy models + Pydantic schemas
+│   │   └── config.py         # DB engine, session, pgvector detection
+│   ├── agent/
+│   │   └── __init__.py       # Tool-based conversational agent
 │   ├── rag/
-│   │   ├── main.py          # RAG implementation
-│   │   ├── embeddings.py    # Embedding utilities
-│   │   └── vector_store.py  # Vector storage
-│   ├── ai/
-│   └── __init__.py
+│   │   └── vector_store.py   # Hybrid semantic + keyword search
+│   ├── graph/
+│   │   └── algorithms.py     # BFS, Union-Find, degree centrality
+│   ├── scheduling/
+│   │   └── sm2.py            # SM-2 spaced repetition (memory resurfacing)
+│   ├── jobs/
+│   │   └── tasks.py          # Celery background tasks
+│   └── utils/
+│       └── __init__.py       # API key encryption helpers
 ├── frontend/
 │   ├── src/
-│   │   ├── components/      # React components
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── Login.jsx
-│   │   │   ├── PersonDetail.jsx
-│   │   │   ├── SearchPage.jsx
-│   │   │   └── GraphPage.jsx
+│   │   ├── components/
+│   │   │   ├── Sidebar.jsx
+│   │   │   ├── BottomTabBar.jsx
+│   │   │   ├── MemoryCard.jsx
+│   │   │   ├── FloatingChatButton.jsx
+│   │   │   └── ui/           # Avatar, Button, Modal, Toast
+│   │   ├── pages/            # 11 pages (Feed, Vault, Graph, Profile...)
 │   │   ├── lib/
-│   │   │   └── utils.js     # Utility functions
-│   │   ├── App.jsx          # Main app component
-│   │   ├── main.jsx         # React entry point
-│   │   └── index.css        # Tailwind CSS styles
-│   ├── package.json
-│   └── vite.config.js
-├── migrate_database.py
-├── migrate_memories.py
-├── requirements.txt
-├── render.yaml
-└── README.md
-```
-Memoir/
-├── backend/
-│   ├── main.py              # FastAPI app entry point
-│   ├── models.py            # SQLAlchemy ORM models
-│   ├── schemas.py           # Pydantic request/response schemas
-│   ├── database.py          # DB connection and session management
-│   ├── routes/              # API route handlers
-│   └── utils/               # Helper utilities
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── Login.jsx
-│   │   │   ├── PersonDetail.jsx
-│   │   │   ├── SearchPage.jsx
-│   │   │   └── GraphPage.jsx
-│   │   ├── lib/             # Utilities
-│   │   ├── App.jsx          # Main app component
-│   │   └── index.css        # Tailwind CSS styles
-│   ├── package.json
+│   │   │   └── api.js        # Axios instance + all API wrappers
+│   │   ├── App.jsx
+│   │   └── index.css         # Tailwind 4 + Letter Box design tokens
 │   └── vite.config.js
 ├── requirements.txt
 └── README.md
@@ -112,109 +100,135 @@ Memoir/
 ### Prerequisites
 
 - Python 3.10+
-- PostgreSQL running locally
 - Node.js 18+
+- PostgreSQL (running locally)
+- Redis (for Celery tasks)
 
-### Installation
+### 1. Clone the repo
 
 ```bash
 git clone https://github.com/MKarthik730/Memoir.git
 cd Memoir
+```
 
-# Backend setup
+### 2. Backend setup
+
+```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+```
 
-# Frontend setup
+### 3. Frontend setup
+
+```bash
 cd frontend
 npm install
 ```
 
-### Configure Database
+### 4. Configure environment
 
-Create a `.env` file:
+Create a `.env` file in the project root:
 
-```bash
+```env
 DATABASE_URL=postgresql://user:password@localhost:5432/memoir_db
+REDIS_URL=redis://localhost:6379
+SECRET_KEY=your_secret_key
+R2_BUCKET=your_bucket
+R2_ACCESS_KEY=your_key
+R2_SECRET_KEY=your_secret
 ```
 
-### Run
+### 5. Run
 
 ```bash
-# Terminal 1 - Backend
+# Terminal 1 — Backend
 cd backend
 uvicorn main:app --reload
 
-# Terminal 2 - Frontend
+# Terminal 2 — Frontend
 cd frontend
 npm run dev
+
+# Terminal 3 — Celery worker
+celery -A jobs.tasks worker --loglevel=info
 ```
 
-Open `http://localhost:5173` in your browser.
-
-API docs available at `http://localhost:8000/docs`
+- App → [http://localhost:5173](http://localhost:5173)
+- API Docs → [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## API Endpoints
+## API Reference
 
-### Authentication
+### Auth
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/sign_up` | Create new account |
-| POST | `/login` | Sign in |
+| POST | `/auth/signup` | Create account |
+| POST | `/auth/login` | Sign in |
+| GET | `/auth/me` | Current user |
 
-### Categories
+### Feed & Posts
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/home/categories` | List all categories |
-| POST | `/home/category` | Create a category |
+| GET | `/feed` | Paginated family feed |
+| POST | `/posts` | Create a post |
+| POST | `/posts/:id/like` | Like / unlike |
+| POST | `/posts/:id/comment` | Add comment |
+| WS | `/ws/comments/:id` | Real-time comments |
 
-### People
+### Stories
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/home/category/{id}/people` | Get people in category |
-| POST | `/home/person` | Add a new person |
-| GET | `/home/person/{id}/files` | Get person's files |
-| POST | `/home/person/{id}/upload` | Upload photo |
-| GET | `/home/person/{id}/pdf` | Download PDF memoir |
+| GET | `/stories` | Active stories (last 24hr) |
+| POST | `/stories` | Create a story |
+
+### Family Vault
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/vault` | List vault items |
+| POST | `/vault/upload` | Upload to vault |
 
 ### Memories
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/home/person/{id}/memories` | Get person's memories |
-| POST | `/home/person/{id}/memory` | Add memory to person |
+| GET | `/people/:id/memories` | List memories |
+| POST | `/people/:id/memories` | Add memory |
+| POST | `/family/:id/search` | Keyword search |
+| POST | `/home/rag/query` | AI semantic search |
 
-### Search
+### Graph
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/home/rag/query` | AI search memories |
+| GET | `/graph/path` | Shortest path between people |
+| GET | `/graph/communities` | Family subgraph clusters |
+| GET | `/graph/centrality` | Most connected person |
 
 ---
 
-## What I Learned
+## Roadmap
 
-- Building React SPAs with component-based architecture
-- Styling with Tailwind CSS while maintaining design consistency
-- Designing relational schemas for graph-like data (people ↔ memories many-to-many)
-- FastAPI dependency injection for database session management
-- SQLAlchemy relationship modeling with backref
-- Implementing smooth animations with Framer Motion
-
----
-
-## Future Improvements
-
-- [ ] Audio notes storage
-- [ ] Timeline view sorted by date
-- [ ] Mobile-responsive refinements
-- [ ] Tags and filtering system
-- [ ] Sharing/collaboration features
+- [x] Auth + invite-only family system
+- [x] People + relationship graph
+- [x] Memory storage with photos
+- [x] AI-powered search (RAG + pgvector)
+- [x] PDF memoir export
+- [ ] Instagram-style feed + likes + comments
+- [ ] Stories (24hr)
+- [ ] Birthday alerts + wish posts
+- [ ] Family vault with role-based access
+- [ ] Real-time notifications (WebSocket)
+- [ ] Mobile app (React Native)
 
 ---
 
 ## Author
 
 **Karthik Motupalli** — [@MKarthik730](https://github.com/MKarthik730)  
-CS Student, ANITS Vizag | [LinkedIn](https://www.linkedin.com/in/karthik-motupalli-0b6951318)
+CS Student · ANITS, Visakhapatnam
+
+---
+
+## License
+
+MIT — open source, free to use. See [LICENSE](LICENSE) for details.
