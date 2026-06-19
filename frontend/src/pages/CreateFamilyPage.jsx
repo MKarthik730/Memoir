@@ -25,19 +25,20 @@ export default function CreateFamilyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--page)] flex items-center justify-center p-4">
       <div className="w-full max-w-[400px] animate-fade-in-up">
         <div className="text-center mb-10">
-          <div className="w-12 h-12 mx-auto mb-4 bg-[var(--accent)] rounded-[var(--radius-sm)] flex items-center justify-center">
-            <Users size={22} className="text-white" />
+          <div className="w-14 h-14 mx-auto mb-4 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
+            <Users size={22} className="text-[var(--seal)]" />
           </div>
-          <h1 className="font-display text-[28px]">Create Your Family</h1>
-          <p className="text-[var(--text-secondary)] text-sm mt-1">Start your family's story on Memoir</p>
+          <div className="thread-divider max-w-[120px] mx-auto mb-4" />
+          <h1 className="font-display text-[28px]">Start Your Family's Story</h1>
+          <p className="text-[var(--ink-light)] text-sm mt-1 font-mono text-[13px]">Name your family archive</p>
         </div>
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-8 shadow-[var(--shadow-sm)]">
+        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[var(--radius-md)] p-8 shadow-[var(--shadow-sm)]">
           {error && (
-            <div className="mb-5 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[var(--radius-sm)] text-[var(--danger)] text-[13px]">
+            <div className="mb-5 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[var(--radius-sm)] text-[var(--danger)] text-[13px] font-mono text-xs">
               {error}
             </div>
           )}
@@ -54,10 +55,14 @@ export default function CreateFamilyPage() {
               />
             </div>
 
-            <button type="submit" disabled={loading || !name.trim()} className="btn btn-primary btn-lg w-full">
-              {loading ? 'Creating...' : 'Create Family'}
+            <button type="submit" disabled={loading || !name.trim()} className="btn-seal w-full">
+              {loading ? 'Creating...' : 'Create Archive'}
             </button>
           </form>
+        </div>
+
+        <div className="mt-8 flex justify-center">
+          <div className="thread-line w-24" />
         </div>
       </div>
     </div>

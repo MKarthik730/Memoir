@@ -104,6 +104,51 @@ export const uploadAPI = {
   },
 };
 
+// ─── Feed / Posts / Social Features ───────────────────────────────────────────
+
+export const feedAPI = {
+  getFeed: (familyId, cursor, limit = 10) =>
+    api.get(`/feed?family_id=${familyId}${cursor ? `&cursor=${cursor}` : ''}&limit=${limit}`).then((r) => r.data),
+  createPost: (formData) =>
+    api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data),
+  toggleLike: (postId) => api.post(`/posts/${postId}/like`).then((r) => r.data),
+  addComment: (postId, text) => {
+    const fd = new FormData();
+    fd.append('text', text);
+    return api.post(`/posts/${postId}/comment`, fd).then((r) => r.data);
+  },
+  getComments: (postId) => api.get(`/posts/${postId}/comments`).then((r) => r.data),
+};
+
+export const storiesAPI = {
+  getActive: (familyId) => api.get(`/stories?family_id=${familyId}`).then((r) => r.data),
+  create: (formData) =>
+    api.post('/stories', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data),
+  markViewed: (storyId) => api.post(`/stories/${storyId}/view`).then((r) => r.data),
+};
+
+export const vaultAPI = {
+  list: (familyId, folder, fileType) => {
+    let url = `/vault?family_id=${familyId}`;
+    if (folder && folder !== 'All') url += `&folder=${encodeURIComponent(folder)}`;
+    if (fileType) url += `&file_type=${fileType}`;
+    return api.get(url).then((r) => r.data);
+  },
+  upload: (formData) =>
+    api.post('/vault/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data),
+  delete: (itemId) => api.delete(`/vault/${itemId}`).then((r) => r.data),
+};
+
+export const notificationsAPI = {
+  list: () => api.get('/notifications').then((r) => r.data),
+  markAllRead: () => api.post('/notifications/read-all').then((r) => r.data),
+  unreadCount: () => api.get('/notifications/unread-count').then((r) => r.data),
+};
+
+export const birthdaysAPI = {
+  getUpcoming: (familyId) => api.get(`/birthdays?family_id=${familyId}`).then((r) => r.data),
+};
+
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 export function getInitials(name) {

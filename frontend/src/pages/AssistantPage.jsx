@@ -2,19 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import BottomTabBar from '../components/BottomTabBar';
-import { Send, Bot, User, X, Loader2 } from 'lucide-react';
+import { MessageCircle, Send, ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function AssistantPage() {
   const { family_id } = useParams();
   const navigate = useNavigate();
-  const [family, setFamily] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [message, setMessage] = useState('');
+  const [conversation, setConversation] = useState([]);
   const [streaming, setStreaming] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
-  const [error, setError] = useState('');
+  const [family, setFamily] = useState(null);
   const messagesEndRef = useRef(null);
-  const chatContainerRef = useRef(null);
 
   useEffect(() => {
     fetch(`/family/${family_id}`, {
@@ -24,217 +22,201 @@ export default function AssistantPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [conversation]);
 
-  const handleSend = async (msg) => {
-    const text = msg || input;
-    if (!text.trim() || streaming) return;
+  const handleSend = async () => {
+    if (!message.trim() || streaming) return;
 
-    setInput('');
-    setSuggestions([]);
-    setError('');
-
-    // Add user message
-    const userMsg = { role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
-
-    // Add placeholder assistant message
-    const assistantId = Date.now();
-    setMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId }]);
+    const userMessage = message;
+    setMessage('');
+    setConversation(prev => [...prev, { role: 'user', content: userMessage }]);
     setStreaming(true);
+    setSuggestions([]);
 
     try {
       const formData = new FormData();
-      formData.append('message', text);
+      formData.append('message', userMessage);
       formData.append('family_id', family_id);
 
-      const res = await fetch('/home/assistant/chat', {
+      const response = await fetch('/home/assistant/chat', {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('memoir_token')}` },
         body: formData,
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Chat request failed');
+      if (!response.ok) {
+        throw new Error('Failed to get response');
       }
 
-      const reader = res.body.getReader();
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
+      let assistantMessage = '';
+
+      setConversation(prev => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-
               if (data.type === 'token') {
-                setMessages(prev => {
+                assistantMessage += data.content;
+                setConversation(prev => {
                   const updated = [...prev];
-                  const last = updated[updated.length - 1];
-                  if (last?.role === 'assistant') {
-                    last.content += data.content;
-                  }
+                  updated[updated.length - 1] = { role: 'assistant', content: assistantMessage };
                   return updated;
                 });
               } else if (data.type === 'suggestions') {
-                setSuggestions(data.content);
-              } else if (data.type === 'done') {
-                setStreaming(false);
+                setSuggestions(data.content || []);
               }
             } catch {}
           }
         }
       }
     } catch (err) {
-      setError(err.message || 'Failed to get response');
+      setConversation(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, I had trouble connecting. Please try again.',
+      }]);
+    } finally {
       setStreaming(false);
-      setMessages(prev => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last?.role === 'assistant' && !last.content) {
-          last.content = 'Sorry, I encountered an error. Please try again.';
-        }
-        return updated;
-      });
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[var(--page)] flex flex-col md:flex-row">
       <Sidebar family={family} familyId={family_id} activePage="assistant" />
 
-      <div className="flex-1 flex flex-col" style={{ paddingBottom: 80 }}>
+      <div className="flex-1 flex flex-col min-w-0" style={{ paddingBottom: 80 }}>
         {/* Header */}
-        <div className="sticky top-0 z-40 bg-[var(--surface)]/95 backdrop-blur-sm border-b border-[var(--border)]">
-          <div className="px-6 py-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-[var(--radius-sm)] bg-[var(--accent)] flex items-center justify-center">
-              <Bot size={18} className="text-white" />
-            </div>
+        <div className="sticky top-0 z-40 bg-[var(--page)]/95 backdrop-blur-sm border-b border-[var(--border)]">
+          <div className="px-6 py-5 max-w-3xl mx-auto flex items-center gap-3">
+            <button onClick={() => navigate(`/family/${family_id}`)} className="btn-icon">
+              <ArrowLeft size={18} />
+            </button>
             <div>
               <h1 className="font-display text-lg">Memory Assistant</h1>
-              <p className="text-xs text-[var(--text-muted)]">Ask about your family's memories</p>
+              <p className="font-mono text-[11px] text-[var(--ink-muted)] tracking-[0.03em]">Ask about your archive</p>
             </div>
           </div>
         </div>
 
-        {/* Chat Messages */}
-        <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4 max-w-3xl mx-auto w-full">
-          {messages.length === 0 && (
-            <div className="text-center py-16 animate-fade-in">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--accent-light)] flex items-center justify-center">
-                <Bot size={32} className="text-[var(--accent)]" />
-              </div>
-              <h2 className="font-display text-lg mb-2">Ask me anything about your family</h2>
-              <p className="text-sm text-[var(--text-secondary)] mb-6">
-                I can search memories, find connections, suggest resurfacing, and more.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
-                {[
-                  "Who have I been neglecting?",
-                  "What happened on our trips?",
-                  "Tell me about Mom",
-                  "What memories are due for review?",
-                ].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleSend(s)}
-                    className="px-4 py-2 text-sm bg-[var(--surface)] border border-[var(--border)] rounded-full hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="max-w-2xl mx-auto space-y-6">
+            {conversation.length === 0 && !streaming && (
+              <div className="text-center py-16 animate-fade-in">
+                <div className="w-16 h-16 mx-auto mb-5 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
+                  <MessageCircle size={28} className="text-[var(--seal)]" />
+                </div>
+                <h2 className="font-display text-xl mb-2">Ask about your family</h2>
+                <p className="text-[var(--ink-light)] text-sm max-w-sm mx-auto leading-relaxed">
+                  I can search your memories, find connections between family members, and surface stories you might have forgotten.
+                </p>
+                <div className="thread-divider max-w-[80px] mx-auto my-6" />
 
-          {messages.map((msg, i) => (
-            <div key={msg.id || i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-              {msg.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-[var(--accent-light)] flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot size={16} className="text-[var(--accent)]" />
+                {/* Suggestions */}
+                <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
+                  {[
+                    "Who have I been neglecting?",
+                    "What memories are due for review?",
+                    "Tell me about a trip",
+                  ].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => { setMessage(s); }}
+                      className="px-4 py-2 rounded-full border border-[var(--border)] text-[13px] text-[var(--ink-light)] hover:border-[var(--seal)] hover:text-[var(--seal)] transition-colors bg-[var(--vellum)]"
+                    >
+                      {s}
+                    </button>
+                  ))}
                 </div>
-              )}
-              <div className={`max-w-[80%] ${msg.role === 'user' ? 'order-first' : ''}`}>
-                <div className={`px-4 py-3 rounded-[var(--radius-lg)] text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-[var(--accent)] text-white rounded-tr-sm'
-                    : 'bg-[var(--surface)] border border-[var(--border)] rounded-tl-sm'
-                }`}>
-                  {msg.content || (msg.role === 'assistant' && i === messages.length - 1 && streaming ? (
-                    <span className="inline-flex gap-1">
-                      <span className="w-1.5 h-1.5 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </span>
-                  ) : '')}
-                </div>
-                {msg.role === 'user' && (
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1 text-right">You</p>
+              </div>
+            )}
+
+            {conversation.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+              >
+                {msg.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-full bg-[var(--seal)] flex items-center justify-center flex-shrink-0 mr-3 mt-1">
+                    <MessageCircle size={14} className="text-white" />
+                  </div>
                 )}
-              </div>
-              {msg.role === 'user' && (
-                <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0 mt-1">
-                  <User size={16} className="text-white" />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Suggestions */}
-          {suggestions.length > 0 && !streaming && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {suggestions.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => handleSend(s)}
-                  className="px-3 py-1.5 text-xs bg-[var(--surface)] border border-[var(--border)] rounded-full hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+                <div
+                  className={`max-w-[75%] px-5 py-3 rounded-[var(--radius-md)] ${
+                    msg.role === 'user'
+                      ? 'bg-[var(--seal)] text-white rounded-br-[4px]'
+                      : 'bg-[var(--vellum)] border border-[var(--border)] text-[var(--ink)] rounded-bl-[4px]'
+                  }`}
                 >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
+                  <p className="text-[14px] leading-relaxed whitespace-pre-wrap">
+                    {msg.content}
+                    {msg.role === 'assistant' && i === conversation.length - 1 && streaming && (
+                      <span className="inline-block w-2 h-4 bg-[var(--seal)] ml-1 animate-pulse" style={{ verticalAlign: 'middle' }} />
+                    )}
+                  </p>
+                </div>
+              </div>
+            ))}
 
-          {error && (
-            <div className="px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[var(--radius-sm)] text-sm text-[var(--danger)]">
-              {error}
-            </div>
-          )}
+            {/* Suggestions after response */}
+            {suggestions.length > 0 && !streaming && (
+              <div className="animate-fade-in">
+                <div className="thread-divider max-w-[60px] mb-4" />
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => { setMessage(s); }}
+                      className="px-4 py-2 rounded-full border border-[var(--border)] text-[13px] text-[var(--ink-light)] hover:border-[var(--seal)] hover:text-[var(--seal)] transition-colors bg-[var(--vellum)]"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Input */}
-        <div className="sticky bottom-0 bg-[var(--surface)]/95 backdrop-blur-sm border-t border-[var(--border)] p-4">
-          <div className="max-w-3xl mx-auto flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder="Ask about your family memories..."
-              disabled={streaming}
-              className="flex-1 px-4 py-3 rounded-[var(--radius-sm)] bg-[var(--bg)] border border-[var(--border)] focus:border-[var(--accent)] text-sm outline-none transition-all"
-            />
+        <div className="sticky bottom-0 bg-[var(--page)]/95 backdrop-blur-sm border-t border-[var(--border)] px-6 py-4">
+          <div className="max-w-2xl mx-auto flex gap-3">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about your memories..."
+                disabled={streaming}
+                className="w-full px-5 py-3 rounded-full bg-[var(--vellum)] border border-[var(--border)] focus:border-[var(--seal)] text-[var(--ink)] font-body text-sm outline-none transition-all"
+              />
+            </div>
             <button
-              onClick={() => handleSend()}
-              disabled={!input.trim() || streaming}
-              className="btn btn-primary px-4"
+              onClick={handleSend}
+              disabled={!message.trim() || streaming}
+              className="w-11 h-11 rounded-full bg-[var(--seal)] text-white hover:bg-[var(--seal-hover)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-95 flex-shrink-0"
             >
               {streaming ? (
-                <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                </svg>
+                <Loader2 size={18} className="animate-spin" />
               ) : (
                 <Send size={18} />
               )}
@@ -243,7 +225,7 @@ export default function AssistantPage() {
         </div>
       </div>
 
-      <BottomTabBar familyId={family_id} activeTab="search" />
+      <BottomTabBar familyId={family_id} activeTab="assistant" />
     </div>
   );
 }

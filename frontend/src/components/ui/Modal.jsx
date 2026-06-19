@@ -21,11 +21,11 @@ export default function Modal({ open, onClose, title, children, maxWidth = '440p
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'rgba(28,26,23,0.25)', backdropFilter: 'blur(4px)' }}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div
-        className="w-full bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] animate-fade-in"
+        className="w-full bg-[var(--vellum)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] animate-fade-in"
         style={{ maxWidth }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -34,7 +34,7 @@ export default function Modal({ open, onClose, title, children, maxWidth = '440p
             <h2 className="font-display text-xl">{title}</h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--bg)] hover:text-[var(--text)] transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--ink-muted)] hover:bg-[var(--page)] hover:text-[var(--ink)] transition-colors"
             >
               <X size={18} />
             </button>

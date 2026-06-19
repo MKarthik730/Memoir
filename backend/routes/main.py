@@ -1368,6 +1368,593 @@ async def assistant_chat(
     )
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Instagram-style Feed & Posts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+from backend.database.models import (
+    Post, PostPhoto, PostLike, PostComment,
+    Story, StoryView, VaultItem, Notification,
+)
+
+
+def serialize_post(post: Post, db: Session, current_user_id: str) -> dict:
+    """Serialize a post with photos, likes, comments, and user info."""
+    photos = db.query(PostPhoto).filter(PostPhoto.post_id == post.id).order_by(PostPhoto.display_order).all()
+    likes = db.query(PostLike).filter(PostLike.post_id == post.id).count()
+    comments_q = db.query(PostComment).filter(PostComment.post_id == post.id).order_by(PostComment.created_at.desc()).limit(2).all()
+    total_comments = db.query(PostComment).filter(PostComment.post_id == post.id).count()
+    user_liked = db.query(PostLike).filter(PostLike.post_id == post.id, PostLike.user_id == current_user_id).first() is not None
+    user = db.query(User).filter(User.id == post.user_id).first()
+    tagged_people = db.query(Person).filter(Person.id.in_(
+        db.query(PostPhoto.photo_url).filter(PostPhoto.post_id == post.id)  # placeholder — tag via caption parse
+    )).all() if False else []
+
+    return {
+        "id": str(post.id),
+        "user_id": str(post.user_id),
+        "family_id": str(post.family_id),
+        "caption": post.caption,
+        "location": post.location,
+        "created_at": post.created_at.isoformat() if post.created_at else None,
+        "photos": [{"id": str(p.id), "photo_url": p.photo_url, "caption": p.caption, "display_order": p.display_order} for p in photos],
+        "user": {"id": str(user.id), "name": user.name, "avatar_url": user.avatar_url} if user else None,
+        "likes_count": likes,
+        "comments_count": total_comments,
+        "user_has_liked": user_liked,
+        "recent_comments": [{
+            "id": str(c.id),
+            "user_id": str(c.user_id),
+            "user_name": db.query(User).filter(User.id == c.user_id).first().name if db.query(User).filter(User.id == c.user_id).first() else "Unknown",
+            "text": c.text,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+        } for c in reversed(comments_q)],
+    }
+
+
+@app.post("/posts")
+async def create_post(
+    family_id: str = Form(...),
+    caption: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
+    photos: List[UploadFile] = File(default=[]),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new post with optional photos."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    post = Post(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        family_id=family_id,
+        caption=caption,
+        location=location,
+    )
+    db.add(post)
+    db.flush()
+
+    for i, photo in enumerate(photos):
+        if photo.filename:
+            photo_url = save_upload(photo)
+            pp = PostPhoto(
+                id=uuid.uuid4(),
+                post_id=post.id,
+                photo_url=photo_url,
+                display_order=i,
+            )
+            db.add(pp)
+
+    db.commit()
+    db.refresh(post)
+    return serialize_post(post, db, str(current_user.id))
+
+
+@app.get("/feed")
+async def get_feed(
+    family_id: str = Query(...),
+    cursor: Optional[str] = Query(None),
+    limit: int = Query(10, le=50),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cursor-based paginated feed."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    query = db.query(Post).filter(Post.family_id == family_id)
+    if cursor:
+        try:
+            cursor_dt = datetime.fromisoformat(cursor)
+            query = query.filter(Post.created_at < cursor_dt)
+        except ValueError:
+            pass
+
+    posts = query.order_by(Post.created_at.desc()).limit(limit + 1).all()
+    has_more = len(posts) > limit
+    if has_more:
+        posts = posts[:limit]
+
+    return {
+        "posts": [serialize_post(p, db, str(current_user.id)) for p in posts],
+        "next_cursor": posts[-1].created_at.isoformat() if has_more and posts else None,
+        "has_more": has_more,
+    }
+
+
+@app.post("/posts/{post_id}/like")
+async def toggle_like(
+    post_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Like or unlike a post."""
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    existing = db.query(PostLike).filter(
+        PostLike.post_id == post_id,
+        PostLike.user_id == current_user.id,
+    ).first()
+
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return {"liked": False, "likes_count": db.query(PostLike).filter(PostLike.post_id == post_id).count()}
+    else:
+        like = PostLike(id=uuid.uuid4(), post_id=post_id, user_id=current_user.id)
+        db.add(like)
+        db.commit()
+        # Create notification
+        if str(post.user_id) != str(current_user.id):
+            notif = Notification(
+                id=uuid.uuid4(),
+                user_id=post.user_id,
+                type="like",
+                payload='{"post_id": "' + post_id + '"}',
+                post_id=post_id,
+                from_user_id=current_user.id,
+            )
+            db.add(notif)
+            db.commit()
+        return {"liked": True, "likes_count": db.query(PostLike).filter(PostLike.post_id == post_id).count()}
+
+
+@app.post("/posts/{post_id}/comment")
+async def add_comment(
+    post_id: str,
+    text: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Add a comment to a post."""
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    comment = PostComment(
+        id=uuid.uuid4(),
+        post_id=post_id,
+        user_id=current_user.id,
+        text=text,
+    )
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+
+    # Create notification
+    if str(post.user_id) != str(current_user.id):
+        notif = Notification(
+            id=uuid.uuid4(),
+            user_id=post.user_id,
+            type="comment",
+            payload='{"post_id": "' + post_id + '"}',
+            post_id=post_id,
+            from_user_id=current_user.id,
+        )
+        db.add(notif)
+        db.commit()
+
+    user = db.query(User).filter(User.id == current_user.id).first()
+    return {
+        "id": str(comment.id),
+        "user_id": str(current_user.id),
+        "user_name": user.name if user else "Unknown",
+        "text": comment.text,
+        "created_at": comment.created_at.isoformat() if comment.created_at else None,
+    }
+
+
+@app.get("/posts/{post_id}/comments")
+async def get_comments(
+    post_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all comments for a post."""
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    comments = db.query(PostComment).filter(PostComment.post_id == post_id).order_by(PostComment.created_at.asc()).all()
+    result = []
+    for c in comments:
+        user = db.query(User).filter(User.id == c.user_id).first()
+        result.append({
+            "id": str(c.id),
+            "user_id": str(c.user_id),
+            "user_name": user.name if user else "Unknown",
+            "avatar_url": user.avatar_url if user else None,
+            "text": c.text,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+        })
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Stories
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/stories")
+async def create_story(
+    family_id: str = Form(...),
+    caption: Optional[str] = Form(None),
+    media: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a 24hr story."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    media_url = save_upload(media)
+    ext = media.filename.rsplit(".", 1)[-1].lower() if media.filename else ""
+    media_type = "video" if ext in ("mp4", "mov", "avi", "webm") else "image"
+
+    story = Story(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        family_id=family_id,
+        media_url=media_url,
+        media_type=media_type,
+        caption=caption,
+        expires_at=datetime.utcnow() + timedelta(hours=24),
+    )
+    db.add(story)
+    db.commit()
+    db.refresh(story)
+
+    return {
+        "id": str(story.id),
+        "media_url": story.media_url,
+        "media_type": story.media_type,
+        "caption": story.caption,
+        "expires_at": story.expires_at.isoformat(),
+    }
+
+
+@app.get("/stories")
+async def get_active_stories(
+    family_id: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get active (non-expired) stories for a family."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    now = datetime.utcnow()
+    stories = db.query(Story).filter(
+        Story.family_id == family_id,
+        Story.expires_at > now,
+    ).order_by(Story.created_at.desc()).all()
+
+    # Group by user
+    users_map = {}
+    for story in stories:
+        uid = str(story.user_id)
+        if uid not in users_map:
+            user = db.query(User).filter(User.id == story.user_id).first()
+            users_map[uid] = {
+                "user_id": uid,
+                "user_name": user.name if user else "Unknown",
+                "avatar_url": user.avatar_url,
+                "stories": [],
+            }
+        has_viewed = db.query(StoryView).filter(
+            StoryView.story_id == story.id,
+            StoryView.viewer_id == current_user.id,
+        ).first() is not None
+        view_count = db.query(StoryView).filter(StoryView.story_id == story.id).count()
+        users_map[uid]["stories"].append({
+            "id": str(story.id),
+            "media_url": story.media_url,
+            "media_type": story.media_type,
+            "caption": story.caption,
+            "created_at": story.created_at.isoformat() if story.created_at else None,
+            "expires_at": story.expires_at.isoformat() if story.expires_at else None,
+            "has_viewed": has_viewed,
+            "view_count": view_count,
+        })
+
+    return list(users_map.values())
+
+
+@app.post("/stories/{story_id}/view")
+async def view_story(
+    story_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark a story as viewed."""
+    existing = db.query(StoryView).filter(
+        StoryView.story_id == story_id,
+        StoryView.viewer_id == current_user.id,
+    ).first()
+    if not existing:
+        view = StoryView(id=uuid.uuid4(), story_id=story_id, viewer_id=current_user.id)
+        db.add(view)
+        db.commit()
+    return {"viewed": True}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Family Vault
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/vault/upload")
+async def vault_upload(
+    family_id: str = Form(...),
+    name: str = Form(...),
+    folder: str = Form("All"),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a file to the family vault."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    file_url = save_upload(file)
+    ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename else ""
+    img_types = {"jpg", "jpeg", "png", "gif", "webp"}
+    doc_types = {"pdf", "doc", "docx", "txt"}
+    vid_types = {"mp4", "mov", "avi", "webm"}
+    if ext in img_types:
+        file_type = "image"
+    elif ext in doc_types:
+        file_type = "document"
+    elif ext in vid_types:
+        file_type = "video"
+    else:
+        file_type = "other"
+
+    item = VaultItem(
+        id=uuid.uuid4(),
+        family_id=family_id,
+        name=name,
+        file_url=file_url,
+        file_type=file_type,
+        file_size=0,
+        folder=folder,
+        uploaded_by=current_user.id,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return {
+        "id": str(item.id),
+        "name": item.name,
+        "file_url": item.file_url,
+        "file_type": item.file_type,
+        "folder": item.folder,
+    }
+
+
+@app.get("/vault")
+async def get_vault(
+    family_id: str = Query(...),
+    folder: Optional[str] = Query(None),
+    file_type: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List vault items, optionally filtered by folder or type."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    query = db.query(VaultItem).filter(VaultItem.family_id == family_id)
+    if folder and folder != "All":
+        query = query.filter(VaultItem.folder == folder)
+    if file_type:
+        query = query.filter(VaultItem.file_type == file_type)
+
+    items = query.order_by(VaultItem.created_at.desc()).all()
+    folders = db.query(VaultItem.folder).filter(VaultItem.family_id == family_id).distinct().all()
+    folder_list = ["All"] + [f[0] for f in folders if f[0] != "All"]
+
+    result = []
+    for item in items:
+        uploader = db.query(User).filter(User.id == item.uploaded_by).first()
+        result.append({
+            "id": str(item.id),
+            "name": item.name,
+            "file_url": item.file_url,
+            "file_type": item.file_type,
+            "file_size": item.file_size,
+            "folder": item.folder,
+            "uploaded_by": uploader.name if uploader else "Unknown",
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+            "is_admin": member.role == MemberRole.admin,
+        })
+
+    return {"items": result, "folders": folder_list}
+
+
+@app.delete("/vault/{item_id}")
+async def delete_vault_item(
+    item_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a vault item (admin only)."""
+    item = db.query(VaultItem).filter(VaultItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == item.family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member or member.role != MemberRole.admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    db.delete(item)
+    db.commit()
+    return {"message": "Item deleted"}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Notifications
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/notifications")
+async def get_notifications(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all notifications for the current user."""
+    notifs = db.query(Notification).filter(
+        Notification.user_id == current_user.id,
+    ).order_by(Notification.created_at.desc()).limit(50).all()
+
+    result = []
+    for n in notifs:
+        from_user = db.query(User).filter(User.id == n.from_user_id).first() if n.from_user_id else None
+        result.append({
+            "id": str(n.id),
+            "type": n.type,
+            "payload": n.payload,
+            "post_id": str(n.post_id) if n.post_id else None,
+            "from_user": {
+                "id": str(from_user.id),
+                "name": from_user.name,
+                "avatar_url": from_user.avatar_url,
+            } if from_user else None,
+            "read": bool(n.read),
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+        })
+    return result
+
+
+@app.post("/notifications/read-all")
+async def mark_all_read(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark all notifications as read."""
+    db.query(Notification).filter(
+        Notification.user_id == current_user.id,
+        Notification.read == 0,
+    ).update({"read": 1})
+    db.commit()
+    return {"message": "All notifications marked as read"}
+
+
+@app.get("/notifications/unread-count")
+async def unread_count(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get unread notification count."""
+    count = db.query(Notification).filter(
+        Notification.user_id == current_user.id,
+        Notification.read == 0,
+    ).count()
+    return {"count": count}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Birthdays
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/birthdays")
+async def get_upcoming_birthdays(
+    family_id: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get upcoming birthdays in the next 30 days."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    from sqlalchemy import func, extract
+    today = date.today()
+    people = db.query(Person).filter(
+        Person.family_id == family_id,
+        Person.dob.isnot(None),
+    ).all()
+
+    birthdays = []
+    for p in people:
+        if not p.dob:
+            continue
+        # Calculate next birthday
+        try:
+            next_bday = date(today.year, p.dob.month, p.dob.day)
+            if next_bday < today:
+                next_bday = date(today.year + 1, p.dob.month, p.dob.day)
+            days_until = (next_bday - today).days
+            if days_until <= 30:
+                age = today.year - p.dob.year
+                if next_bday.year > today.year:
+                    age += 1
+                birthdays.append({
+                    "person_id": str(p.id),
+                    "person_name": p.name,
+                    "photo_url": p.photo_url,
+                    "dob": p.dob.isoformat(),
+                    "next_birthday": next_bday.isoformat(),
+                    "days_until": days_until,
+                    "turning_age": age,
+                })
+        except ValueError:
+            continue
+
+    birthdays.sort(key=lambda b: b["days_until"])
+    return birthdays
+
+
 # ─── File Upload Route ────────────────────────────────────────────────────────
 
 @app.post("/upload")

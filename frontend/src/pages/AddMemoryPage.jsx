@@ -108,23 +108,23 @@ export default function AddMemoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
+    <div className="min-h-screen bg-[var(--page)]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[var(--surface)]/95 backdrop-blur-sm border-b border-[var(--border)]">
+      <div className="sticky top-0 z-40 bg-[var(--page)]/95 backdrop-blur-sm border-b border-[var(--border)]">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="btn-icon">
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="font-display text-lg">Add Memory</h1>
-            {person && <p className="text-[13px] text-[var(--text-muted)] font-serif italic">For {person.name}</p>}
+            <h1 className="font-display text-lg">Write a New Entry</h1>
+            {person && <p className="text-[13px] text-[var(--ink-muted)] font-body italic">For {person.name}</p>}
           </div>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-6 py-8 animate-fade-in-up">
         {error && (
-          <div className="mb-6 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[var(--radius-sm)] text-[var(--danger)] text-[13px] flex items-center gap-2">
+          <div className="mb-6 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[var(--radius-sm)] text-[var(--danger)] text-[13px] flex items-center gap-2 font-mono text-xs">
             <X size={16} />
             {error}
           </div>
@@ -138,7 +138,7 @@ export default function AddMemoryPage() {
               type="text"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Give your memory a title..."
+              placeholder="Give this letter a title..."
               required
               className="font-display text-lg"
             />
@@ -146,7 +146,7 @@ export default function AddMemoryPage() {
 
           {/* Story */}
           <div className="form-group">
-            <label>Story</label>
+            <label>Letter</label>
             <textarea
               value={form.story_text}
               onChange={(e) => setForm({ ...form, story_text: e.target.value })}
@@ -175,12 +175,12 @@ export default function AddMemoryPage() {
               onDragLeave={() => setDragOver(false)}
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-[var(--radius-md)] p-8 text-center cursor-pointer transition-all ${
-                dragOver ? 'border-[var(--accent)] bg-[var(--accent-light)]' : 'border-[var(--border)] hover:border-[var(--accent)]'
+                dragOver ? 'border-[var(--seal)] bg-[var(--seal-light)]' : 'border-[var(--border)] hover:border-[var(--seal)]'
               }`}
             >
-              <Image size={28} className="mx-auto mb-2 text-[var(--text-muted)]" />
-              <p className="text-sm text-[var(--text-muted)]">Drop photos here or click to browse</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">JPG, PNG, WebP</p>
+              <Image size={28} className="mx-auto mb-2 text-[var(--ink-muted)]" />
+              <p className="text-sm text-[var(--ink-muted)]">Drop photos here or click to browse</p>
+              <p className="text-xs text-[var(--ink-muted)] mt-1">JPG, PNG, WebP</p>
               <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden"
                 onChange={(e) => handlePhotoAdd(e.target.files)} />
             </div>
@@ -206,12 +206,12 @@ export default function AddMemoryPage() {
             <div className="flex gap-3">
               <button type="button" onClick={recording ? stopRecording : startRecording}
                 className={`flex items-center gap-2 px-4 py-3 rounded-[var(--radius-sm)] border transition-all ${
-                  recording ? 'bg-[var(--danger-bg)] border-[var(--danger)]/30 text-[var(--danger)]' : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)]'
+                  recording ? 'bg-[var(--danger-bg)] border-[var(--danger)]/30 text-[var(--danger)]' : 'bg-[var(--vellum)] border-[var(--border)] text-[var(--ink-light)] hover:border-[var(--seal)]'
                 }`}>
                 <Mic size={18} className={recording ? 'animate-pulse' : ''} />
                 <span className="text-sm">{recording ? `Recording ${formatTimer(recordingTimer)}` : 'Record'}</span>
               </button>
-              <label className="flex items-center gap-2 px-4 py-3 rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)] transition-all cursor-pointer bg-[var(--surface)]">
+              <label className="flex items-center gap-2 px-4 py-3 rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--ink-light)] hover:border-[var(--seal)] transition-all cursor-pointer bg-[var(--vellum)]">
                 <Upload size={18} />
                 <span className="text-sm">Upload</span>
                 <input type="file" accept=".mp3,.m4a,.webm,audio/*" className="hidden"
@@ -219,7 +219,7 @@ export default function AddMemoryPage() {
               </label>
             </div>
             {audioUrl && (
-              <div className="mt-3 p-3 bg-[var(--bg)] rounded-[var(--radius-sm)]">
+              <div className="mt-3 p-3 bg-[var(--page)] rounded-[var(--radius-sm)] border border-[var(--border)]">
                 <audio controls src={audioUrl} className="w-full h-10" />
                 <button type="button" onClick={() => { setAudioUrl(''); setVoiceNote(null); }}
                   className="mt-1 text-xs text-[var(--danger)] hover:underline">Remove</button>
@@ -228,14 +228,14 @@ export default function AddMemoryPage() {
           </div>
 
           <button type="submit" disabled={loading || !form.title.trim()}
-            className="btn btn-primary btn-lg w-full">
+            className="btn-seal w-full">
             {loading ? (
               <><svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />
                 <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg> Saving your memory...</>
+              </svg> Saving your letter...</>
             ) : (
-              <><Check size={18} /> Save Memory</>
+              <><Check size={18} /> Save Letter</>
             )}
           </button>
         </form>

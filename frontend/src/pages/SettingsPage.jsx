@@ -42,14 +42,14 @@ export default function SettingsPage() {
         body: formData,
       });
       if (res.ok) {
-        setMessage(`✅ ${provider} key saved successfully`);
+        setMessage(`${provider} key saved successfully`);
         setKey('');
         fetchKeys();
       } else {
         const err = await res.json();
-        setMessage(`❌ ${err.detail || 'Failed to save key'}`);
+        setMessage(`Failed: ${err.detail || 'Could not save key'}`);
       }
-    } catch { setMessage('❌ Network error'); }
+    } catch { setMessage('Network error'); }
     finally { setSaving(false); }
   };
 
@@ -61,14 +61,14 @@ export default function SettingsPage() {
         headers: { Authorization: `Bearer ${localStorage.getItem('memoir_token')}` },
       });
       if (res.ok) {
-        setMessage(`✅ ${prov} key removed`);
+        setMessage(`${prov} key removed`);
         fetchKeys();
       }
     } catch {}
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
+    <div className="min-h-screen bg-[var(--page)]">
       <div className="max-w-2xl mx-auto px-6 py-8 animate-fade-in-up">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
@@ -79,18 +79,18 @@ export default function SettingsPage() {
         </div>
 
         {/* API Keys Section */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-6 mb-6">
+        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[var(--radius-md)] p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <Key size={20} className="text-[var(--accent)]" />
+            <Key size={20} className="text-[var(--seal)]" />
             <h2 className="font-display text-lg">API Keys</h2>
           </div>
-          <p className="text-sm text-[var(--text-secondary)] mb-6">
+          <p className="text-sm text-[var(--ink-light)] mb-6">
             Add your LLM provider API keys for AI-powered features.
             Keys are encrypted at rest and never stored in plain text.
           </p>
 
           {message && (
-            <div className="mb-4 px-4 py-3 bg-[var(--bg)] rounded-[var(--radius-sm)] text-sm">
+            <div className="mb-4 px-4 py-3 bg-[var(--page)] rounded-[var(--radius-sm)] text-sm font-mono text-xs border border-[var(--border)]">
               {message}
             </div>
           )}
@@ -102,22 +102,22 @@ export default function SettingsPage() {
             </div>
           ) : apiKeys.length > 0 ? (
             <div className="space-y-2 mb-6">
-              <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Saved Keys</p>
+              <p className="font-mono text-[10px] text-[var(--ink-muted)] uppercase tracking-[0.08em]">Saved Keys</p>
               {apiKeys.map((ak) => (
-                <div key={ak.provider} className="flex items-center justify-between px-4 py-3 bg-[var(--bg)] rounded-[var(--radius-sm)]">
+                <div key={ak.provider} className="flex items-center justify-between px-4 py-3 bg-[var(--page)] rounded-[var(--radius-sm)] border border-[var(--border)]">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium capitalize">{ak.provider}</span>
-                    <span className="text-xs text-[var(--text-muted)] font-mono">{ak.masked_key}</span>
+                    <span className="font-mono text-[11px] text-[var(--ink-muted)]">{ak.masked_key}</span>
                   </div>
                   <button onClick={() => handleDelete(ak.provider)}
-                    className="p-1.5 text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors">
+                    className="p-1.5 text-[var(--ink-muted)] hover:text-[var(--danger)] transition-colors">
                     <Trash2 size={16} />
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-[var(--text-muted)] mb-6 italic">No API keys saved yet.</p>
+            <p className="text-sm text-[var(--ink-muted)] mb-6 font-body italic">No API keys saved yet.</p>
           )}
 
           {/* Add Key Form */}
@@ -142,7 +142,7 @@ export default function SettingsPage() {
                   placeholder={`Enter your ${provider} API key`}
                 />
                 <button type="button" onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)]">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]">
                   {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -154,14 +154,14 @@ export default function SettingsPage() {
         </div>
 
         {/* Info */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-6">
+        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[var(--radius-md)] p-6">
           <h3 className="font-display text-base mb-2">About API Keys</h3>
-          <ul className="text-sm text-[var(--text-secondary)] space-y-2">
-            <li>• Your keys are encrypted at rest using Fernet (AES-128-CBC)</li>
-            <li>• The server never stores your full key in plain text</li>
-            <li>• Keys are fetched per-request and never cached in logs</li>
-            <li>• Supported: OpenAI, Anthropic (Claude), or Groq</li>
-            <li>• No API key? You can still search and explore your family tree</li>
+          <ul className="text-sm text-[var(--ink-light)] space-y-2">
+            <li>Your keys are encrypted at rest using Fernet (AES-128-CBC)</li>
+            <li>The server never stores your full key in plain text</li>
+            <li>Keys are fetched per-request and never cached in logs</li>
+            <li>Supported: OpenAI, Anthropic (Claude), or Groq</li>
+            <li>No API key? You can still search and explore your family tree</li>
           </ul>
         </div>
       </div>

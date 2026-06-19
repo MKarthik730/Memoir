@@ -17,30 +17,39 @@ export default function MemoryCard({ memory, personName, compact = false }) {
 
   return (
     <>
-      <div className="card overflow-hidden">
-        <div className="p-5">
-          {/* Title + Date */}
-          <div className="mb-3">
-            <h3 className="font-display text-lg text-[var(--text)]">{memory.title}</h3>
+      <div className="card overflow-hidden relative">
+        {/* Thread line left border (signature element) */}
+        <div className="absolute left-0 top-0 bottom-0 w-[3px] opacity-40"
+          style={{
+            background: 'repeating-linear-gradient(to bottom, var(--border) 0px, var(--border) 4px, transparent 4px, transparent 8px)',
+          }}
+        />
+
+        <div className="p-5 pl-6">
+          {/* Title + Postmark Date */}
+          <div className="mb-3 flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-display text-lg text-[var(--ink)]">{memory.title}</h3>
+            </div>
             {memory.memory_date && (
-              <p className="text-[13px] text-[var(--text-muted)] mt-0.5 font-serif italic">
-                {formatDate(memory.memory_date)}
-              </p>
+              <div className="postmark flex-shrink-0 mt-0.5">
+                <span>{formatDate(memory.memory_date)}</span>
+              </div>
             )}
           </div>
 
           {/* Story */}
           {memory.story_text && (
             <div className="mb-3">
-              <p className={`text-[var(--text-secondary)] leading-relaxed text-[14px] ${!expanded && isTruncated ? 'line-clamp-3' : ''}`}>
+              <p className={`text-[var(--ink-light)] leading-relaxed text-[14px] ${!expanded && isTruncated ? 'line-clamp-3' : ''}`}>
                 {memory.story_text}
               </p>
               {isTruncated && (
                 <button
                   onClick={() => setExpanded(!expanded)}
-                  className="mt-1 text-[13px] text-[var(--accent)] hover:underline flex items-center gap-1 transition-colors"
+                  className="mt-1 text-[13px] text-[var(--seal)] hover:underline flex items-center gap-1 transition-colors"
                 >
-                  {expanded ? <><ChevronUp size={14} /> Show less</> : <><ChevronDown size={14} /> Read more</>}
+                  {expanded ? <><ChevronUp size={14} /> Show less</> : <><ChevronDown size={14} /> Continue reading</>}
                 </button>
               )}
             </div>
@@ -59,7 +68,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
                 </button>
               ))}
               {photos.length > 4 && (
-                <div className="flex-shrink-0 w-[72px] h-[72px] rounded-[var(--radius-sm)] bg-[var(--bg)] flex items-center justify-center text-[var(--text-muted)] text-sm font-medium">
+                <div className="flex-shrink-0 w-[72px] h-[72px] rounded-[var(--radius-sm)] bg-[var(--page)] flex items-center justify-center text-[var(--ink-muted)] text-sm font-mono">
                   +{photos.length - 4}
                 </div>
               )}
@@ -68,7 +77,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
 
           {/* Voice Note */}
           {memory.voice_note_url && (
-            <div className="mb-3 p-3 bg-[var(--bg)] rounded-[var(--radius-sm)]">
+            <div className="mb-3 p-3 bg-[var(--page)] rounded-[var(--radius-sm)]">
               <audio controls className="w-full h-10">
                 <source src={memory.voice_note_url} />
               </audio>
@@ -82,21 +91,21 @@ export default function MemoryCard({ memory, personName, compact = false }) {
                 <>
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium text-white"
-                    style={{ background: 'var(--accent)' }}
+                    style={{ background: 'var(--seal)' }}
                   >
                     {getInitials(memory.contributor.name)}
                   </div>
-                  <span className="text-[13px] text-[var(--text-muted)]">
+                  <span className="text-[13px] text-[var(--ink-muted)] font-body">
                     {memory.contributor.name}
                   </span>
                 </>
               ) : (
-                <span className="text-[13px] text-[var(--text-muted)]">{personName || memory.person_name}</span>
+                <span className="text-[13px] text-[var(--ink-muted)] font-body">{personName || memory.person_name}</span>
               )}
             </div>
             <button
               onClick={handleWhatsAppShare}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#25D366] bg-[var(--success-bg)] hover:bg-[rgba(37,211,102,0.15)] transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--success)] bg-[var(--success-bg)] hover:bg-[rgba(46,125,110,0.15)] transition-colors"
               title="Share to WhatsApp"
             >
               <MessageCircle size={16} />
@@ -107,7 +116,12 @@ export default function MemoryCard({ memory, personName, compact = false }) {
 
       {/* Skeleton */}
       {!memory.id && (
-        <div className="card p-5 space-y-3">
+        <div className="card p-5 pl-6 space-y-3 relative">
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] opacity-40"
+            style={{
+              background: 'repeating-linear-gradient(to bottom, var(--border) 0px, var(--border) 4px, transparent 4px, transparent 8px)',
+            }}
+          />
           <div className="skeleton h-6 w-3/4" />
           <div className="skeleton h-4 w-1/3" />
           <div className="skeleton h-4 w-full" />
@@ -125,7 +139,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
       {lightboxImg && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.85)' }}
+          style={{ background: 'rgba(28,26,23,0.85)' }}
           onClick={() => setLightboxImg(null)}
         >
           <img src={lightboxImg} alt="Memory" className="max-w-full max-h-[90vh] rounded-[var(--radius-sm)] object-contain" />

@@ -383,3 +383,127 @@ class SearchResult(BaseModel):
 
 class UploadResponse(BaseModel):
     url: str
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Instagram-style Social Features (Feed, Stories, Vault, Notifications)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    family_id = Column(GUID(), ForeignKey("families.id"), nullable=False, index=True)
+    caption = Column(Text, nullable=True)
+    location = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user = relationship("User")
+    family = relationship("Family")
+    photos = relationship("PostPhoto", back_populates="post", cascade="all, delete-orphan", order_by="PostPhoto.display_order")
+    likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
+    comments = relationship("PostComment", back_populates="post", cascade="all, delete-orphan", order_by="PostComment.created_at")
+
+
+class PostPhoto(Base):
+    __tablename__ = "post_photos"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    post_id = Column(GUID(), ForeignKey("posts.id"), nullable=False, index=True)
+    photo_url = Column(String, nullable=False)
+    caption = Column(String, nullable=True)
+    display_order = Column(Integer, default=0)
+
+    post = relationship("Post", back_populates="photos")
+
+
+class PostLike(Base):
+    __tablename__ = "post_likes"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    post_id = Column(GUID(), ForeignKey("posts.id"), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("post_id", "user_id"),)
+
+    post = relationship("Post", back_populates="likes")
+    user = relationship("User")
+
+
+class PostComment(Base):
+    __tablename__ = "post_comments"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    post_id = Column(GUID(), ForeignKey("posts.id"), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    post = relationship("Post", back_populates="comments")
+    user = relationship("User")
+
+
+class Story(Base):
+    __tablename__ = "stories"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    family_id = Column(GUID(), ForeignKey("families.id"), nullable=False, index=True)
+    media_url = Column(String, nullable=False)
+    media_type = Column(String, default="image")  # image | video
+    caption = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+
+    user = relationship("User")
+    views = relationship("StoryView", back_populates="story", cascade="all, delete-orphan")
+
+
+class StoryView(Base):
+    __tablename__ = "story_views"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    story_id = Column(GUID(), ForeignKey("stories.id"), nullable=False, index=True)
+    viewer_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    viewed_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("story_id", "viewer_id"),)
+
+    story = relationship("Story", back_populates="views")
+    viewer = relationship("User")
+
+
+class VaultItem(Base):
+    __tablename__ = "vault_items"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    family_id = Column(GUID(), ForeignKey("families.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    file_url = Column(String, nullable=False)
+    file_type = Column(String, default="image")  # image | document | video | other
+    file_size = Column(Integer, default=0)
+    folder = Column(String, default="All")
+    uploaded_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    family = relationship("Family")
+    uploader = relationship("User")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    type = Column(String, nullable=False)  # like | comment | tag | birthday | story
+    payload = Column(Text, nullable=True)  # JSON blob with context
+    post_id = Column(GUID(), ForeignKey("posts.id"), nullable=True)
+    from_user_id = Column(GUID(), ForeignKey("users.id"), nullable=True)
+    read = Column(Integer, default=0)  # 0 = unread, 1 = read
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+    from_user = relationship("User", foreign_keys=[from_user_id])
+    post = relationship("Post")
