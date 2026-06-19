@@ -15,7 +15,7 @@ services:
     name: memoir-api
     env: python
     region: oregon
-    plan: free
+    plan: starter
     buildCommand: pip install -r requirements.txt && (pip install -r requirements-ai.txt || echo "Optional search deps unavailable, using keyword fallback") && mkdir -p uploads
     startCommand: uvicorn backend.routes.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
