@@ -224,28 +224,28 @@ export default function PersonDetailPage() {
 
       <div className="flex-1 min-w-0" style={{ paddingBottom: 80 }}>
         {/* Hero */}
-        <div className="relative h-[260px] md:h-[300px] overflow-hidden bg-[var(--page)]">
+        <div className="relative h-[280px] md:h-[320px] overflow-hidden bg-[var(--page)]">
           {person.photo_url ? (
             <img src={person.photo_url} alt="" className="w-full h-full object-cover" style={{ filter: 'brightness(0.7)' }} />
           ) : (
-            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #A85542, #4A6B8A)' }} />
+            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--seal) 0%, var(--postmark) 100%)' }} />
           )}
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(28,26,23,0.6), transparent)' }} />
 
           <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
             <div className="flex items-end justify-between">
               <div className="flex items-center gap-5">
-                <Avatar name={person.name} url={person.photo_url} size={72} className="border-[3px] border-[var(--vellum)]/80" />
+                <Avatar name={person.name} url={person.photo_url} size={72} className="border-[3px] border-[var(--page)]/80" />
                 <div>
-                  <h1 className="font-display text-3xl md:text-[40px] text-white">{person.name}</h1>
+                  <h1 className="font-display text-3xl md:text-[40px] text-[var(--page)]">{person.name}</h1>
                   <div className="flex items-center gap-3 mt-1">
                     {person.relationship_tag && (
-                      <span className="px-3 py-0.5 text-[11px] rounded-full border border-white/30 text-white/90 font-mono tracking-[0.03em]">
+                      <span className="px-3 py-0.5 text-[11px] rounded-full border border-[var(--page)]/30 text-[var(--page)]/90 font-mono tracking-[0.03em]">
                         {person.relationship_tag}
                       </span>
                     )}
                     {person.dob && (
-                      <span className="font-mono text-[12px] text-white/80 flex items-center gap-1">
+                      <span className="font-mono text-[12px] text-[var(--page)]/80 flex items-center gap-1">
                         <Calendar size={13} />
                         Born {formatDate(person.dob)}
                       </span>

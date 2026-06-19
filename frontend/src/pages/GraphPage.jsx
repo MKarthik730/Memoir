@@ -213,7 +213,7 @@ export default function GraphPage() {
     node.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.2em')
-      .attr('fill', 'white')
+      .attr('fill', 'var(--page)')
       .attr('font-family', "'DM Serif Display', Georgia, serif")
       .attr('font-size', d => `${Math.max(13, (nodeRadius(d) - 4) * 0.55)}px`)
       .text(d => d.name?.charAt(0).toUpperCase());
@@ -357,7 +357,7 @@ export default function GraphPage() {
             </button>
             <div className="h-px bg-[var(--border)] my-1" />
             <button onClick={() => setShowAddRel(true)}
-              className="w-9 h-9 rounded-[var(--radius-sm)] bg-[var(--seal)] text-white hover:bg-[var(--seal-hover)] flex items-center justify-center transition-colors shadow-[var(--shadow-sm)]">
+              className="w-9 h-9 rounded-[var(--radius-sm)] bg-[var(--seal)] text-[var(--page)] hover:bg-[var(--seal-hover)] flex items-center justify-center transition-colors shadow-[var(--shadow-sm)]">
               <Plus size={18} />
             </button>
           </div>

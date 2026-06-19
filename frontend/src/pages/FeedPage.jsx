@@ -77,15 +77,15 @@ function StoryViewer({ users, initialIndex, onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-[#1C1A17] flex items-center justify-center"
+      className="fixed inset-0 z-[100] bg-[var(--ink)] flex items-center justify-center"
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
       onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
     >
       <div className="absolute top-4 left-4 right-4 flex gap-1 z-10">
         {stories.map((_, i) => (
-          <div key={i} className="flex-1 h-[3px] bg-white/30 rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full transition-all duration-100 ease-linear"
+          <div key={i} className="flex-1 h-[3px] bg-[var(--vellum)]/30 rounded-full overflow-hidden">
+            <div className="h-full bg-[var(--vellum)] rounded-full transition-all duration-100 ease-linear"
               style={{ width: i < currentStoryIdx ? '100%' : i === currentStoryIdx ? `${progress * 100}%` : '0%' }} />
           </div>
         ))}
@@ -95,13 +95,13 @@ function StoryViewer({ users, initialIndex, onClose }) {
         <div className="flex items-center gap-3">
           <Avatar name={currentUser.user_name} url={currentUser.avatar_url} size={36} />
           <div>
-            <p className="text-white text-sm font-medium">{currentUser.user_name}</p>
-            <p className="text-white/60 text-[10px] font-mono">
+            <p className="text-[var(--page)] text-sm font-medium">{currentUser.user_name}</p>
+            <p className="text-[var(--page)]/60 text-[10px] font-mono">
               {currentStory.created_at ? new Date(currentStory.created_at).toLocaleDateString() : 'just now'}
             </p>
           </div>
         </div>
-        <button onClick={onClose} className="text-white/80 hover:text-white p-1"><ChevronLeft size={20} /></button>
+        <button onClick={onClose} className="text-[var(--page)]/80 hover:text-[var(--page)] p-1"><ChevronLeft size={20} /></button>
       </div>
 
       <div className="absolute inset-0 flex z-5" onClick={(e) => {
@@ -118,7 +118,7 @@ function StoryViewer({ users, initialIndex, onClose }) {
       </div>
 
       {currentStory.view_count > 0 && (
-        <div className="absolute bottom-8 left-4 text-white/70 font-mono text-[11px]">
+        <div className="absolute bottom-8 left-4 text-[var(--page)]/70 font-mono text-[11px]">
           {currentStory.view_count} view{currentStory.view_count !== 1 ? 's' : ''}
         </div>
       )}
@@ -144,7 +144,7 @@ function BirthdayBanner({ birthdays }) {
             </p>
           </div>
           <button onClick={() => navigate(`/post/new?person=${b.person_id}`)}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full bg-[var(--seal)] text-white text-[11px] font-medium hover:bg-[var(--seal-hover)] transition-colors">
+            className="flex-shrink-0 px-3 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[11px] font-medium hover:bg-[var(--seal-hover)] transition-colors">
             Wish
           </button>
         </div>
@@ -217,19 +217,19 @@ function PostCard({ post, index }) {
             <>
               {currentPhoto > 0 && (
                 <button onClick={() => setCurrentPhoto(i => i - 1)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-md">
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[var(--vellum)]/80 flex items-center justify-center shadow-md">
                   <ChevronLeft size={18} className="text-[var(--ink)]" />
                 </button>
               )}
               {currentPhoto < photos.length - 1 && (
                 <button onClick={() => setCurrentPhoto(i => i + 1)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-md">
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[var(--vellum)]/80 flex items-center justify-center shadow-md">
                   <ChevronRight size={18} className="text-[var(--ink)]" />
                 </button>
               )}
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                 {photos.map((_, i) => (
-                  <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentPhoto ? 'bg-white' : 'bg-white/50'}`} />
+                  <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentPhoto ? 'bg-[var(--vellum)]' : 'bg-[var(--vellum)]/50'}`} />
                 ))}
               </div>
             </>
@@ -390,7 +390,7 @@ export default function FeedPage() {
               <button onClick={() => navigate('/notifications')} className="relative">
                 <Heart size={20} className="text-[var(--ink-light)] hover:text-[var(--ink)] transition-colors" />
                 {unreadNotifs > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--seal)] text-white text-[9px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--seal)] text-[var(--page)] text-[9px] font-bold flex items-center justify-center">
                     {unreadNotifs > 9 ? '9+' : unreadNotifs}
                   </span>
                 )}

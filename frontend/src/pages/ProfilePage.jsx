@@ -62,12 +62,12 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-2xl mx-auto pb-24">
-        <div className="h-[200px] relative" style={{ background: 'linear-gradient(135deg, #A85542, #4A6B8A)' }}>
+        <div className="h-[200px] relative" style={{ background: 'linear-gradient(135deg, var(--seal) 0%, var(--postmark) 100%)' }}>
           <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end gap-5">
             <Avatar name={user?.name} size={80} className="border-[4px] border-[var(--vellum)]" />
             <div className="mb-1">
-              <h1 className="font-display text-2xl text-white">{user?.name}</h1>
-              {family && <p className="text-white/80 text-[13px] font-mono tracking-[0.02em]">{family.name}</p>}
+              <h1 className="font-display text-2xl text-[var(--page)]">{user?.name}</h1>
+              {family && <p className="text-[var(--page)]/80 text-[13px] font-mono tracking-[0.02em]">{family.name}</p>}
             </div>
           </div>
         </div>
@@ -116,9 +116,9 @@ export default function ProfilePage() {
                 <motion.div key={post.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}
                   className="relative aspect-square bg-[var(--vellum)] overflow-hidden group cursor-pointer" onClick={() => navigate('/')}>
                   {post.photos?.[0] && <img src={post.photos[0].photo_url} alt="" className="w-full h-full object-cover" />}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-6 opacity-0 group-hover:opacity-100 text-white">
-                    <div className="flex items-center gap-1.5"><Heart size={16} fill="white" /><span className="text-sm font-medium">{post.likes_count}</span></div>
-                    <div className="flex items-center gap-1.5"><MessageCircle size={16} fill="white" /><span className="text-sm font-medium">{post.comments_count}</span></div>
+                  <div className="absolute inset-0 bg-[var(--ink)]/0 group-hover:bg-[var(--ink)]/30 transition-colors flex items-center justify-center gap-6 opacity-0 group-hover:opacity-100 text-[var(--page)]">
+                    <div className="flex items-center gap-1.5"><Heart size={16} fill="var(--page)" /><span className="text-sm font-medium">{post.likes_count}</span></div>
+                    <div className="flex items-center gap-1.5"><MessageCircle size={16} fill="var(--page)" /><span className="text-sm font-medium">{post.comments_count}</span></div>
                   </div>
                 </motion.div>
               ))}

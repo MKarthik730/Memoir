@@ -90,7 +90,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
               {memory.contributor ? (
                 <>
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium text-white"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium text-[var(--page)]"
                     style={{ background: 'var(--seal)' }}
                   >
                     {getInitials(memory.contributor.name)}

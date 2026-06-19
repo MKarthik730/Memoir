@@ -1,49 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  /* ─── Letter Box Palette ──────────────────────────────────────────────── */
-  --page:        #F2EFE7;   /* Off-white stationery paper background        */
-  --vellum:      #F8F5EF;   /* Slightly warmer layer for cards/elevated     */
-  --ink:         #1C1A17;   /* Fountain-pen ink for primary text            */
-  --ink-light:   #6B6560;   /* Lighter ink for secondary text               */
-  --ink-muted:   #9E9890;   /* Muted ink for placeholders/metadata          */
-  --seal:        #A85542;   /* Wax-seal red — primary accent, not terracotta */
-  --seal-hover:  #904535;   /* Deeper seal on hover */
-  --seal-light:  rgba(168, 85, 66, 0.08);
+  /* Core */
+  --page: #F2EFE7;
+  --vellum: #F8F5EF;
+  --ink: #1C1A17;
+  --ink-light: #6B6560;
+  --ink-muted: #9E9890;
+  --seal: #A85542;
+  --postmark: #4A6B8A;
+  --gilt: #C4984F;
+  --border: #E3DDD0;
+
+  /* Derived */
+  --seal-hover: #904535;
+  --seal-light: rgba(168, 85, 66, 0.08);
   --seal-lighter: rgba(168, 85, 66, 0.04);
-  --postmark:    #4A6B8A;   /* Slate-blue ink pad — secondary accent        */
   --postmark-light: rgba(74, 107, 138, 0.08);
-  --gilt:        #C4984F;   /* Gold foil — sparing use, highlights only     */
-  --gilt-light:  rgba(196, 152, 79, 0.12);
-  --gilt-pale:   rgba(196, 152, 79, 0.06);
-  --border:      #E3DDD0;   /* Thread/paper-edge color for borders          */
-  --border-light:#EFEAE0;   /* Lighter border for dividers                  */
+  --gilt-light: rgba(196, 152, 79, 0.12);
+  --gilt-pale: rgba(196, 152, 79, 0.06);
+  --border-light: #EFEAE0;
+  --success: #2E7D6E;
+  --success-bg: rgba(46, 125, 110, 0.08);
+  --danger: #B8453A;
+  --danger-bg: rgba(184, 69, 58, 0.08);
+  --info: #4A6B8A;
+  --info-bg: rgba(74, 107, 138, 0.08);
 
-  /* ─── Semantic ─────────────────────────────────────────────────────────── */
-  --success:     #2E7D6E;
-  --success-bg:  rgba(46, 125, 110, 0.08);
-  --danger:      #B8453A;
-  --danger-bg:   rgba(184, 69, 58, 0.08);
-  --info:        #4A6B8A;
-  --info-bg:     rgba(74, 107, 138, 0.08);
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(28, 26, 23, 0.05);
+  --shadow-md: 0 4px 12px rgba(28, 26, 23, 0.06);
+  --shadow-lg: 0 8px 28px rgba(28, 26, 23, 0.08);
 
-  /* ─── Shadows ──────────────────────────────────────────────────────────── */
-  --shadow-sm:   0 1px 2px rgba(28, 26, 23, 0.05);
-  --shadow-md:   0 4px 12px rgba(28, 26, 23, 0.06);
-  --shadow-lg:   0 8px 28px rgba(28, 26, 23, 0.08);
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
 
-  /* ─── Radii ────────────────────────────────────────────────────────────── */
-  --radius-sm:   6px;
-  --radius-md:   10px;
-  --radius-lg:   14px;
-
-  /* ─── Layout ───────────────────────────────────────────────────────────── */
+  /* Layout */
   --sidebar-width: 240px;
 
-  /* ─── Fonts ────────────────────────────────────────────────────────────── */
+  /* Fonts */
   --font-display: 'DM Serif Display', Georgia, serif;
-  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:    'DM Mono', 'Courier New', monospace;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'DM Mono', 'Courier New', monospace;
 }
 
 @theme {
@@ -78,11 +78,11 @@ html {
   scroll-behavior: smooth;
 }
 
-body {
+body, #root {
   font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.6;
-  background-color: var(--page);
+  background: var(--page);
   color: var(--ink);
   overflow-x: hidden;
 }
@@ -242,7 +242,7 @@ label {
 
 .btn-primary {
   background: var(--seal);
-  color: white;
+  color: var(--page);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -302,7 +302,7 @@ label {
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 500;
-  color: white;
+  color: var(--page);
   background: var(--seal);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -457,6 +457,18 @@ label {
   font-size: 9px;
   color: var(--postmark);
   flex-shrink: 0;
+}
+
+/* Postmark-styled date input */
+.postmark-input {
+  font-family: var(--font-mono) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.03em !important;
+  color: var(--postmark) !important;
+  border-color: var(--postmark) !important;
+  background: rgba(74, 107, 138, 0.04) !important;
+  border-radius: 2px !important;
+  padding: 8px 12px !important;
 }
 
 /* ─── Empty State ────────────────────────────────────────────────────────────── */

@@ -159,11 +159,14 @@ export default function AddMemoryPage() {
           {/* Date */}
           <div className="form-group">
             <label>Date</label>
-            <input
-              type="date"
-              value={form.memory_date}
-              onChange={(e) => setForm({ ...form, memory_date: e.target.value })}
-            />
+            <div className="relative">
+              <input
+                type="date"
+                value={form.memory_date}
+                onChange={(e) => setForm({ ...form, memory_date: e.target.value })}
+                className="postmark-input w-full"
+              />
+            </div>
           </div>
 
           {/* Photos */}
@@ -191,7 +194,7 @@ export default function AddMemoryPage() {
                   <div key={i} className="relative group">
                     <img src={url} alt="" className="w-20 h-20 object-cover rounded-[var(--radius-sm)] border border-[var(--border)]" />
                     <button type="button" onClick={() => removePhoto(i)}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-[var(--danger)] text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-[var(--danger)] text-[var(--page)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <X size={12} />
                     </button>
                   </div>
@@ -225,6 +228,11 @@ export default function AddMemoryPage() {
                   className="mt-1 text-xs text-[var(--danger)] hover:underline">Remove</button>
               </div>
             )}
+          </div>
+
+          {/* Thread divider */}
+          <div className="thread-divider mb-6">
+            <span className="thread-divider-dot" />
           </div>
 
           <button type="submit" disabled={loading || !form.title.trim()}

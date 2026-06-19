@@ -92,7 +92,7 @@ export default function CreatePostPage() {
               {previews.map((url, i) => (
                 <div key={i} className="relative group">
                   <img src={url} alt="" className="w-full h-24 object-cover rounded-[var(--radius-sm)] border border-[var(--border)]" />
-                  <button onClick={() => removePhoto(i)} className="absolute -top-2 -right-2 w-5 h-5 bg-[var(--danger)] text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                  <button onClick={() => removePhoto(i)} className="absolute -top-2 -right-2 w-5 h-5 bg-[var(--danger)] text-[var(--page)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
                 </div>
               ))}
             </div>

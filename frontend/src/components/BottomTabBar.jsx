@@ -38,7 +38,7 @@ export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
                 <Link
                   key={tab.id}
                   to={tab.path}
-                  className="w-12 h-12 -mt-3 rounded-full bg-[var(--seal)] text-white hover:bg-[var(--seal-hover)] flex items-center justify-center transition-all active:scale-95 shadow-[var(--shadow-md)]"
+                  className="w-12 h-12 -mt-3 rounded-full bg-[var(--seal)] text-[var(--page)] hover:bg-[var(--seal-hover)] flex items-center justify-center transition-all active:scale-95 shadow-[var(--shadow-md)]"
                 >
                   <Plus size={22} />
                 </Link>
@@ -72,7 +72,7 @@ export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
                 <Icon size={20} />
                 <span className="text-[9px] font-mono tracking-[0.03em]">{tab.label}</span>
                 {tab.id === 'notifications' && unreadCount > 0 && (
-                  <span className="absolute top-0 right-2 w-4 h-4 rounded-full bg-[var(--seal)] text-white text-[8px] font-bold flex items-center justify-center">
+                  <span className="absolute top-0 right-2 w-4 h-4 rounded-full bg-[var(--seal)] text-[var(--page)] text-[8px] font-bold flex items-center justify-center">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}

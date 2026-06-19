@@ -139,8 +139,8 @@ export default function PublicMemoryPage() {
           {/* Share */}
           <div className="text-center mt-6">
             <button onClick={handleWhatsAppShare}
-              className="btn inline-flex items-center gap-2 px-6 py-3 text-white rounded-[var(--radius-sm)] font-medium text-sm transition-all active:scale-[0.98]"
-              style={{ background: '#2E7D6E' }}>
+              className="btn inline-flex items-center gap-2 px-6 py-3 text-[var(--page)] rounded-[var(--radius-sm)] font-medium text-sm transition-all active:scale-[0.98]"
+              style={{ background: 'var(--success)' }}>
               <MessageCircle size={18} />
               Share on WhatsApp
             </button>

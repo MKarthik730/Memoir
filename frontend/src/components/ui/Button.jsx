@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 
 const variants = {
-  primary: 'bg-[var(--seal)] text-white hover:bg-[var(--seal-hover)]',
+  primary: 'bg-[var(--seal)] text-[var(--page)] hover:bg-[var(--seal-hover)]',
   secondary: 'bg-transparent text-[var(--seal)] border border-[var(--seal)] hover:bg-[var(--seal-light)]',
   ghost: 'bg-transparent text-[var(--ink-light)] hover:bg-[var(--seal-lighter)] hover:text-[var(--ink)]',
   danger: 'bg-transparent text-[var(--danger)] border border-[var(--danger)] hover:bg-[var(--danger-bg)]',

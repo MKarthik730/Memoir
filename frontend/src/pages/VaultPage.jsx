@@ -102,7 +102,7 @@ export default function VaultPage() {
         <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
           {folders.map(f => (
             <button key={f} onClick={() => setActiveFolder(f)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-[12px] font-mono tracking-[0.03em] transition-all ${activeFolder === f ? 'bg-[var(--seal)] text-white' : 'bg-transparent border border-[var(--border)] text-[var(--ink-light)] hover:border-[var(--seal)]'}`}>
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-[12px] font-mono tracking-[0.03em] transition-all ${activeFolder === f ? 'bg-[var(--seal)] text-[var(--page)]' : 'bg-transparent border border-[var(--border)] text-[var(--ink-light)] hover:border-[var(--seal)]'}`}>
               {f === 'All' ? f : f}
             </button>
           ))}
@@ -148,7 +148,7 @@ export default function VaultPage() {
                 </div>
                 {item.is_admin && (
                   <button onClick={() => handleDelete(item.id)}
-                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[var(--ink)]/40 text-[var(--page)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
                 )}
               </motion.div>
             ))}

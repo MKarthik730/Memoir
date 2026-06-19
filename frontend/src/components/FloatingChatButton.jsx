@@ -9,7 +9,7 @@ export default function FloatingChatButton({ familyId }) {
   return (
     <button
       onClick={() => navigate(`/family/${familyId}/assistant`)}
-      className="fixed bottom-24 md:bottom-8 right-6 z-50 w-14 h-14 rounded-full bg-[var(--seal)] text-white shadow-[var(--shadow-lg)] hover:bg-[var(--seal-hover)] active:scale-95 transition-all duration-200 flex items-center justify-center"
+      className="fixed bottom-24 md:bottom-8 right-6 z-50 w-14 h-14 rounded-full bg-[var(--seal)] text-[var(--page)] shadow-[var(--shadow-lg)] hover:bg-[var(--seal-hover)] active:scale-95 transition-all duration-200 flex items-center justify-center"
       title="Ask the Memory Assistant"
       aria-label="Open Memory Assistant"
     >

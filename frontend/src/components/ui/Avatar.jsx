@@ -35,7 +35,7 @@ export default function Avatar({ name, url, size = 36, className = '', onClick }
 
   return (
     <div
-      className={`rounded-full flex items-center justify-center flex-shrink-0 font-[var(--font-display)] text-white ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`rounded-full flex items-center justify-center flex-shrink-0 font-[var(--font-display)] text-[var(--page)] ${onClick ? 'cursor-pointer' : ''} ${className}`}
       style={{ width: size, height: size, background: getColor(name), fontSize }}
       onClick={onClick}
       title={name}

@@ -154,13 +154,13 @@ export default function AssistantPage() {
               >
                 {msg.role === 'assistant' && (
                   <div className="w-8 h-8 rounded-full bg-[var(--seal)] flex items-center justify-center flex-shrink-0 mr-3 mt-1">
-                    <MessageCircle size={14} className="text-white" />
+                    <MessageCircle size={14} className="text-[var(--page)]" />
                   </div>
                 )}
                 <div
                   className={`max-w-[75%] px-5 py-3 rounded-[var(--radius-md)] ${
                     msg.role === 'user'
-                      ? 'bg-[var(--seal)] text-white rounded-br-[4px]'
+                      ? 'bg-[var(--seal)] text-[var(--page)] rounded-br-[4px]'
                       : 'bg-[var(--vellum)] border border-[var(--border)] text-[var(--ink)] rounded-bl-[4px]'
                   }`}
                 >
@@ -213,7 +213,7 @@ export default function AssistantPage() {
             <button
               onClick={handleSend}
               disabled={!message.trim() || streaming}
-              className="w-11 h-11 rounded-full bg-[var(--seal)] text-white hover:bg-[var(--seal-hover)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-95 flex-shrink-0"
+              className="w-11 h-11 rounded-full bg-[var(--seal)] text-[var(--page)] hover:bg-[var(--seal-hover)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-95 flex-shrink-0"
             >
               {streaming ? (
                 <Loader2 size={18} className="animate-spin" />

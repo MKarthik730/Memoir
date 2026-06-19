@@ -96,9 +96,9 @@ export default function FamilyHomePage() {
           <div className="px-6 py-5 max-w-5xl mx-auto flex items-center justify-between">
             <div>
               <h1 className="font-display text-xl">{family?.name || 'Family'}</h1>
-              <p className="text-[12px] text-[var(--ink-light)] mt-0.5 font-mono tracking-[0.02em]">
-                {people.length} {people.length === 1 ? 'page' : 'pages'}
-              </p>
+              <div className="postmark inline-flex mt-1">
+                <span>{people.length} {people.length === 1 ? 'page' : 'pages'}</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -176,7 +176,7 @@ export default function FamilyHomePage() {
                       <Avatar name={person.name} url={person.photo_url} size={44} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3">
-                          <h3 className="font-medium text-[var(--ink)] truncate">{person.name}</h3>
+                          <h3 className="font-display text-[var(--ink)] truncate">{person.name}</h3>
                           {person.relationship_tag && (
                             <span className="flex-shrink-0 px-2.5 py-0.5 rounded-full border border-[var(--postmark)] text-[10px] text-[var(--postmark)] font-mono tracking-[0.03em]">
                               {person.relationship_tag}
