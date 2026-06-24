@@ -2,15 +2,15 @@
 
 :root {
   /* Core */
-  --page: #F2EFE7;
-  --vellum: #F8F5EF;
+  --page: #F7F8FA;
+  --vellum: #F0F1F3;
   --ink: #1C1A17;
   --ink-light: #6B6560;
   --ink-muted: #9E9890;
   --seal: #A85542;
   --postmark: #4A6B8A;
   --gilt: #C4984F;
-  --border: #E3DDD0;
+  --border: #E0E2E6;
 
   /* Derived */
   --seal-hover: #904535;
@@ -19,7 +19,7 @@
   --postmark-light: rgba(74, 107, 138, 0.08);
   --gilt-light: rgba(196, 152, 79, 0.12);
   --gilt-pale: rgba(196, 152, 79, 0.06);
-  --border-light: #EFEAE0;
+  --border-light: #E8EAED;
   --success: #2E7D6E;
   --success-bg: rgba(46, 125, 110, 0.08);
   --danger: #B8453A;
@@ -47,8 +47,8 @@
 }
 
 @theme {
-  --color-page: #F2EFE7;
-  --color-vellum: #F8F5EF;
+  --color-page: #F7F8FA;
+  --color-vellum: #F0F1F3;
   --color-ink: #1C1A17;
   --color-ink-light: #6B6560;
   --color-ink-muted: #9E9890;
@@ -56,7 +56,7 @@
   --color-seal-hover: #904535;
   --color-postmark: #4A6B8A;
   --color-gilt: #C4984F;
-  --color-border: #E3DDD0;
+  --color-border: #E0E2E6;
   --color-success: #2E7D6E;
   --color-danger: #B8453A;
   --font-display: 'DM Serif Display', Georgia, serif;

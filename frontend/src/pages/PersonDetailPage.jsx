@@ -79,7 +79,6 @@ export default function PersonDetailPage() {
         doc.text(`${i + 1}. ${memory.title}`, 30, y);
       });
 
-      // Helper: load an image URL into a data URL via canvas, returning dimensions
       const loadImageToDataUrl = (url) => {
         return new Promise((resolve, reject) => {
           const img = new Image();
@@ -123,7 +122,7 @@ export default function PersonDetailPage() {
           yPos += 12;
         }
 
-        // Photos — load all in parallel, then render preserving aspect ratio
+        // Photos
         const photoList = memory.photos || [];
         const photoDataUrls = await Promise.allSettled(
           photoList.slice(0, 4).map((p) => loadImageToDataUrl(p.photo_url))
@@ -136,7 +135,6 @@ export default function PersonDetailPage() {
           const imgWidth = pageWidth - 40;
           const maxImgHeight = 80;
           for (const { dataUrl, width, height } of loadedPhotos) {
-            // Compute dimensions preserving aspect ratio using pre-loaded canvas dimensions
             const aspectRatio = width / height;
             let renderW = imgWidth;
             let renderH = imgWidth / aspectRatio;
@@ -196,7 +194,7 @@ export default function PersonDetailPage() {
     return (
       <div className="min-h-screen bg-[var(--page)] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-thread-pull w-32 h-px mx-auto mb-4" />
+          <div className="thread-line w-32 mx-auto mb-4" />
           <p className="text-[var(--ink-muted)] text-sm font-mono text-xs tracking-wider">Opening this page...</p>
         </div>
       </div>
@@ -207,12 +205,12 @@ export default function PersonDetailPage() {
     return (
       <div className="min-h-screen bg-[var(--page)] flex items-center justify-center">
         <div className="text-center animate-fade-in-up">
-          <div className="w-16 h-16 mx-auto mb-5 rounded-full border-1.5 border-dashed border-[var(--border)] flex items-center justify-center">
-            <BookOpen size={26} className="text-[var(--ink-muted)]" style={{ opacity: 0.4 }} />
+          <div className="w-16 h-16 mx-auto mb-5 rounded-full border-[1.5px] border-dashed border-[var(--border)] flex items-center justify-center">
+            <BookOpen size={26} className="text-[var(--ink-muted)] opacity-40" />
           </div>
           <h1 className="font-display text-xl mb-2">Page not found</h1>
           <p className="text-[var(--ink-light)] text-sm mb-6">This chapter doesn't seem to exist.</p>
-          <Link to="/family" className="btn btn-primary">Go Home</Link>
+          <Link to="/family" className="px-4 py-2 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-colors" style={{ color: 'var(--page)', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>Go Home</Link>
         </div>
       </div>
     );
@@ -224,53 +222,55 @@ export default function PersonDetailPage() {
 
       <div className="flex-1 min-w-0" style={{ paddingBottom: 80 }}>
         {/* Hero */}
-        <div className="relative h-[280px] md:h-[320px] overflow-hidden bg-[var(--page)]">
+        <div className="relative h-[280px] overflow-hidden">
           {person.photo_url ? (
-            <img src={person.photo_url} alt="" className="w-full h-full object-cover" style={{ filter: 'brightness(0.7)' }} />
+            <img src={person.photo_url} alt="" className="w-full h-full object-cover" style={{ filter: 'brightness(0.65)' }} />
           ) : (
             <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--seal) 0%, var(--postmark) 100%)' }} />
           )}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(28,26,23,0.6), transparent)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(28,26,23,0.75) 0%, transparent 60%)' }} />
 
-          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-            <div className="flex items-end justify-between">
-              <div className="flex items-center gap-5">
-                <Avatar name={person.name} url={person.photo_url} size={72} className="border-[3px] border-[var(--page)]/80" />
-                <div>
-                  <h1 className="font-display text-3xl md:text-[40px] text-[var(--page)]">{person.name}</h1>
-                  <div className="flex items-center gap-3 mt-1">
-                    {person.relationship_tag && (
-                      <span className="px-3 py-0.5 text-[11px] rounded-full border border-[var(--page)]/30 text-[var(--page)]/90 font-mono tracking-[0.03em]">
-                        {person.relationship_tag}
-                      </span>
-                    )}
-                    {person.dob && (
-                      <span className="font-mono text-[12px] text-[var(--page)]/80 flex items-center gap-1">
-                        <Calendar size={13} />
-                        Born {formatDate(person.dob)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Link to={`/people/${person_id}/add-memory`} className="btn btn-primary btn-sm">
-                  <Plus size={16} />
-                  <span className="hidden sm:inline">Add Entry</span>
-                </Link>
-                <button onClick={handleGeneratePDF} className="btn btn-secondary btn-sm">
-                  <BookOpen size={16} />
-                  <span className="hidden sm:inline">Bind Book</span>
-                </button>
-              </div>
+          <div className="absolute bottom-0 left-0 right-0 px-6 pb-6">
+            <h1 className="font-display text-[26px] text-[var(--page)] mb-1">{person.name}</h1>
+            <div className="flex items-center gap-3">
+              {person.relationship_tag && (
+                <span className="px-3 py-0.5 text-[11px] rounded-full border border-[var(--vellum)]/30 text-[var(--vellum)]/90 font-mono tracking-[0.03em]">
+                  {person.relationship_tag}
+                </span>
+              )}
+              {person.dob && (
+                <span className="font-mono text-[12px] text-[var(--vellum)]/80 flex items-center gap-1">
+                  <Calendar size={13} />
+                  Born {formatDate(person.dob)}
+                </span>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Avatar overlap */}
+        <div className="px-6" style={{ marginTop: -36 }}>
+          <div className="flex items-end justify-between">
+            <Avatar
+              name={person.name}
+              url={person.photo_url}
+              size={72}
+              className="border-[3px] border-[var(--vellum)]"                    />
+            <div className="flex gap-2 pb-1">
+              <Link to={`/people/${person_id}/add-memory`} className="px-4 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors no-underline">
+              <Plus size={14} className="inline mr-1" />Add Entry
+            </Link>
+            <button onClick={handleGeneratePDF} className="px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(168,85,66,0.08)] transition-colors">
+              <BookOpen size={14} className="inline mr-1" />Bind Book
+            </button>
+          </div>
+        </div>
         </div>
 
         {/* Bio */}
         {person.bio && (
           <div className="px-6 py-5 border-b border-[var(--border)]">
-            <p className="text-[var(--ink-light)] leading-relaxed max-w-3xl mx-auto text-[14px] font-body italic">{person.bio}</p>
+            <p className="text-[var(--ink-light)] leading-relaxed max-w-3xl mx-auto text-[14px] italic">{person.bio}</p>
           </div>
         )}
 
@@ -283,26 +283,25 @@ export default function PersonDetailPage() {
                 {memories.length} {memories.length === 1 ? 'letter' : 'letters'}
               </span>
             </div>
-            <Link to={`/people/${person_id}/add-memory`} className="btn btn-primary btn-sm">
-              <Plus size={16} /> New Entry
+            <Link to={`/people/${person_id}/add-memory`} className="px-4 py-1.5 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-colors" style={{ color: 'var(--page)', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
+              <Plus size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />New Entry
             </Link>
           </div>
 
           {memories.length === 0 ? (
-            <div className="empty-journal animate-fade-in-up">
-              <BookOpen size={36} className="mx-auto mb-4 text-[var(--ink-muted)]" style={{ opacity: 0.3 }} />
+            <div className="text-center py-16 animate-fade-in-up">
+              <BookOpen size={36} className="mx-auto mb-4 text-[var(--ink-muted)] opacity-30" />
               <div className="thread-divider max-w-[80px] mx-auto mb-6" />
               <h3 className="font-display text-xl mb-2">The first page is waiting</h3>
               <p className="text-[var(--ink-light)] text-sm max-w-xs mx-auto mb-6 leading-relaxed">
                 Nothing has been written yet. Start {person.name}'s story with the first memory.
               </p>
-              <Link to={`/people/${person_id}/add-memory`} className="btn-seal">
-                <Plus size={18} />
-                Write the First Entry
+              <Link to={`/people/${person_id}/add-memory`} className="px-6 py-3 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(168,85,66,0.2)]" style={{ color: 'var(--page)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
+                <Plus size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />Write the First Entry
               </Link>
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {memories.map((memory) => (
                 <MemoryCard key={memory.id} memory={memory} personName={person.name} />
               ))}
@@ -314,7 +313,7 @@ export default function PersonDetailPage() {
       {/* PDF Progress Modal */}
       {pdfProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(28,26,23,0.3)', backdropFilter: 'blur(4px)' }}>
-          <div className="bg-[var(--vellum)] rounded-[var(--radius-md)] p-8 shadow-[var(--shadow-lg)] max-w-sm w-full text-center animate-fade-in border border-[var(--border)]">
+          <div className="bg-[var(--vellum)] rounded-[14px] p-8 shadow-[var(--shadow-lg)] max-w-sm w-full text-center animate-fade-in border border-[var(--border)]">
             <BookOpen size={36} className="mx-auto mb-4 text-[var(--seal)]" />
             <p className="text-[var(--ink)] text-sm font-mono text-xs tracking-wider">{pdfProgress}</p>
             <div className="mt-6 h-1.5 bg-[var(--page)] rounded-full overflow-hidden">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Key, Trash2, Check, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -69,28 +69,29 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--page)]">
-      <div className="max-w-2xl mx-auto px-6 py-8 animate-fade-in-up">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button onClick={() => navigate(-1)} className="btn-icon">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
+        <div className="max-w-2xl mx-auto px-4 h-full flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors">
             <ArrowLeft size={18} />
           </button>
-          <h1 className="font-display text-xl">Settings</h1>
+          <h1 className="text-[17px] font-medium text-[var(--ink)]">Settings</h1>
         </div>
+      </div>
 
+      <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in-up space-y-6">
         {/* API Keys Section */}
-        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[var(--radius-md)] p-6 mb-6">
+        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[10px] p-6">
           <div className="flex items-center gap-3 mb-4">
             <Key size={20} className="text-[var(--seal)]" />
             <h2 className="font-display text-lg">API Keys</h2>
           </div>
           <p className="text-sm text-[var(--ink-light)] mb-6">
-            Add your LLM provider API keys for AI-powered features.
-            Keys are encrypted at rest and never stored in plain text.
+            Add your LLM provider API keys for AI-powered features. Keys are encrypted at rest.
           </p>
 
           {message && (
-            <div className="mb-4 px-4 py-3 bg-[var(--page)] rounded-[var(--radius-sm)] text-sm font-mono text-xs border border-[var(--border)]">
+            <div className="mb-4 px-4 py-3 bg-[var(--page)] rounded-[6px] text-sm font-mono text-xs border border-[var(--border)]">
               {message}
             </div>
           )}
@@ -98,48 +99,48 @@ export default function SettingsPage() {
           {/* Existing Keys */}
           {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map(i => <div key={i} className="skeleton h-12 rounded-[var(--radius-sm)]" />)}
+              {[1, 2, 3].map(i => <div key={i} className="skeleton h-12 rounded-[6px]" />)}
             </div>
           ) : apiKeys.length > 0 ? (
             <div className="space-y-2 mb-6">
               <p className="font-mono text-[10px] text-[var(--ink-muted)] uppercase tracking-[0.08em]">Saved Keys</p>
               {apiKeys.map((ak) => (
-                <div key={ak.provider} className="flex items-center justify-between px-4 py-3 bg-[var(--page)] rounded-[var(--radius-sm)] border border-[var(--border)]">
+                <div key={ak.provider} className="flex items-center justify-between px-4 py-3 bg-[var(--page)] rounded-[6px] border border-[var(--border)]">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium capitalize">{ak.provider}</span>
                     <span className="font-mono text-[11px] text-[var(--ink-muted)]">{ak.masked_key}</span>
                   </div>
                   <button onClick={() => handleDelete(ak.provider)}
-                    className="p-1.5 text-[var(--ink-muted)] hover:text-[var(--danger)] transition-colors">
-                    <Trash2 size={16} />
+                    className="px-3 py-1.5 rounded-full bg-transparent text-[var(--danger)] border border-[var(--danger)] text-[11px] font-medium hover:bg-[var(--danger-bg)] transition-colors">
+                    <Trash2 size={14} className="inline mr-1" />Remove
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-[var(--ink-muted)] mb-6 font-body italic">No API keys saved yet.</p>
+            <p className="text-sm text-[var(--ink-muted)] mb-6 italic">No API keys saved yet.</p>
           )}
 
           {/* Add Key Form */}
           <form onSubmit={handleSave} className="border-t border-[var(--border)] pt-4">
-            <div className="flex gap-3 mb-3">
-              <div className="flex-1">
-                <label>Provider</label>
-                <select value={provider} onChange={(e) => setProvider(e.target.value)}>
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
-                  <option value="groq">Groq</option>
-                </select>
-              </div>
+            <div className="mb-4">
+              <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Provider</label>
+              <select value={provider} onChange={(e) => setProvider(e.target.value)}
+                className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] outline-none focus:border-[var(--seal)] transition-colors">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="groq">Groq</option>
+              </select>
             </div>
-            <div className="form-group" style={{ marginBottom: 12 }}>
-              <label>API Key</label>
+            <div className="mb-5">
+              <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">API Key</label>
               <div className="relative">
                 <input
                   type={showKey ? 'text' : 'password'}
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
                   placeholder={`Enter your ${provider} API key`}
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] outline-none focus:border-[var(--seal)] transition-colors pr-10"
                 />
                 <button type="button" onClick={() => setShowKey(!showKey)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]">
@@ -147,22 +148,25 @@ export default function SettingsPage() {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={saving || !key.trim()} className="btn btn-primary btn-sm">
+            <button type="submit" disabled={saving || !key.trim()} className="px-5 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] text-[13px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-colors inline-flex items-center gap-1">
               {saving ? 'Saving...' : <><Check size={16} /> Save Key</>}
             </button>
           </form>
         </div>
 
         {/* Info */}
-        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[var(--radius-md)] p-6">
-          <h3 className="font-display text-base mb-2">About API Keys</h3>
-          <ul className="text-sm text-[var(--ink-light)] space-y-2">
-            <li>Your keys are encrypted at rest using Fernet (AES-128-CBC)</li>
-            <li>The server never stores your full key in plain text</li>
-            <li>Keys are fetched per-request and never cached in logs</li>
-            <li>Supported: OpenAI, Anthropic (Claude), or Groq</li>
-            <li>No API key? You can still search and explore your family tree</li>
-          </ul>
+        <div className="p-[14px] border rounded-[8px] flex items-start gap-3" style={{ background: 'rgba(74,107,138,0.06)', borderColor: 'rgba(74,107,138,0.15)' }}>
+          <Key size={16} className="text-[var(--postmark)] flex-shrink-0 mt-[2px]" />
+          <div>
+            <h3 className="text-[13px] font-medium text-[var(--ink)] mb-1">About API Keys</h3>
+            <ul className="text-[12px] text-[var(--ink-light)] space-y-1 leading-relaxed">
+              <li>Your keys are encrypted at rest using Fernet (AES-128-CBC)</li>
+              <li>The server never stores your full key in plain text</li>
+              <li>Keys are fetched per-request and never cached in logs</li>
+              <li>Supported: OpenAI, Anthropic (Claude), or Groq</li>
+              <li>No API key? You can still search and explore your family tree</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

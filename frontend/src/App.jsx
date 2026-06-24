@@ -17,6 +17,9 @@ import CreatePostPage from './pages/CreatePostPage';
 import VaultPage from './pages/VaultPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
+import TripsPage from './pages/TripsPage';
+import TripDetailPage from './pages/TripDetailPage';
+import CreateTripPage from './pages/CreateTripPage';
 import { ToastProvider } from './components/ui';
 
 function PrivateRoute({ children }) {
@@ -54,6 +57,9 @@ function AnimatedRoutes() {
           <Route path="/vault" element={<PrivateRoute><VaultPage /></PrivateRoute>} />
           <Route path="/notifications" element={<PrivateRoute><NotificationsPage /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+          <Route path="/trips" element={<PrivateRoute><TripsPage /></PrivateRoute>} />
+          <Route path="/trips/new" element={<PrivateRoute><CreateTripPage /></PrivateRoute>} />
+          <Route path="/trips/:trip_id" element={<PrivateRoute><TripDetailPage /></PrivateRoute>} />
 
           {/* Legacy routes (kept for backward compat) */}
           <Route path="/create-family" element={<PrivateRoute><CreateFamilyPage /></PrivateRoute>} />

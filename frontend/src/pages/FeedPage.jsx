@@ -15,11 +15,9 @@ function StoryBubble({ user, onOpen }) {
   const firstStory = user.stories?.[0];
   const hasUnseen = firstStory && !firstStory.has_viewed;
   return (
-    <button onClick={() => onOpen(user)} className="flex flex-col items-center gap-1 flex-shrink-0 w-[72px]">
-      <div className={`rounded-full p-[3px] ${hasUnseen ? 'bg-[var(--seal)]' : 'bg-[var(--border)]'}`}>
-        <div className="rounded-full bg-[var(--page)] p-[2px]">
-          <Avatar name={user.user_name} url={user.avatar_url} size={56} />
-        </div>
+    <button onClick={() => onOpen(user)} className="flex flex-col items-center gap-1 flex-shrink-0 w-[68px]">
+      <div className={`rounded-full p-[2px] ${hasUnseen ? 'border-2 border-[var(--seal)]' : 'border-2 border-[var(--border)]'}`}>
+        <Avatar name={user.user_name} url={user.avatar_url} size={56} />
       </div>
       <span className="text-[10px] font-mono text-[var(--ink-light)] truncate w-full text-center">
         {user.user_name?.split(' ')[0]}
@@ -134,7 +132,7 @@ function BirthdayBanner({ birthdays }) {
     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
       {birthdays.map((b) => (
         <div key={b.person_id}
-          className="flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-[var(--radius-md)] border border-[var(--gilt)]/30"
+          className="flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[var(--gilt)]/30"
           style={{ background: 'rgba(196, 152, 79, 0.08)', minWidth: 200 }}>
           <Cake size={20} className="text-[var(--gilt)] flex-shrink-0" />
           <div className="min-w-0">
@@ -192,27 +190,28 @@ function PostCard({ post, index }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.06 }}
-      className="bg-[var(--vellum)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] overflow-hidden"
+      className="bg-[var(--vellum)] border border-[var(--border)] rounded-[12px] overflow-hidden shadow-[0_2px_8px_rgba(28,26,23,0.04)] mb-4"
     >
-      <div className="flex items-center gap-3 px-5 py-4">
-        <Avatar name={post.user?.name} url={post.user?.avatar_url} size={40} />
+      {/* Post header */}
+      <div className="px-4 py-3 flex items-center gap-[10px]">
+        <Avatar name={post.user?.name} url={post.user?.avatar_url} size={36} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-[var(--ink)] cursor-pointer"
-            onClick={() => navigate(`/people/${post.user_id}`)}>{post.user?.name}</p>
+          <p className="text-[14px] font-medium text-[var(--ink)] cursor-pointer">{post.user?.name}</p>
           <div className="flex items-center gap-2">
             {post.location && (
-              <span className="flex items-center gap-1 text-[11px] text-[var(--ink-muted)]"><MapPin size={10} />{post.location}</span>
+              <span className="flex items-center gap-1 text-[12px] font-mono text-[var(--ink-muted)]"><MapPin size={10} />{post.location}</span>
             )}
-            <span className="text-[11px] font-mono text-[var(--ink-muted)]">
+            <span className="text-[12px] font-mono text-[var(--ink-muted)]">
               {post.created_at ? new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
             </span>
           </div>
         </div>
       </div>
 
+      {/* Photo area (edge-to-edge, no side padding) */}
       {photos.length > 0 && (
-        <div className="relative">
-          <img src={photos[currentPhoto]?.photo_url} alt="" className="w-full max-h-[480px] object-cover bg-[var(--page)]" />
+        <div className="relative" style={{ borderRadius: 0 }}>
+          <img src={photos[currentPhoto]?.photo_url} alt="" className="w-full max-h-[400px] object-cover bg-[var(--page)]" style={{ borderRadius: 0 }} />
           {photos.length > 1 && (
             <>
               {currentPhoto > 0 && (
@@ -237,19 +236,20 @@ function PostCard({ post, index }) {
         </div>
       )}
 
-      <div className="flex items-center gap-4 px-5 py-3">
+      {/* Action row */}
+      <div className="flex items-center gap-4 px-4 py-3">
         <button onClick={handleLike} className="transition-transform active:scale-125">
-          <Heart size={22} className={liked ? 'fill-[var(--seal)] text-[var(--seal)]' : 'text-[var(--ink-light)]'} />
+          <Heart size={20} className={liked ? 'fill-[var(--seal)] text-[var(--seal)]' : 'text-[var(--ink-light)]'} />
         </button>
         <button onClick={() => setShowComments(!showComments)} className="text-[var(--ink-light)] hover:text-[var(--ink)] transition-colors">
-          <MessageCircle size={22} />
+          <MessageCircle size={20} />
         </button>
-        <div className="flex-1" />
-        <span className="text-[12px] font-mono text-[var(--ink-muted)]">{likesCount} like{likesCount !== 1 ? 's' : ''}</span>
+        <span className="ml-auto text-[13px] font-mono text-[var(--ink-muted)]">{likesCount} like{likesCount !== 1 ? 's' : ''}</span>
       </div>
 
+      {/* Caption */}
       {post.caption && (
-        <div className="px-5 pb-2">
+        <div className="px-4 pb-3">
           <p className="text-[14px] text-[var(--ink)] leading-relaxed">
             <span className="font-medium">{post.user?.name}</span>{' '}
             {expanded || post.caption.length < 150 ? post.caption : post.caption.slice(0, 150) + '... '}
@@ -262,9 +262,10 @@ function PostCard({ post, index }) {
         </div>
       )}
 
+      {/* Comments */}
       {showComments && (
         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="border-t border-[var(--border)]">
-          <div className="px-5 py-3 space-y-3 max-h-[240px] overflow-y-auto">
+          <div className="px-4 py-3 space-y-3 max-h-[240px] overflow-y-auto">
             {post.comments_count > 2 && (
               <button className="text-[13px] text-[var(--postmark)] hover:underline">View all {post.comments_count} comments</button>
             )}
@@ -283,7 +284,7 @@ function PostCard({ post, index }) {
               </div>
             ))}
           </div>
-          <form onSubmit={handleSubmitComment} className="flex items-center gap-2 px-5 py-3 border-t border-[var(--border)]">
+          <form onSubmit={handleSubmitComment} className="flex items-center gap-2 px-4 py-3 border-t border-[var(--border)]">
             <Avatar name={localStorage.getItem('memoir_user') ? JSON.parse(localStorage.getItem('memoir_user') || '{}').name : ''} size={28} />
             <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment..." className="flex-1 bg-transparent border-none outline-none text-[13px] text-[var(--ink)] placeholder:text-[var(--ink-muted)]" />
@@ -298,11 +299,11 @@ function PostCard({ post, index }) {
 
 function FeedSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-[var(--vellum)] border border-[var(--border)] rounded-[var(--radius-md)] p-5 space-y-4 animate-pulse">
-          <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-[var(--border)]" /><div className="space-y-2 flex-1"><div className="h-3 w-24 bg-[var(--border)] rounded" /><div className="h-2 w-16 bg-[var(--border-light)] rounded" /></div></div>
-          <div className="h-[320px] bg-[var(--border)] rounded-[var(--radius-sm)]" />
+        <div key={i} className="bg-[var(--vellum)] border border-[var(--border)] rounded-[12px] p-4 space-y-4 animate-pulse">
+          <div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full bg-[var(--border)]" /><div className="space-y-2 flex-1"><div className="h-3 w-24 bg-[var(--border)] rounded" /><div className="h-2 w-16 bg-[var(--border-light)] rounded" /></div></div>
+          <div className="h-[320px] bg-[var(--border)] rounded-[6px]" />
           <div className="flex gap-4"><div className="h-5 w-5 bg-[var(--border)] rounded" /><div className="h-5 w-5 bg-[var(--border)] rounded" /></div>
         </div>
       ))}
@@ -378,14 +379,10 @@ export default function FeedPage() {
       <Sidebar family={family} familyId={familyId} activePage="feed" />
 
       <div className="flex-1 min-w-0" style={{ paddingBottom: 80 }}>
-        <div className="sticky top-0 z-40 bg-[var(--page)]/95 backdrop-blur-sm border-b border-[var(--border)]">
-          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
-                <span className="font-display text-sm text-[var(--seal)]">M</span>
-              </div>
-              <h1 className="font-display text-lg text-[var(--ink)]">Memoir</h1>
-            </div>
+        {/* Header */}
+        <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
+          <div className="max-w-[600px] mx-auto px-4 h-full flex items-center justify-between">
+            <h1 className="font-display italic text-[22px] text-[var(--ink)]">Memoir</h1>
             <div className="flex items-center gap-3">
               <button onClick={() => navigate('/notifications')} className="relative">
                 <Heart size={20} className="text-[var(--ink-light)] hover:text-[var(--ink)] transition-colors" />
@@ -395,14 +392,16 @@ export default function FeedPage() {
                   </span>
                 )}
               </button>
-              <button onClick={() => navigate('/post/new')} className="btn btn-primary btn-sm">
-                <Camera size={15} /><span className="hidden sm:inline">Post</span>
+              <button onClick={() => navigate('/post/new')} className="px-4 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors">
+                <Camera size={14} className="inline mr-1" />Post
               </button>
             </div>
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto px-4 py-6 pb-24 space-y-6">
+        {/* Feed content */}
+        <div className="max-w-[600px] mx-auto px-4 py-6 pb-24 space-y-4">
+          {/* Stories */}
           {stories.length > 0 && (
             <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
               {stories.map((user, i) => (
@@ -411,24 +410,28 @@ export default function FeedPage() {
             </div>
           )}
 
+          {/* Birthdays */}
           {birthdays.length > 0 && <BirthdayBanner birthdays={birthdays} />}
 
+          {/* Posts or empty */}
           {loading ? <FeedSkeleton /> : (
             posts.length === 0 ? (
               <div className="text-center py-20 animate-fade-in">
-                <div className="w-16 h-16 mx-auto mb-5 rounded-full border-2 border-dashed border-[var(--border)] flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-5 rounded-full border-[1.5px] border-dashed border-[var(--border)] flex items-center justify-center">
                   <Camera size={28} className="text-[var(--ink-muted)] opacity-40" />
                 </div>
                 <div className="thread-divider max-w-[100px] mx-auto mb-6" />
                 <h2 className="font-display text-xl mb-2">No posts yet</h2>
                 <p className="text-[var(--ink-light)] text-sm max-w-sm mx-auto mb-6">Share your first family memory — a photo, a story, a moment.</p>
-                <button onClick={() => navigate('/post/new')} className="btn-seal"><Camera size={18} /> Share a Memory</button>
+                <button onClick={() => navigate('/post/new')} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all active:scale-[0.98] shadow-[0_2px_8px_rgba(168,85,66,0.2)]">
+                  <Camera size={18} className="inline mr-2" />Share a Memory
+                </button>
               </div>
             ) : (
-              <div className="space-y-6">
+              <>
                 {posts.map((post, i) => <PostCard key={post.id} post={post} index={i} />)}
-                {hasMore && <div ref={loaderRef} className="flex justify-center py-4"><div className="animate-thread-pull w-32 h-px" /></div>}
-              </div>
+                {hasMore && <div ref={loaderRef} className="flex justify-center py-4"><div className="thread-line w-32" /></div>}
+              </>
             )
           )}
         </div>

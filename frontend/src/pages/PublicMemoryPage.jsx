@@ -35,7 +35,7 @@ export default function PublicMemoryPage() {
     return (
       <div className="min-h-screen bg-[var(--page)] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-thread-pull w-32 h-px mx-auto mb-4" />
+          <div className="thread-line w-32 mx-auto mb-4" />
           <p className="text-[var(--ink-muted)] text-sm font-mono text-xs tracking-wider">Opening this letter...</p>
         </div>
       </div>
@@ -46,12 +46,12 @@ export default function PublicMemoryPage() {
     return (
       <div className="min-h-screen bg-[var(--page)] flex items-center justify-center p-4">
         <div className="text-center max-w-md animate-fade-in-up">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-dashed border-[var(--border)] flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full border-[1.5px] border-dashed border-[var(--border)] flex items-center justify-center">
             <span className="font-display text-2xl text-[var(--ink-muted)]">M</span>
           </div>
           <h1 className="font-display text-2xl mb-4">This letter is lost.</h1>
           <p className="text-[var(--ink-light)] mb-8">{error || 'The memory you are looking for does not exist.'}</p>
-          <Link to="/" className="btn btn-primary">Go Home</Link>
+          <Link to="/" className="px-5 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] text-[13px] font-medium hover:bg-[var(--seal-hover)] transition-colors">Go Home</Link>
         </div>
       </div>
     );
@@ -62,9 +62,8 @@ export default function PublicMemoryPage() {
   return (
     <div className="min-h-screen bg-[var(--page)]">
       <div className="max-w-2xl mx-auto px-4 py-12 animate-fade-in-up">
-        {/* Breadcrumb */}
         <div className="text-center mb-8">
-          <div className="postmark inline-flex mx-auto mb-4">
+          <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] inline-flex mx-auto mb-4 bg-[rgba(74,107,138,0.04)]">
             <span>Shared letter</span>
           </div>
           {memory.family_name && (
@@ -74,37 +73,30 @@ export default function PublicMemoryPage() {
           )}
         </div>
 
-        {/* Memory Content */}
-        <div className="bg-[var(--vellum)] rounded-[var(--radius-md)] p-8 md:p-10 border border-[var(--border)] shadow-[var(--shadow-sm)] relative">
-          {/* Thread line */}
+        <div className="bg-[var(--vellum)] rounded-[14px] p-8 md:p-10 border border-[var(--border)] shadow-[0_8px_32px_rgba(28,26,23,0.1)] relative">
           <div className="absolute left-0 top-0 bottom-0 w-[3px] opacity-40"
             style={{
               background: 'repeating-linear-gradient(to bottom, var(--border) 0px, var(--border) 4px, transparent 4px, transparent 8px)',
             }}
           />
 
-          {/* Title + Postmark Date */}
           <div className="flex items-start justify-between gap-4 mb-6">
-            <h1 className="font-display text-[32px] text-[var(--ink)] leading-tight">
-              {memory.title}
-            </h1>
+            <h1 className="font-display text-[32px] text-[var(--ink)] leading-tight">{memory.title}</h1>
             {memory.memory_date && (
-              <div className="postmark flex-shrink-0 mt-2">
+              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(74,107,138,0.04)] flex-shrink-0 mt-2">
                 <span>{formatDate(memory.memory_date)}</span>
               </div>
             )}
           </div>
 
-          {/* Story */}
           {memory.story_text && (
             <div className="mb-8">
-              <p className="text-[var(--ink)] leading-relaxed whitespace-pre-line font-body" style={{ fontSize: '15px', lineHeight: '1.8' }}>
+              <p className="text-[var(--ink)] leading-relaxed whitespace-pre-line" style={{ fontSize: '15px', lineHeight: '1.8' }}>
                 {memory.story_text}
               </p>
             </div>
           )}
 
-          {/* Photos */}
           {photos.length > 0 && (
             <div className="mb-8 space-y-4">
               {photos.map((photo) => (
@@ -112,56 +104,49 @@ export default function PublicMemoryPage() {
                   key={photo.id}
                   src={photo.photo_url}
                   alt={photo.caption || ''}
-                  className="w-full rounded-[var(--radius-md)] border border-[var(--border)] cursor-pointer hover:opacity-95 transition-opacity"
+                  className="w-full rounded-[10px] border border-[var(--border)] cursor-pointer hover:opacity-95 transition-opacity"
                   onClick={() => setLightboxImg(photo.photo_url)}
                 />
               ))}
             </div>
           )}
 
-          {/* Voice Note */}
           {memory.voice_note_url && (
-            <div className="mb-8 p-4 bg-[var(--page)] rounded-[var(--radius-sm)] border border-[var(--border)]">
+            <div className="mb-8 p-4 bg-[var(--page)] rounded-[6px] border border-[var(--border)]">
               <audio controls src={memory.voice_note_url} className="w-full h-11" />
             </div>
           )}
 
-          {/* Thread divider */}
           <div className="thread-divider my-6" />
 
-          {/* Contributor */}
           {memory.contributor && (
-            <div className="text-center text-sm text-[var(--ink-light)] font-body">
+            <div className="text-center text-sm text-[var(--ink-light)]">
               Shared by {memory.contributor.name}
             </div>
           )}
 
-          {/* Share */}
           <div className="text-center mt-6">
             <button onClick={handleWhatsAppShare}
-              className="btn inline-flex items-center gap-2 px-6 py-3 text-[var(--page)] rounded-[var(--radius-sm)] font-medium text-sm transition-all active:scale-[0.98]"
-              style={{ background: 'var(--success)' }}>
+              className="px-6 py-3 rounded-full bg-[#2E7D6E] text-[var(--page)] text-[14px] font-medium hover:opacity-90 transition-all active:scale-[0.98] inline-flex items-center gap-2">
               <MessageCircle size={18} />
               Share on WhatsApp
             </button>
           </div>
         </div>
 
-        {/* CTA */}
         {memory.family_name && (
-          <div className="text-center mt-8 p-6 bg-[var(--vellum)] rounded-[var(--radius-md)] border border-[var(--border)]">
+          <div className="text-center mt-8 p-6 bg-[var(--vellum)] rounded-[14px] border border-[var(--border)]">
             <h3 className="font-display text-lg mb-2">Join {memory.family_name}</h3>
             <p className="text-[var(--ink-light)] text-sm mb-4">Preserve your family's letters and memories</p>
-            <Link to="/login" className="btn-seal">Get Started</Link>
+            <Link to="/login" className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(168,85,66,0.2)]">Get Started</Link>
           </div>
         )}
       </div>
 
-      {/* Lightbox */}
       {lightboxImg && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
           style={{ background: 'rgba(28,26,23,0.85)' }} onClick={() => setLightboxImg(null)}>
-          <img src={lightboxImg} alt="Memory" className="max-w-full max-h-[90vh] rounded-[var(--radius-sm)] object-contain" />
+          <img src={lightboxImg} alt="Memory" className="max-w-full max-h-[90vh] rounded-[6px] object-contain" />
         </div>
       )}
     </div>

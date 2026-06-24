@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Heart, Archive, User, Plus, Grid3X3, Search, Share2, MessageCircle, Settings, X, BookOpen } from 'lucide-react';
+import { Home, Heart, Archive, User, Plus, Grid3X3, Search, Share2, MessageCircle, Settings, X, BookOpen, Route } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
@@ -17,6 +17,7 @@ export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
 
   const moreItems = [
     { id: 'journal', label: 'Journal', icon: BookOpen, path: familyId ? `/family/${familyId}` : '/' },
+    { id: 'trips', label: 'Trips', icon: Route, path: '/trips' },
     { id: 'tree', label: 'Tree', icon: Share2, path: familyId ? `/family/${familyId}/graph` : '/' },
     { id: 'search', label: 'Search', icon: Search, path: familyId ? `/family/${familyId}/search` : '/' },
     { id: 'assistant', label: 'Assistant', icon: MessageCircle, path: familyId ? `/family/${familyId}/assistant` : '/' },

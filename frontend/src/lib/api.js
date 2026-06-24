@@ -149,6 +149,27 @@ export const birthdaysAPI = {
   getUpcoming: (familyId) => api.get(`/birthdays?family_id=${familyId}`).then((r) => r.data),
 };
 
+// ─── Trips ────────────────────────────────────────────────────────────────────
+
+export const tripsAPI = {
+  list: (familyId) => api.get(`/home/trips?family_id=${familyId}`).then((r) => r.data),
+  get: (tripId) => api.get(`/home/trip/${tripId}`).then((r) => r.data),
+  create: (formData) =>
+    api.post('/home/trip', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data),
+  addPerson: (tripId, personId) => {
+    const fd = new FormData();
+    fd.append('person_id', personId);
+    return api.post(`/home/trip/${tripId}/person`, fd).then((r) => r.data);
+  },
+  addMemory: (tripId, memoryId) => {
+    const fd = new FormData();
+    fd.append('memory_id', memoryId);
+    return api.post(`/home/trip/${tripId}/memory`, fd).then((r) => r.data);
+  },
+};
+
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 export function getInitials(name) {

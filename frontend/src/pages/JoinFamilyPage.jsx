@@ -44,12 +44,12 @@ export default function JoinFamilyPage() {
     return (
       <div className="min-h-screen bg-[var(--page)] flex items-center justify-center p-4">
         <div className="text-center max-w-md animate-fade-in-up">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-dashed border-[var(--border)] flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full border-[1.5px] border-dashed border-[var(--border)] flex items-center justify-center">
             <span className="font-display text-2xl text-[var(--ink-muted)]">M</span>
           </div>
           <h1 className="font-display text-2xl mb-4">Invite expired</h1>
           <p className="text-[var(--ink-light)] mb-8">{error}</p>
-          <a href="/login" className="btn btn-primary">Go to Login</a>
+          <a href="/login" className="px-5 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] text-[13px] font-medium hover:bg-[var(--seal-hover)] transition-colors">Go to Login</a>
         </div>
       </div>
     );
@@ -58,7 +58,7 @@ export default function JoinFamilyPage() {
   return (
     <div className="min-h-screen bg-[var(--page)] flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-thread-pull w-32 h-px mx-auto mb-4" />
+        <div className="thread-line w-32 mx-auto mb-4" />
         <p className="text-[var(--ink-muted)] text-sm font-mono text-xs tracking-wider">Opening the door...</p>
       </div>
     </div>
