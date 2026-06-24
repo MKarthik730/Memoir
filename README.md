@@ -1,6 +1,6 @@
 # Memoir
 
-> *A personal memory vault that preserves the people you love and the moments you've shared — visualized through an interactive knowledge graph.*
+> *Your family's story, preserved forever — a private social space for the people who matter most.*
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-latest-009688?style=flat-square)
@@ -12,11 +12,11 @@
 
 ## What is Memoir?
 
-Memoir is a **personal CRM meets memory journal** — built for human relationships, not business ones.
+Memoir is a **private family social network** — think Instagram, but invite-only and built for your family.
 
-Store photos and text entries linked to the people in your life. Explore how those connections weave together through a dynamic, force-directed relationship graph. Generate a beautifully exported PDF memoir for any person with one click.
+Post photos, celebrate birthdays, comment in real-time, and preserve memories in a shared family vault. Everything stays within your family — no algorithm, no ads, no strangers.
 
-It's for the moments you don't want to forget. The people who matter.
+Built on a warm stationery-inspired design system with an interactive relationship graph, AI-powered memory search, and one-click PDF memoir generation.
 
 ---
 
@@ -24,12 +24,15 @@ It's for the moments you don't want to forget. The people who matter.
 
 | Feature | Description |
 |---|---|
-| 🧠 **AI Memory Search** | Natural language search across all your memories using RAG |
-| 🕸️ **Relationship Graph** | Interactive force-directed graph visualizing how people connect |
-| 🗂️ **People Management** | Organize relationships by category — Family, Friends, Colleagues |
-| 📸 **Photo & Text Memories** | Attach photos and rich text entries to any person |
-| 📄 **PDF Export** | One-click, beautifully formatted memoir PDF for any person |
-| 🔐 **Auth System** | Secure signup/login with user-scoped data |
+| 📸 **Family Feed** | Instagram-style feed — post photos, like, comment in real-time |
+| 🎭 **Stories** | 24-hour disappearing photo/video stories with view counters |
+| 🎂 **Birthday & Anniversary Alerts** | Auto-detects upcoming birthdays, one-tap to post a wish |
+| 🔒 **Family Vault** | Role-gated archive for important docs, photos, and videos |
+| 🔔 **Real-time Notifications** | WebSocket-driven likes, comments, tags, and birthday alerts |
+| 🕸️ **Relationship Graph** | Interactive D3.js force graph visualizing how everyone connects |
+| 🧠 **AI Memory Search** | Natural language search across all memories using RAG + pgvector |
+| 📄 **PDF Memoir Export** | One-click beautifully formatted memoir PDF per person |
+| 🔐 **Invite-Only Auth** | No public signup — join via family invite link only |
 
 ---
 
@@ -38,11 +41,15 @@ It's for the moments you don't want to forget. The people who matter.
 | Layer | Technology |
 |---|---|
 | Backend | FastAPI, Python 3.11 |
-| Database | PostgreSQL, SQLAlchemy ORM |
-| Frontend | React 18, Tailwind CSS 4, Framer Motion |
-| AI / Search | RAG pipeline with vector embeddings |
+| Database | PostgreSQL, SQLAlchemy ORM, pgvector |
+| Cache / Queue | Redis, Celery |
+| Frontend | React 18, Vite 5, Tailwind CSS 4, Framer Motion 11 |
+| Graph | D3.js 7 |
+| Real-time | WebSockets |
+| Media Storage | Cloudflare R2 / AWS S3 |
+| AI / Search | RAG pipeline, sentence-transformers, pgvector |
+| Auth | JWT + bcrypt, role-based (admin / member) |
 | Icons | Lucide React |
-| Validation | Pydantic |
 
 ---
 
@@ -52,33 +59,37 @@ It's for the moments you don't want to forget. The people who matter.
 Memoir/
 ├── backend/
 │   ├── routes/
-│   │   └── main.py           # FastAPI app + all route definitions
+│   │   └── main.py           # All API endpoints (~30 routes)
 │   ├── database/
-│   │   ├── models.py         # SQLAlchemy ORM models
-│   │   └── config.py         # DB connection configuration
+│   │   ├── models.py         # SQLAlchemy models + Pydantic schemas
+│   │   └── config.py         # DB engine, session, pgvector detection
+│   ├── agent/
+│   │   └── __init__.py       # Tool-based conversational agent
 │   ├── rag/
-│   │   ├── main.py           # RAG query pipeline
-│   │   ├── embeddings.py     # Embedding generation utilities
-│   │   └── vector_store.py   # Vector storage layer
-│   └── __init__.py
+│   │   └── vector_store.py   # Hybrid semantic + keyword search
+│   ├── graph/
+│   │   └── algorithms.py     # BFS, Union-Find, degree centrality
+│   ├── scheduling/
+│   │   └── sm2.py            # SM-2 spaced repetition (memory resurfacing)
+│   ├── jobs/
+│   │   └── tasks.py          # Celery background tasks
+│   └── utils/
+│       └── __init__.py       # API key encryption helpers
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── PersonDetail.jsx
-│   │   │   ├── SearchPage.jsx
-│   │   │   └── GraphPage.jsx
+│   │   │   ├── Sidebar.jsx
+│   │   │   ├── BottomTabBar.jsx
+│   │   │   ├── MemoryCard.jsx
+│   │   │   ├── FloatingChatButton.jsx
+│   │   │   └── ui/           # Avatar, Button, Modal, Toast
+│   │   ├── pages/            # 11 pages (Feed, Vault, Graph, Profile...)
 │   │   ├── lib/
-│   │   │   └── utils.js
+│   │   │   └── api.js        # Axios instance + all API wrappers
 │   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── package.json
+│   │   └── index.css         # Tailwind 4 + Letter Box design tokens
 │   └── vite.config.js
-├── docs/
-│   └── memoir-workflow.svg
 ├── requirements.txt
-├── render.yaml
 └── README.md
 ```
 
@@ -91,6 +102,7 @@ Memoir/
 - Python 3.10+
 - Node.js 18+
 - PostgreSQL (running locally)
+- Redis (for Celery tasks)
 
 ### 1. Clone the repo
 
@@ -120,6 +132,11 @@ Create a `.env` file in the project root:
 
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/memoir_db
+REDIS_URL=redis://localhost:6379
+SECRET_KEY=your_secret_key
+R2_BUCKET=your_bucket
+R2_ACCESS_KEY=your_key
+R2_SECRET_KEY=your_secret
 ```
 
 ### 5. Run
@@ -132,6 +149,9 @@ uvicorn main:app --reload
 # Terminal 2 — Frontend
 cd frontend
 npm run dev
+
+# Terminal 3 — Celery worker
+celery -A jobs.tasks worker --loglevel=info
 ```
 
 - App → [http://localhost:5173](http://localhost:5173)
@@ -142,51 +162,63 @@ npm run dev
 ## API Reference
 
 ### Auth
-
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/sign_up` | Create a new account |
-| POST | `/login` | Sign in |
+| POST | `/auth/signup` | Create account |
+| POST | `/auth/login` | Sign in |
+| GET | `/auth/me` | Current user |
 
-### Categories
-
+### Feed & Posts
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/home/categories` | List all categories |
-| POST | `/home/category` | Create a category |
+| GET | `/feed` | Paginated family feed |
+| POST | `/posts` | Create a post |
+| POST | `/posts/:id/like` | Like / unlike |
+| POST | `/posts/:id/comment` | Add comment |
+| WS | `/ws/comments/:id` | Real-time comments |
 
-### People
-
+### Stories
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/home/category/{id}/people` | Get people in a category |
-| POST | `/home/person` | Add a new person |
-| GET | `/home/person/{id}/files` | Get person's uploaded files |
-| POST | `/home/person/{id}/upload` | Upload a photo |
-| GET | `/home/person/{id}/pdf` | Download PDF memoir |
+| GET | `/stories` | Active stories (last 24hr) |
+| POST | `/stories` | Create a story |
+
+### Family Vault
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/vault` | List vault items |
+| POST | `/vault/upload` | Upload to vault |
 
 ### Memories
-
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/home/person/{id}/memories` | List memories for a person |
-| POST | `/home/person/{id}/memory` | Add a memory |
+| GET | `/people/:id/memories` | List memories |
+| POST | `/people/:id/memories` | Add memory |
+| POST | `/family/:id/search` | Keyword search |
+| POST | `/home/rag/query` | AI semantic search |
 
-### Search
-
+### Graph
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/home/rag/query` | AI-powered natural language search |
+| GET | `/graph/path` | Shortest path between people |
+| GET | `/graph/communities` | Family subgraph clusters |
+| GET | `/graph/centrality` | Most connected person |
 
 ---
 
 ## Roadmap
 
-- [ ] Timeline view sorted by date
-- [ ] Audio note storage
-- [ ] Tags and filtering system
-- [ ] Mobile-responsive refinements
-- [ ] Sharing and collaboration features
+- [x] Auth + invite-only family system
+- [x] People + relationship graph
+- [x] Memory storage with photos
+- [x] AI-powered search (RAG + pgvector)
+- [x] PDF memoir export
+- [ ] Instagram-style feed + likes + comments
+- [ ] Stories (24hr)
+- [ ] Birthday alerts + wish posts
+- [ ] Family vault with role-based access
+- [ ] Real-time notifications (WebSocket)
+- [ ] Mobile app (React Native)
 
 ---
 
@@ -199,4 +231,4 @@ CS Student · ANITS, Visakhapatnam
 
 ## License
 
-MIT License — open source, free to use. See [LICENSE](LICENSE) for details.
+MIT — open source, free to use. See [LICENSE](LICENSE) for details.

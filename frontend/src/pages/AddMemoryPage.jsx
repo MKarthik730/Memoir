@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { memoriesAPI, peopleAPI } from '../lib/api';
 import { ArrowLeft, Image, Mic, Upload, X, Check } from 'lucide-react';
-import Avatar from '../components/ui/Avatar';
 
 export default function AddMemoryPage() {
   const { person_id } = useParams();
@@ -108,79 +107,82 @@ export default function AddMemoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
+    <div className="min-h-screen bg-[var(--page)]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[var(--surface)]/95 backdrop-blur-sm border-b border-[var(--border)]">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="btn-icon">
+      <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
+        <div className="max-w-2xl mx-auto px-4 h-full flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors">
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="font-display text-lg">Add Memory</h1>
-            {person && <p className="text-[13px] text-[var(--text-muted)] font-serif italic">For {person.name}</p>}
+            <h1 className="text-[17px] font-medium text-[var(--ink)]">Write a New Entry</h1>
+            {person && <p className="text-[13px] text-[var(--ink-muted)] italic">For {person.name}</p>}
           </div>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-8 animate-fade-in-up">
+      <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in-up">
         {error && (
-          <div className="mb-6 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[var(--radius-sm)] text-[var(--danger)] text-[13px] flex items-center gap-2">
+          <div className="mb-6 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[6px] text-[var(--danger)] text-[13px] flex items-center gap-2 font-mono text-xs">
             <X size={16} />
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Title */}
-          <div className="form-group">
-            <label>Title <span className="text-[var(--danger)]">*</span></label>
+          {/* Title — handwritten feel */}
+          <div className="mb-6">
             <input
               type="text"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Give your memory a title..."
+              placeholder="Give this letter a title..."
               required
-              className="font-display text-lg"
+              className="w-full font-display text-[20px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] bg-transparent border-0 border-b-[1.5px] border-[var(--border)] outline-none pb-2 focus:border-[var(--seal)] transition-colors"
+              style={{ borderRadius: 0 }}
             />
           </div>
 
-          {/* Story */}
-          <div className="form-group">
-            <label>Story</label>
+          {/* Letter textarea */}
+          <div className="mb-6">
             <textarea
               value={form.story_text}
               onChange={(e) => setForm({ ...form, story_text: e.target.value })}
               placeholder="Write your memory here..."
-              rows={6}
-              style={{ minHeight: 120 }}
+              rows={8}
+              className="w-full min-h-[180px] text-[14px] text-[var(--ink)] leading-[1.8] border border-[var(--border)] rounded-[6px] p-[14px] outline-none resize-y focus:border-[var(--seal)] transition-colors placeholder:text-[var(--ink-muted)]"
             />
           </div>
 
+          {/* Thread divider */}
+          <div className="thread-line mb-6" />
+
           {/* Date */}
-          <div className="form-group">
-            <label>Date</label>
+          <div className="mb-6">
+            <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Date</label>
             <input
               type="date"
               value={form.memory_date}
               onChange={(e) => setForm({ ...form, memory_date: e.target.value })}
+              className="postmark-input w-auto"
             />
           </div>
 
           {/* Photos */}
-          <div className="form-group">
-            <label>Photos</label>
+          <div className="mb-6">
+            <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Photos</label>
             <div
               onDrop={(e) => { e.preventDefault(); setDragOver(false); handlePhotoAdd(e.dataTransfer.files); }}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-[var(--radius-md)] p-8 text-center cursor-pointer transition-all ${
-                dragOver ? 'border-[var(--accent)] bg-[var(--accent-light)]' : 'border-[var(--border)] hover:border-[var(--accent)]'
+              className={`border-2 border-dashed rounded-[10px] h-[100px] flex flex-col items-center justify-center cursor-pointer transition-all ${
+                dragOver ? 'border-[var(--seal)] bg-[rgba(168,85,66,0.04)]' : 'border-[var(--border)] hover:border-[var(--seal)]'
               }`}
             >
-              <Image size={28} className="mx-auto mb-2 text-[var(--text-muted)]" />
-              <p className="text-sm text-[var(--text-muted)]">Drop photos here or click to browse</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">JPG, PNG, WebP</p>
+              <Image size={24} className="mb-1 text-[var(--ink-muted)]" />
+              <p className="text-[13px] text-[var(--ink-muted)]">Add photos</p>
+              <p className="text-[11px] text-[var(--ink-muted)] mt-1">JPG, PNG, WebP</p>
               <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden"
                 onChange={(e) => handlePhotoAdd(e.target.files)} />
             </div>
@@ -189,9 +191,9 @@ export default function AddMemoryPage() {
               <div className="flex flex-wrap gap-2 mt-3">
                 {photoPreviews.map((url, i) => (
                   <div key={i} className="relative group">
-                    <img src={url} alt="" className="w-20 h-20 object-cover rounded-[var(--radius-sm)] border border-[var(--border)]" />
+                    <img src={url} alt="" className="w-[72px] h-[72px] object-cover rounded-[6px] border border-[var(--border)]" />
                     <button type="button" onClick={() => removePhoto(i)}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-[var(--danger)] text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-[var(--danger)] text-[var(--page)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <X size={12} />
                     </button>
                   </div>
@@ -201,25 +203,30 @@ export default function AddMemoryPage() {
           </div>
 
           {/* Voice Note */}
-          <div className="form-group" style={{ marginBottom: 32 }}>
-            <label>Voice Note</label>
-            <div className="flex gap-3">
+          <div className="mb-8">
+            <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Voice Note</label>
+            <div className="flex gap-3 items-center">
               <button type="button" onClick={recording ? stopRecording : startRecording}
-                className={`flex items-center gap-2 px-4 py-3 rounded-[var(--radius-sm)] border transition-all ${
-                  recording ? 'bg-[var(--danger-bg)] border-[var(--danger)]/30 text-[var(--danger)]' : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)]'
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
+                  recording ? 'border-[var(--danger)] bg-[var(--danger-bg)] shadow-[0_0_0_4px_rgba(184,69,58,0.2)]' : 'border-[var(--seal)] text-[var(--seal)] hover:bg-[var(--seal-light)]'
                 }`}>
-                <Mic size={18} className={recording ? 'animate-pulse' : ''} />
-                <span className="text-sm">{recording ? `Recording ${formatTimer(recordingTimer)}` : 'Record'}</span>
+                <Mic size={20} className={recording ? 'animate-pulse text-[var(--danger)]' : ''} />
               </button>
-              <label className="flex items-center gap-2 px-4 py-3 rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)] transition-all cursor-pointer bg-[var(--surface)]">
-                <Upload size={18} />
-                <span className="text-sm">Upload</span>
+              {recording && (
+                <div className="flex items-center gap-2 font-mono text-[13px] text-[var(--ink-muted)]">
+                  <span className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse" />
+                  Recording {formatTimer(recordingTimer)}
+                </div>
+              )}
+              <label className="flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--border)] text-[var(--ink-light)] hover:border-[var(--seal)] transition-all cursor-pointer bg-[var(--vellum)] text-[13px]">
+                <Upload size={16} />
+                Upload
                 <input type="file" accept=".mp3,.m4a,.webm,audio/*" className="hidden"
                   onChange={(e) => { const file = e.target.files[0]; if (file) { setVoiceNote(file); setAudioUrl(URL.createObjectURL(file)); } }} />
               </label>
             </div>
             {audioUrl && (
-              <div className="mt-3 p-3 bg-[var(--bg)] rounded-[var(--radius-sm)]">
+              <div className="mt-3 p-3 bg-[var(--page)] rounded-[6px] border border-[var(--postmark)]/20">
                 <audio controls src={audioUrl} className="w-full h-10" />
                 <button type="button" onClick={() => { setAudioUrl(''); setVoiceNote(null); }}
                   className="mt-1 text-xs text-[var(--danger)] hover:underline">Remove</button>
@@ -227,15 +234,20 @@ export default function AddMemoryPage() {
             )}
           </div>
 
+          {/* Thread divider */}
+          <div className="thread-divider mb-6">
+            <span className="thread-divider-dot" />
+          </div>
+
           <button type="submit" disabled={loading || !form.title.trim()}
-            className="btn btn-primary btn-lg w-full">
+            className="w-full h-[48px] rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(168,85,66,0.2)]">
             {loading ? (
               <><svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />
                 <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg> Saving your memory...</>
+              </svg> Saving your letter...</>
             ) : (
-              <><Check size={18} /> Save Memory</>
+              <><Check size={18} /> Save Letter</>
             )}
           </button>
         </form>

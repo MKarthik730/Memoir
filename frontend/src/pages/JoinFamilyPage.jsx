@@ -31,7 +31,7 @@ export default function JoinFamilyPage() {
           } catch {}
           navigate('/family');
         } else {
-          setError(err.response?.data?.detail || 'Invalid invite link');
+          setError(err.response?.data?.detail || 'This invite link is no longer valid');
           setStatus('error');
         }
       }
@@ -42,27 +42,24 @@ export default function JoinFamilyPage() {
 
   if (status === 'error') {
     return (
-      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[var(--page)] flex items-center justify-center p-4">
         <div className="text-center max-w-md animate-fade-in-up">
-          <div className="w-16 h-16 mx-auto mb-6 bg-[var(--accent)] rounded-[var(--radius-sm)] flex items-center justify-center">
-            <span className="font-display italic text-[28px] text-white">M</span>
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full border-[1.5px] border-dashed border-[var(--border)] flex items-center justify-center">
+            <span className="font-display text-2xl text-[var(--ink-muted)]">M</span>
           </div>
-          <h1 className="font-display text-3xl mb-4">Invalid Invite</h1>
-          <p className="text-[var(--text-secondary)] mb-8">{error || 'This invite link is invalid or expired.'}</p>
-          <a href="/login" className="btn btn-primary">Go to Login</a>
+          <h1 className="font-display text-2xl mb-4">Invite expired</h1>
+          <p className="text-[var(--ink-light)] mb-8">{error}</p>
+          <a href="/login" className="px-5 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] text-[13px] font-medium hover:bg-[var(--seal-hover)] transition-colors">Go to Login</a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
+    <div className="min-h-screen bg-[var(--page)] flex items-center justify-center">
       <div className="text-center">
-        <svg className="animate-spin mx-auto mb-4" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="var(--border)" strokeWidth="3" />
-          <path d="M12 2a10 10 0 0 1 10 10" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" />
-        </svg>
-        <p className="text-[var(--text-secondary)] text-sm">Joining family...</p>
+        <div className="thread-line w-32 mx-auto mb-4" />
+        <p className="text-[var(--ink-muted)] text-sm font-mono text-xs tracking-wider">Opening the door...</p>
       </div>
     </div>
   );

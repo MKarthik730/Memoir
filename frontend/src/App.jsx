@@ -12,6 +12,14 @@ import AddMemoryPage from './pages/AddMemoryPage';
 import PublicMemoryPage from './pages/PublicMemoryPage';
 import SettingsPage from './pages/SettingsPage';
 import AssistantPage from './pages/AssistantPage';
+import FeedPage from './pages/FeedPage';
+import CreatePostPage from './pages/CreatePostPage';
+import VaultPage from './pages/VaultPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ProfilePage from './pages/ProfilePage';
+import TripsPage from './pages/TripsPage';
+import TripDetailPage from './pages/TripDetailPage';
+import CreateTripPage from './pages/CreateTripPage';
 import { ToastProvider } from './components/ui';
 
 function PrivateRoute({ children }) {
@@ -43,6 +51,17 @@ function AnimatedRoutes() {
           <Route path="/join/:invite_token" element={<JoinFamilyPage />} />
           <Route path="/memories/:memory_id/public" element={<PublicMemoryPage />} />
 
+          {/* New Instagram-style Feed */}
+          <Route path="/" element={<PrivateRoute><FeedPage /></PrivateRoute>} />
+          <Route path="/post/new" element={<PrivateRoute><CreatePostPage /></PrivateRoute>} />
+          <Route path="/vault" element={<PrivateRoute><VaultPage /></PrivateRoute>} />
+          <Route path="/notifications" element={<PrivateRoute><NotificationsPage /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+          <Route path="/trips" element={<PrivateRoute><TripsPage /></PrivateRoute>} />
+          <Route path="/trips/new" element={<PrivateRoute><CreateTripPage /></PrivateRoute>} />
+          <Route path="/trips/:trip_id" element={<PrivateRoute><TripDetailPage /></PrivateRoute>} />
+
+          {/* Legacy routes (kept for backward compat) */}
           <Route path="/create-family" element={<PrivateRoute><CreateFamilyPage /></PrivateRoute>} />
           <Route path="/family/:family_id" element={<PrivateRoute><FamilyHomePage /></PrivateRoute>} />
           <Route path="/family/:family_id/graph" element={<PrivateRoute><GraphPage /></PrivateRoute>} />
@@ -53,7 +72,6 @@ function AnimatedRoutes() {
           <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
 
           <Route path="/family" element={<PrivateRoute><FamilyRedirect /></PrivateRoute>} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </motion.div>
@@ -100,12 +118,13 @@ function FamilyRedirect() {
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
+    <div className="min-h-screen bg-[var(--page)] flex items-center justify-center">
       <div className="text-center">
-        <div className="w-12 h-12 mx-auto mb-4 bg-[var(--accent)] rounded-[var(--radius-sm)] flex items-center justify-center">
-          <span className="font-display italic text-2xl text-white">M</span>
+        <div className="w-14 h-14 mx-auto mb-5 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
+          <span className="font-display text-2xl text-[var(--seal)]">M</span>
         </div>
-        <h1 className="font-display text-xl text-[var(--text)] animate-pulse-slow">Memoir</h1>
+        <div className="animate-thread-pull w-32 h-px mx-auto mb-4" />
+        <h1 className="font-display text-lg text-[var(--ink)]">Memoir</h1>
       </div>
     </div>
   );
@@ -113,13 +132,13 @@ function LoadingScreen() {
 
 function NotFoundPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-8">
-      <div className="text-center max-w-md">
-        <div className="w-16 h-16 mx-auto mb-6 bg-[var(--accent)] rounded-[var(--radius-sm)] flex items-center justify-center">
-          <span className="font-display italic text-[28px] text-white">M</span>
+    <div className="min-h-screen bg-[var(--page)] flex items-center justify-center p-8">
+      <div className="text-center max-w-md animate-fade-in-up">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-dashed border-[var(--border)] flex items-center justify-center">
+          <span className="font-display text-2xl text-[var(--ink-muted)]">M</span>
         </div>
-        <h1 className="font-display text-3xl mb-4">Page not found</h1>
-        <p className="text-[var(--text-secondary)] mb-8">The page you're looking for doesn't exist or has been moved.</p>
+        <h1 className="font-display text-2xl mb-4">Page not found</h1>
+        <p className="text-[var(--ink-light)] mb-8">This page doesn't exist or has been moved.</p>
         <a href="/" className="btn btn-primary">Go Home</a>
       </div>
     </div>

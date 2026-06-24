@@ -1,14 +1,23 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authAPI } from '../lib/api';
-import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '';
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+
+  const doRedirect = () => {
+    if (redirectTo) {
+      navigate(redirectTo);
+    } else {
+      navigate('/');
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -18,19 +27,7 @@ export default function LoginPage() {
       const data = await authAPI.login({ email: form.email, password: form.password });
       localStorage.setItem('memoir_token', data.access_token);
       localStorage.setItem('memoir_user', JSON.stringify(data.user));
-      try {
-        const familiesRes = await fetch('/user/families', {
-          headers: { Authorization: `Bearer ${data.access_token}` },
-        });
-        const families = await familiesRes.json();
-        if (Array.isArray(families) && families.length > 0) {
-          navigate(`/family/${families[0].id}`);
-        } else {
-          navigate('/create-family');
-        }
-      } catch {
-        navigate('/create-family');
-      }
+      doRedirect();
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password');
     } finally {
@@ -50,7 +47,8 @@ export default function LoginPage() {
       const data = await authAPI.signup({ email: form.email, password: form.password, name: form.name });
       localStorage.setItem('memoir_token', data.access_token);
       localStorage.setItem('memoir_user', JSON.stringify(data.user));
-      navigate('/create-family');
+      localStorage.setItem('memoir_user_id', data.user.id);
+      doRedirect();
     } catch (err) {
       setError(err.response?.data?.detail || 'Signup failed');
     } finally {
@@ -59,149 +57,140 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
-      <div className="w-full max-w-[400px] animate-fade-in-up">
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <div className="w-12 h-12 mx-auto mb-4 bg-[var(--accent)] rounded-[var(--radius-sm)] flex items-center justify-center">
-            <span className="font-display italic text-2xl text-white">M</span>
-          </div>
-          <h1 className="font-display text-[28px]">Memoir</h1>
-          <p className="text-[var(--text-secondary)] text-sm mt-1">Your family's story, forever.</p>
-        </div>
-
+    <div className="min-h-screen bg-[var(--page)] flex items-center justify-center p-4">
+      <div className="w-full max-w-[400px]">
         {/* Card */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-8 shadow-[var(--shadow-sm)]">
-          {/* Tabs */}
-          <div className="flex bg-[var(--bg)] rounded-[var(--radius-sm)] p-[3px] mb-6">
+        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[14px] shadow-[0_8px_32px_rgba(28,26,23,0.1)] p-8 animate-fade-in-up text-center">
+          {/* Logo */}
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
+            <span className="font-display italic text-xl text-[var(--seal)]">M</span>
+          </div>
+          <h1 className="font-display italic text-[28px] text-[var(--ink)] mb-1">Memoir</h1>
+          <p className="font-mono text-[12px] text-[var(--ink-muted)] mb-6">Your family's story, forever.</p>
+
+          {/* Tab row */}
+          <div className="flex items-center justify-center gap-0 mb-5">
             <button
               onClick={() => { setIsRegister(false); setError(''); }}
-              className={`flex-1 py-[10px] text-center text-[13px] font-medium rounded-[4px] transition-all ${
+              className={`font-mono text-[11px] uppercase tracking-[0.08em] px-4 py-2 transition-colors ${
                 !isRegister
-                  ? 'bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-sm)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+                  ? 'text-[var(--seal)] font-medium border-b-2 border-[var(--seal)]'
+                  : 'text-[var(--ink-muted)] border-b-2 border-transparent hover:text-[var(--ink)]'
               }`}
             >
               Sign In
             </button>
             <button
               onClick={() => { setIsRegister(true); setError(''); }}
-              className={`flex-1 py-[10px] text-center text-[13px] font-medium rounded-[4px] transition-all ${
+              className={`font-mono text-[11px] uppercase tracking-[0.08em] px-4 py-2 transition-colors ${
                 isRegister
-                  ? 'bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-sm)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+                  ? 'text-[var(--seal)] font-medium border-b-2 border-[var(--seal)]'
+                  : 'text-[var(--ink-muted)] border-b-2 border-transparent hover:text-[var(--ink)]'
               }`}
             >
               Sign Up
             </button>
           </div>
 
+          <div className="thread-line mb-6" />
+
           {/* Error */}
           {error && (
-            <div className="mb-5 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[var(--radius-sm)] text-[var(--danger)] text-[13px]">
+            <div className="mb-5 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[6px] text-[var(--danger)] text-[13px] font-mono text-xs text-left">
               {error}
             </div>
           )}
 
           {!isRegister ? (
-            <form onSubmit={handleLogin}>
-              <div className="form-group">
-                <label>Email</label>
-                <div className="form-input-icon">
-                  <Mail size={16} />
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleLogin} className="text-left">
+              <div className="mb-4">
+                <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                />
               </div>
-              <div className="form-group" style={{ marginBottom: 28 }}>
-                <label>Password</label>
-                <div className="form-input-icon">
-                  <Lock size={16} />
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder="Enter your password"
-                    required
-                  />
-                </div>
+              <div className="mb-5">
+                <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Password</label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Enter your password"
+                  required
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                />
               </div>
-              <button type="submit" disabled={loading} className="btn btn-primary btn-lg w-full">
+              <button type="submit" disabled={loading} className="w-full h-[48px] rounded-[999px] bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98]">
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleSignup}>
-              <div className="form-group">
-                <label>Name</label>
-                <div className="form-input-icon">
-                  <User size={16} />
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Your full name"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleSignup} className="text-left">
+              <div className="mb-4">
+                <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Your Name</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Your full name"
+                  required
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                />
               </div>
-              <div className="form-group">
-                <label>Email</label>
-                <div className="form-input-icon">
-                  <Mail size={16} />
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
+              <div className="mb-4">
+                <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                />
               </div>
-              <div className="form-group">
-                <label>Password</label>
-                <div className="form-input-icon">
-                  <Lock size={16} />
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder="Min. 8 characters"
-                    required
-                    minLength={8}
-                  />
-                </div>
+              <div className="mb-4">
+                <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Password</label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Min. 8 characters"
+                  required
+                  minLength={8}
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                />
               </div>
-              <div className="form-group" style={{ marginBottom: 28 }}>
-                <label>Confirm Password</label>
-                <div className="form-input-icon">
-                  <Lock size={16} />
-                  <input
-                    type="password"
-                    value={form.confirmPassword}
-                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                    placeholder="Re-enter password"
-                    required
-                  />
-                </div>
+              <div className="mb-5">
+                <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px]">Confirm Password</label>
+                <input
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  placeholder="Re-enter password"
+                  required
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                />
               </div>
-              <button type="submit" disabled={loading} className="btn btn-primary btn-lg w-full">
+              <button type="submit" disabled={loading} className="w-full h-[48px] rounded-[999px] bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98]">
                 {loading ? 'Creating account...' : 'Create Account'}
               </button>
             </form>
           )}
 
-          <p className="mt-5 text-center text-[13px] text-[var(--text-muted)]">
-            Join a family instead?{' '}
-            <Link to="/join/demo" className="text-[var(--accent)] hover:underline font-medium">
-              Use your invite link
-            </Link>
-          </p>
+          {/* Bottom link */}
+          <div className="mt-6 pt-5 border-t border-[var(--border)]">
+            <p className="text-[13px] text-[var(--ink-light)]">
+              Joining a family that's already on Memoir?{' '}
+              <Link to="/join/demo" className="text-[var(--seal)] hover:underline font-medium">
+                Use your invite link
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

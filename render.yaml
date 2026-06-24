@@ -2,18 +2,30 @@
 # Deploy Memoir to Render — Family Memory Vault
 # https://render.com
 
+databases:
+  - name: memoir-db
+    databaseName: memoir
+    user: memoir
+    plan: free
+    region: oregon
+    ipAllowList: []
+
 services:
   - type: web
     name: memoir-api
     env: python
     region: oregon
-    plan: free
+    plan: starter
     buildCommand: pip install -r requirements.txt && (pip install -r requirements-ai.txt || echo "Optional search deps unavailable, using keyword fallback") && mkdir -p uploads
     startCommand: uvicorn backend.routes.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: memoir-db
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
@@ -29,7 +41,6 @@ services:
   - type: web
     name: memoir-frontend
     env: static
-    region: oregon
     plan: free
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist

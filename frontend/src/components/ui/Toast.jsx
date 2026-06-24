@@ -12,7 +12,7 @@ const icons = {
 const colors = {
   success: { border: 'var(--success)', bg: 'var(--success-bg)', icon: 'var(--success)' },
   error: { border: 'var(--danger)', bg: 'var(--danger-bg)', icon: 'var(--danger)' },
-  info: { border: 'var(--info)', bg: 'var(--info-bg)', icon: 'var(--info)' },
+  info: { border: 'var(--postmark)', bg: 'var(--postmark-light)', icon: 'var(--postmark)' },
 };
 
 function ToastItem({ id, type, message, onDismiss }) {
@@ -23,7 +23,7 @@ function ToastItem({ id, type, message, onDismiss }) {
     <div
       className="flex items-start gap-3 px-4 py-3 rounded-[var(--radius-sm)] shadow-[var(--shadow-lg)] animate-slideInRight"
       style={{
-        background: 'var(--surface)',
+        background: 'var(--vellum)',
         border: `1px solid var(--border)`,
         borderLeft: `3px solid ${color.border}`,
         minWidth: 280,
@@ -31,10 +31,10 @@ function ToastItem({ id, type, message, onDismiss }) {
       }}
     >
       <Icon size={18} style={{ color: color.icon, flexShrink: 0, marginTop: 1 }} />
-      <p className="flex-1 text-sm text-[var(--text)]">{message}</p>
+      <p className="flex-1 text-sm text-[var(--ink)]">{message}</p>
       <button
         onClick={() => onDismiss(id)}
-        className="flex-shrink-0 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+        className="flex-shrink-0 text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
       >
         <X size={14} />
       </button>
