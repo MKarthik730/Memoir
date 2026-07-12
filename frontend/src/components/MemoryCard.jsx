@@ -17,7 +17,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
 
   return (
     <>
-      <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[10px] overflow-hidden relative"
+      <div className="card-pinned bg-[var(--vellum)] border border-[var(--border)] rounded-[10px] overflow-hidden relative shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition-shadow"
         style={{ borderLeft: '3px dashed var(--seal)' }}>
         <div className="p-4" style={{ paddingLeft: 20 }}>
           {/* Title + Postmark Date */}

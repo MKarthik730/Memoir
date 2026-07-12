@@ -34,8 +34,8 @@ export default function Sidebar({ family, familyId, activePage }) {
       {/* Logo */}
       <div className="px-5 py-[20px] border-b border-[var(--border)]">
         <Link to="/" className="flex items-center gap-3 no-underline">
-          <div className="w-8 h-8 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
-            <span className="font-display italic text-sm text-[var(--seal)]">M</span>
+          <div className="wax-seal w-8 h-8">
+            <span className="font-display italic text-sm">M</span>
           </div>
           <span className="font-display italic text-[20px] text-[var(--ink)]">Memoir</span>
         </Link>
@@ -51,12 +51,15 @@ export default function Sidebar({ family, familyId, activePage }) {
             <Link
               key={item.id}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-[10px] rounded-[8px] text-sm transition-all no-underline ${
+              className={`relative flex items-center gap-3 pl-4 pr-4 py-[10px] rounded-[8px] text-sm transition-all no-underline ${
                 isActive
                   ? 'bg-[rgba(168,85,66,0.1)] text-[var(--seal)] font-medium'
                   : 'text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] hover:text-[var(--ink)]'
               }`}
             >
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-full bg-[var(--seal)]" />
+              )}
               <Icon size={18} className="flex-shrink-0" />
               <span className="text-[14px]">{item.label}</span>
             </Link>
@@ -68,18 +71,18 @@ export default function Sidebar({ family, familyId, activePage }) {
         {members.length > 0 && (
           <>
             <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)] mb-2">MEMBERS</p>
-            <div className="flex items-center gap-[6px] mb-3">
+            <div className="flex items-center mb-3">
               {visibleMembers.map((member, i) => (
                 <div
                   key={member.id}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium text-[var(--page)]"
-                  style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium text-[var(--page)] border-2 border-[var(--vellum)]"
+                  style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length], marginLeft: i === 0 ? 0 : -8, zIndex: visibleMembers.length - i }}
                 >
                   {member.name?.charAt(0).toUpperCase()}
                 </div>
               ))}
               {remainingCount > 0 && (
-                <div className="w-7 h-7 rounded-full bg-[var(--page)] flex items-center justify-center text-[10px] text-[var(--ink-muted)] border-2 border-[var(--vellum)] font-mono">
+                <div className="w-7 h-7 rounded-full bg-[var(--page)] flex items-center justify-center text-[10px] text-[var(--ink-muted)] border-2 border-[var(--vellum)] font-mono" style={{ marginLeft: -8 }}>
                   +{remainingCount}
                 </div>
               )}
