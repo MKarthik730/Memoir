@@ -39,7 +39,7 @@ export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
                 <Link
                   key={tab.id}
                   to={tab.path}
-                  className="w-12 h-12 -mt-3 rounded-full bg-[var(--seal)] text-[var(--page)] hover:bg-[var(--seal-hover)] flex items-center justify-center transition-all active:scale-95 shadow-[var(--shadow-md)]"
+                  className="wax-seal w-12 h-12 -mt-3 transition-transform active:scale-95"
                 >
                   <Plus size={22} />
                 </Link>

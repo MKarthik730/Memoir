@@ -87,6 +87,25 @@ body, #root {
   overflow-x: hidden;
 }
 
+/* Paper grain — subtle, felt more than seen. The whole app sits on "paper". */
+body {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(28,26,23,0.035) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+/* Visible keyboard focus everywhere — accessibility floor */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--seal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 ::selection {
   background: rgba(168, 85, 66, 0.12);
 }
@@ -357,6 +376,50 @@ label {
 .card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
+}
+
+/* Dog-eared corner — a memory "pinned" to the page. Use on cards that hold a
+   single artifact (a memory, a document, a trip). Not for list rows or forms. */
+.card-pinned {
+  position: relative;
+}
+
+.card-pinned::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, transparent 50%, var(--page) 50%);
+  border-bottom-left-radius: 3px;
+  box-shadow: -1px 1px 2px rgba(28,26,23,0.08);
+  pointer-events: none;
+}
+
+/* ─── Wax Seal (signature mark) ─────────────────────────────────────────────── */
+.wax-seal {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, var(--seal-hover) 0%, var(--seal) 55%, var(--seal-hover) 100%);
+  color: var(--page);
+  box-shadow:
+    0 2px 4px rgba(168, 85, 66, 0.35),
+    inset 0 1px 1px rgba(255,255,255,0.25),
+    inset 0 -2px 3px rgba(0,0,0,0.15);
+}
+
+.wax-seal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(rgba(255,255,255,0.06) 0deg 6deg, transparent 6deg 12deg);
+  mix-blend-mode: overlay;
 }
 
 .card-clickable {

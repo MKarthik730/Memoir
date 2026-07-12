@@ -257,12 +257,12 @@ export default function PersonDetailPage() {
               size={72}
               className="border-[3px] border-[var(--vellum)]"                    />
             <div className="flex gap-2 pb-1">
-              <Link to={`/people/${person_id}/add-memory`} className="px-4 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors no-underline">
-              <Plus size={14} className="inline mr-1" />Add Entry
-            </Link>
-            <button onClick={handleGeneratePDF} className="px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(168,85,66,0.08)] transition-colors">
-              <BookOpen size={14} className="inline mr-1" />Bind Book
-            </button>
+              <Link to={`/people/${person_id}/add-memory`} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[var(--seal)] text-white text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors no-underline">
+                <Plus size={14} />Add Entry
+              </Link>
+              <button onClick={handleGeneratePDF} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(168,85,66,0.08)] transition-colors">
+                <BookOpen size={14} />Bind Book
+              </button>
           </div>
         </div>
         </div>
