@@ -47,7 +47,7 @@ export default function CreateTripPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
         <div className="max-w-2xl mx-auto px-4 h-full flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
             <ArrowLeft size={18} />
           </button>
           <h1 className="text-[17px] font-medium text-[var(--ink)]">Plan a New Trip</h1>
@@ -140,7 +140,7 @@ export default function CreateTripPage() {
             <button
               type="submit"
               disabled={loading || !form.name.trim()}
-              className="w-full h-[48px] rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(168,85,66,0.2)]"
+              className="w-full h-[48px] rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(63,93,70,0.2)]"
             >
               {loading ? 'Creating...' : 'Create Trip'}
             </button>

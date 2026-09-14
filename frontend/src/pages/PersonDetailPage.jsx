@@ -52,7 +52,7 @@ export default function PersonDetailPage() {
       const pageHeight = doc.internal.pageSize.getHeight();
 
       // Cover
-      doc.setFillColor(168, 85, 66);
+      doc.setFillColor(63, 93, 70);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'italic');
@@ -67,13 +67,13 @@ export default function PersonDetailPage() {
 
       // TOC
       doc.addPage();
-      doc.setTextColor(168, 85, 66);
+      doc.setTextColor(63, 93, 70);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'italic');
       doc.text('Contents', pageWidth / 2, 30, { align: 'center' });
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(11);
-      doc.setTextColor(28, 26, 23);
+      doc.setTextColor(36, 31, 26);
       memories.forEach((memory, i) => {
         const y = 60 + i * 10;
         doc.text(`${i + 1}. ${memory.title}`, 30, y);
@@ -105,7 +105,7 @@ export default function PersonDetailPage() {
         // Title
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(20);
-        doc.setTextColor(168, 85, 66);
+        doc.setTextColor(63, 93, 70);
         const titleLines = doc.splitTextToSize(memory.title || 'Untitled', pageWidth - 40);
         doc.text(titleLines, 20, yPos);
         yPos += titleLines.length * 8 + 5;
@@ -117,7 +117,7 @@ export default function PersonDetailPage() {
         if (metaParts.length) {
           doc.setFont('helvetica', 'italic');
           doc.setFontSize(10);
-          doc.setTextColor(107, 101, 96);
+          doc.setTextColor(107, 98, 85);
           doc.text(metaParts.join(' — '), 20, yPos);
           yPos += 12;
         }
@@ -157,7 +157,7 @@ export default function PersonDetailPage() {
         if (memory.story_text) {
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(10);
-          doc.setTextColor(28, 26, 23);
+          doc.setTextColor(36, 31, 26);
           const storyLines = doc.splitTextToSize(memory.story_text, pageWidth - 40);
           if (yPos + storyLines.length * 5 > pageHeight - 40) {
             doc.addPage();
@@ -169,7 +169,7 @@ export default function PersonDetailPage() {
 
       // Back
       doc.addPage();
-      doc.setFillColor(168, 85, 66);
+      doc.setFillColor(63, 93, 70);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(16);
@@ -228,7 +228,7 @@ export default function PersonDetailPage() {
           ) : (
             <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--seal) 0%, var(--postmark) 100%)' }} />
           )}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(28,26,23,0.75) 0%, transparent 60%)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(36,31,26,0.75) 0%, transparent 60%)' }} />
 
           <div className="absolute bottom-0 left-0 right-0 px-6 pb-6">
             <h1 className="font-display text-[26px] text-[var(--page)] mb-1">{person.name}</h1>
@@ -260,7 +260,7 @@ export default function PersonDetailPage() {
               <Link to={`/people/${person_id}/add-memory`} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[var(--seal)] text-white text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors no-underline">
                 <Plus size={14} />Add Entry
               </Link>
-              <button onClick={handleGeneratePDF} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(168,85,66,0.08)] transition-colors">
+              <button onClick={handleGeneratePDF} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">
                 <BookOpen size={14} />Bind Book
               </button>
           </div>
@@ -296,7 +296,7 @@ export default function PersonDetailPage() {
               <p className="text-[var(--ink-light)] text-sm max-w-xs mx-auto mb-6 leading-relaxed">
                 Nothing has been written yet. Start {person.name}'s story with the first memory.
               </p>
-              <Link to={`/people/${person_id}/add-memory`} className="px-6 py-3 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(168,85,66,0.2)]" style={{ color: 'var(--page)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
+              <Link to={`/people/${person_id}/add-memory`} className="px-6 py-3 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)]" style={{ color: 'var(--page)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
                 <Plus size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />Write the First Entry
               </Link>
             </div>
@@ -312,7 +312,7 @@ export default function PersonDetailPage() {
 
       {/* PDF Progress Modal */}
       {pdfProgress && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(28,26,23,0.3)', backdropFilter: 'blur(4px)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(36,31,26,0.3)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-[var(--vellum)] rounded-[14px] p-8 shadow-[var(--shadow-lg)] max-w-sm w-full text-center animate-fade-in border border-[var(--border)]">
             <BookOpen size={36} className="mx-auto mb-4 text-[var(--seal)]" />
             <p className="text-[var(--ink)] text-sm font-mono text-xs tracking-wider">{pdfProgress}</p>

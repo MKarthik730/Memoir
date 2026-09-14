@@ -60,7 +60,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[var(--page)] flex items-center justify-center p-4">
       <div className="w-full max-w-[400px]">
         {/* Card */}
-        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[14px] shadow-[0_8px_32px_rgba(28,26,23,0.1)] p-8 animate-fade-in-up text-center">
+        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[14px] shadow-[0_8px_32px_rgba(36,31,26,0.1)] p-8 animate-fade-in-up text-center">
           {/* Logo */}
           <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
             <span className="font-display italic text-xl text-[var(--seal)]">M</span>
@@ -111,7 +111,7 @@ export default function LoginPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="you@example.com"
                   required
-                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(63,93,70,0.08)]"
                 />
               </div>
               <div className="mb-5">
@@ -122,7 +122,7 @@ export default function LoginPage() {
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="Enter your password"
                   required
-                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(63,93,70,0.08)]"
                 />
               </div>
               <button type="submit" disabled={loading} className="w-full h-[48px] rounded-[999px] bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98]">
@@ -139,7 +139,7 @@ export default function LoginPage() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Your full name"
                   required
-                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(63,93,70,0.08)]"
                 />
               </div>
               <div className="mb-4">
@@ -150,7 +150,7 @@ export default function LoginPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="you@example.com"
                   required
-                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(63,93,70,0.08)]"
                 />
               </div>
               <div className="mb-4">
@@ -162,7 +162,7 @@ export default function LoginPage() {
                   placeholder="Min. 8 characters"
                   required
                   minLength={8}
-                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(63,93,70,0.08)]"
                 />
               </div>
               <div className="mb-5">
@@ -173,7 +173,7 @@ export default function LoginPage() {
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                   placeholder="Re-enter password"
                   required
-                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(168,85,66,0.08)]"
+                  className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none transition-all focus:border-[var(--seal)] focus:shadow-[0_0_0_3px_rgba(63,93,70,0.08)]"
                 />
               </div>
               <button type="submit" disabled={loading} className="w-full h-[48px] rounded-[999px] bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98]">

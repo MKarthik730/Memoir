@@ -10,15 +10,6 @@ from sqlalchemy.orm import declarative_base, relationship
 from pydantic import BaseModel, Field
 import enum
 
-# Try to import pgvector Vector type - gracefully handle if unavailable
-PGVECTOR_AVAILABLE = False
-try:
-    from pgvector.sqlalchemy import Vector
-    PGVECTOR_AVAILABLE = True
-except ImportError:
-    Vector = None
-
-
 class GUID(TypeDecorator):
     """Platform-independent GUID type.
     Uses PostgreSQL UUID when available, otherwise stores as String(36).
@@ -160,11 +151,9 @@ class Memory(Base):
     voice_note_url = Column(String, nullable=True)
     created_by_user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    # embedding column - VECTOR(384) for pgvector, null fallback for SQLite
-    if PGVECTOR_AVAILABLE and Vector:
-        embedding = Column(Vector(384), nullable=True)
-    else:
-        embedding = Column(Text, nullable=True)
+    # JSON-encoded list of floats (see backend/rag/vector_store.py) — works
+    # identically on SQLite and Postgres, similarity is computed in Python.
+    embedding = Column(Text, nullable=True)
 
     # SM-2 Spaced Repetition fields (Section 5)
     last_shown_at = Column(DateTime, nullable=True)
@@ -386,7 +375,7 @@ class UploadResponse(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Instagram-style Social Features (Feed, Stories, Vault, Notifications)
+# Diary Feed, Vault, Notifications
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class Post(Base):

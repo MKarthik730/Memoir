@@ -111,7 +111,7 @@ export default function AddMemoryPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
         <div className="max-w-2xl mx-auto px-4 h-full flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -177,7 +177,7 @@ export default function AddMemoryPage() {
               onDragLeave={() => setDragOver(false)}
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-[10px] h-[100px] flex flex-col items-center justify-center cursor-pointer transition-all ${
-                dragOver ? 'border-[var(--seal)] bg-[rgba(168,85,66,0.04)]' : 'border-[var(--border)] hover:border-[var(--seal)]'
+                dragOver ? 'border-[var(--seal)] bg-[rgba(63,93,70,0.04)]' : 'border-[var(--border)] hover:border-[var(--seal)]'
               }`}
             >
               <Image size={24} className="mb-1 text-[var(--ink-muted)]" />
@@ -208,7 +208,7 @@ export default function AddMemoryPage() {
             <div className="flex gap-3 items-center">
               <button type="button" onClick={recording ? stopRecording : startRecording}
                 className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
-                  recording ? 'border-[var(--danger)] bg-[var(--danger-bg)] shadow-[0_0_0_4px_rgba(184,69,58,0.2)]' : 'border-[var(--seal)] text-[var(--seal)] hover:bg-[var(--seal-light)]'
+                  recording ? 'border-[var(--danger)] bg-[var(--danger-bg)] shadow-[0_0_0_4px_rgba(168,85,66,0.2)]' : 'border-[var(--seal)] text-[var(--seal)] hover:bg-[var(--seal-light)]'
                 }`}>
                 <Mic size={20} className={recording ? 'animate-pulse text-[var(--danger)]' : ''} />
               </button>
@@ -240,7 +240,7 @@ export default function AddMemoryPage() {
           </div>
 
           <button type="submit" disabled={loading || !form.title.trim()}
-            className="w-full h-[48px] rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(168,85,66,0.2)]">
+            className="w-full h-[48px] rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(63,93,70,0.2)]">
             {loading ? (
               <><svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />

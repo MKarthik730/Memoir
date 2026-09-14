@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Heart, Archive, User, Plus, Grid3X3, Search, Share2, MessageCircle, Settings, X, BookOpen, Route } from 'lucide-react';
+import { Home, Bell, Archive, Feather, Grid3X3, Search, Share2, MessageCircle, Settings, X, BookOpen, Route, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
@@ -8,16 +8,17 @@ export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'feed', label: 'Feed', icon: Home, path: '/' },
+    { id: 'feed', label: 'Diary', icon: Home, path: '/' },
     { id: 'vault', label: 'Vault', icon: Archive, path: '/vault' },
     { id: 'post', label: '', icon: null, path: '/post/new', isPost: true },
-    { id: 'notifications', label: 'Alerts', icon: Heart, path: '/notifications' },
+    { id: 'notifications', label: 'Alerts', icon: Bell, path: '/notifications' },
     { id: 'more', label: 'More', icon: Grid3X3, isMore: true },
   ];
 
   const moreItems = [
-    { id: 'journal', label: 'Journal', icon: BookOpen, path: familyId ? `/family/${familyId}` : '/' },
+    { id: 'journal', label: 'People', icon: BookOpen, path: familyId ? `/family/${familyId}` : '/' },
     { id: 'trips', label: 'Trips', icon: Route, path: '/trips' },
+    { id: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { id: 'tree', label: 'Tree', icon: Share2, path: familyId ? `/family/${familyId}/graph` : '/' },
     { id: 'search', label: 'Search', icon: Search, path: familyId ? `/family/${familyId}/search` : '/' },
     { id: 'assistant', label: 'Assistant', icon: MessageCircle, path: familyId ? `/family/${familyId}/assistant` : '/' },
@@ -41,7 +42,7 @@ export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
                   to={tab.path}
                   className="wax-seal w-12 h-12 -mt-3 transition-transform active:scale-95"
                 >
-                  <Plus size={22} />
+                  <Feather size={20} />
                 </Link>
               );
             }

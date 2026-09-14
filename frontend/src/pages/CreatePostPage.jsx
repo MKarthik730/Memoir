@@ -1,22 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Image, MapPin, X, ChevronLeft, Users } from 'lucide-react';
-import Avatar from '../components/ui/Avatar';
+import { useNavigate } from 'react-router-dom';
+import { Image, MapPin, X, ChevronLeft } from 'lucide-react';
 import { familyAPI, feedAPI } from '../lib/api';
 
 export default function CreatePostPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [familyId, setFamilyId] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
-  const [members, setMembers] = useState([]);
-  const [tagged, setTagged] = useState([]);
-  const [showTagSearch, setShowTagSearch] = useState(false);
-  const [tagQuery, setTagQuery] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef(null);
@@ -25,7 +18,6 @@ export default function CreatePostPage() {
     familyAPI.getMyFamilies().then(families => {
       if (Array.isArray(families) && families.length > 0) {
         setFamilyId(families[0].id);
-        familyAPI.get(families[0].id).then(data => setMembers(data.members || [])).catch(() => {});
       }
     }).catch(() => {});
   }, []);
@@ -55,12 +47,8 @@ export default function CreatePostPage() {
       await feedAPI.createPost(formData);
       navigate('/');
     } catch (err) {
-      alert(err?.response?.data?.detail || 'Failed to create post');
+      alert(err?.response?.data?.detail || 'Failed to save entry');
     } finally { setUploading(false); }
-  };
-
-  const toggleTag = (member) => {
-    setTagged(prev => prev.find(t => t.id === member.id) ? prev.filter(t => t.id !== member.id) : [...prev, member]);
   };
 
   return (
@@ -68,14 +56,21 @@ export default function CreatePostPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
         <div className="max-w-2xl mx-auto px-4 h-full flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors"><ChevronLeft size={20} /></button>
-          <h1 className="text-[17px] font-medium text-[var(--ink)]">New Post</h1>
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[var(--seal-lighter)] transition-colors"><ChevronLeft size={20} /></button>
+          <h1 className="text-[17px] font-medium text-[var(--ink)]">New Entry</h1>
           <button onClick={handleSubmit} disabled={uploading || (photos.length === 0 && !caption.trim())}
-            className="px-4 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[12px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-colors">{uploading ? 'Posting...' : 'Share'}</button>
+            className="px-4 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[12px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-colors">{uploading ? 'Saving...' : 'Save Entry'}</button>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 animate-fade-in-up">
+        {/* Entry text */}
+        <div>
+          <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px] font-mono text-xs uppercase tracking-[0.05em]">Your entry</label>
+          <textarea value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Write what's on your mind..." rows={6}
+            className="w-full bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] p-4 text-[15px] text-[var(--ink)] leading-[1.7] placeholder:text-[var(--ink-muted)] outline-none resize-y focus:border-[var(--seal)] transition-colors" />
+        </div>
+
         {/* Photos */}
         <div>
           <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px] font-mono text-xs uppercase tracking-[0.05em]">Photos</label>
@@ -101,13 +96,6 @@ export default function CreatePostPage() {
           )}
         </div>
 
-        {/* Caption */}
-        <div>
-          <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px] font-mono text-xs uppercase tracking-[0.05em]">Caption</label>
-          <textarea value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Write something..." rows={4}
-            className="w-full bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] p-4 text-[15px] text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none resize-none focus:border-[var(--seal)] transition-colors" />
-        </div>
-
         {/* Location */}
         <div>
           <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px] font-mono text-xs uppercase tracking-[0.05em]">Location</label>
@@ -115,37 +103,6 @@ export default function CreatePostPage() {
             <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" />
             <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Add location (optional)"
               className="w-full pl-10 pr-4 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--seal)] transition-colors" />
-          </div>
-        </div>
-
-        {/* Tag People */}
-        <div>
-          <label className="block text-[12px] font-medium text-[var(--ink-light)] mb-[6px] font-mono text-xs uppercase tracking-[0.05em]">Tag People</label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {tagged.map(t => (
-              <div key={t.id} className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(168,85,66,0.08)] rounded-full">
-                <span className="text-[12px] text-[var(--seal)]">{t.name}</span>
-                <button onClick={() => toggleTag(t)} className="text-[var(--seal)] hover:text-[var(--seal-hover)]"><X size={12} /></button>
-              </div>
-            ))}
-          </div>
-          <div className="relative">
-            <input type="text" value={tagQuery} onChange={(e) => { setTagQuery(e.target.value); setShowTagSearch(true); }}
-              onFocus={() => setShowTagSearch(true)} placeholder="Search family members..."
-              className="w-full px-4 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-sm outline-none focus:border-[var(--seal)] transition-colors" />
-            {showTagSearch && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] shadow-[var(--shadow-md)] max-h-40 overflow-y-auto z-10">
-                {members.filter(m => m.name.toLowerCase().includes(tagQuery.toLowerCase())).map(m => (
-                  <button key={m.id} onClick={() => { toggleTag(m); setShowTagSearch(false); setTagQuery(''); }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-[var(--page)] transition-colors">
-                    <Avatar name={m.name} size={28} />
-                    <span className="text-sm text-[var(--ink)]">{m.name}</span>
-                    {tagged.find(t => t.id === m.id) && <span className="ml-auto text-[11px] text-[var(--seal)] font-mono">Tagged</span>}
-                  </button>
-                ))}
-                {members.length === 0 && <p className="px-4 py-3 text-sm text-[var(--ink-muted)]">No family members found</p>}
-              </div>
-            )}
           </div>
         </div>
       </div>

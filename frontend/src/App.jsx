@@ -20,6 +20,7 @@ import ProfilePage from './pages/ProfilePage';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import CreateTripPage from './pages/CreateTripPage';
+import CalendarPage from './pages/CalendarPage';
 import { ToastProvider } from './components/ui';
 
 function PrivateRoute({ children }) {
@@ -51,7 +52,7 @@ function AnimatedRoutes() {
           <Route path="/join/:invite_token" element={<JoinFamilyPage />} />
           <Route path="/memories/:memory_id/public" element={<PublicMemoryPage />} />
 
-          {/* New Instagram-style Feed */}
+          {/* Diary timeline */}
           <Route path="/" element={<PrivateRoute><FeedPage /></PrivateRoute>} />
           <Route path="/post/new" element={<PrivateRoute><CreatePostPage /></PrivateRoute>} />
           <Route path="/vault" element={<PrivateRoute><VaultPage /></PrivateRoute>} />
@@ -60,6 +61,7 @@ function AnimatedRoutes() {
           <Route path="/trips" element={<PrivateRoute><TripsPage /></PrivateRoute>} />
           <Route path="/trips/new" element={<PrivateRoute><CreateTripPage /></PrivateRoute>} />
           <Route path="/trips/:trip_id" element={<PrivateRoute><TripDetailPage /></PrivateRoute>} />
+          <Route path="/calendar" element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
 
           {/* Legacy routes (kept for backward compat) */}
           <Route path="/create-family" element={<PrivateRoute><CreateFamilyPage /></PrivateRoute>} />

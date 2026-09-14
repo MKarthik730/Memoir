@@ -89,7 +89,7 @@ export default function VaultPage() {
         <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
           <div className="max-w-4xl mx-auto px-4 h-full flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors">
+              <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
                 <ArrowLeft size={18} />
               </button>
               <Archive size={20} className="text-[var(--seal)]" />
@@ -127,7 +127,7 @@ export default function VaultPage() {
               <button key={t.key || 'all'} onClick={() => setActiveType(t.key)}
                 className={`px-3 py-1.5 rounded-full text-[11px] font-mono transition-all ${
                   activeType === t.key
-                    ? 'bg-[rgba(74,107,138,0.1)] text-[var(--postmark)]'
+                    ? 'bg-[rgba(122,79,99,0.1)] text-[var(--postmark)]'
                     : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
                 }`}>
                 {t.label}
@@ -145,7 +145,7 @@ export default function VaultPage() {
               <div className="thread-divider max-w-[80px] mx-auto mb-6" />
               <h2 className="font-display text-xl mb-2">Nothing here yet</h2>
               <p className="text-[var(--ink-light)] text-sm max-w-sm mx-auto mb-6">Start preserving memories — upload photos, documents, and videos to your family vault.</p>
-              <button onClick={() => setShowUpload(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(168,85,66,0.2)]">
+              <button onClick={() => setShowUpload(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)]">
                 <Upload size={18} className="inline mr-2" />Upload to Vault
               </button>
             </div>
@@ -178,7 +178,7 @@ export default function VaultPage() {
 
         {/* Upload Modal */}
         {showUpload && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(28,26,23,0.25)', backdropFilter: 'blur(4px)' }}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(36,31,26,0.25)', backdropFilter: 'blur(4px)' }}
             onClick={() => setShowUpload(false)}>
             <div className="w-full max-w-[420px] bg-[var(--vellum)] rounded-[14px] shadow-[var(--shadow-lg)] animate-fade-in" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
@@ -217,7 +217,7 @@ export default function VaultPage() {
 
         {/* Lightbox */}
         {previewUrl && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(28,26,23,0.85)' }} onClick={() => setPreviewUrl(null)}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(36,31,26,0.85)' }} onClick={() => setPreviewUrl(null)}>
             <img src={previewUrl} alt="" className="max-w-full max-h-[90vh] rounded-[6px] object-contain" />
           </div>
         )}

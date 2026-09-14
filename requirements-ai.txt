@@ -1,6 +1,7 @@
-# Optional AI/vector search dependencies (~500MB with PyTorch)
-# Fails gracefully on Render's free tier — falls back to keyword search
+# Optional semantic-search dependency (~500MB with PyTorch).
+# Search works fully on keyword scoring without this — installing it just
+# adds semantic (meaning-based) matching on top. No database extension or
+# background worker required; similarity is computed in Python.
 # pip install -r requirements-ai.txt
 
 sentence-transformers==2.7.0
-pgvector==0.2.5
