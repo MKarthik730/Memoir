@@ -63,7 +63,7 @@ export default function PublicMemoryPage() {
     <div className="min-h-screen bg-[var(--page)]">
       <div className="max-w-2xl mx-auto px-4 py-12 animate-fade-in-up">
         <div className="text-center mb-8">
-          <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] inline-flex mx-auto mb-4 bg-[rgba(74,107,138,0.04)]">
+          <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] inline-flex mx-auto mb-4 bg-[rgba(122,79,99,0.04)]">
             <span>Shared letter</span>
           </div>
           {memory.family_name && (
@@ -73,7 +73,7 @@ export default function PublicMemoryPage() {
           )}
         </div>
 
-        <div className="bg-[var(--vellum)] rounded-[14px] p-8 md:p-10 border border-[var(--border)] shadow-[0_8px_32px_rgba(28,26,23,0.1)] relative">
+        <div className="bg-[var(--vellum)] rounded-[14px] p-8 md:p-10 border border-[var(--border)] shadow-[0_8px_32px_rgba(36,31,26,0.1)] relative">
           <div className="absolute left-0 top-0 bottom-0 w-[3px] opacity-40"
             style={{
               background: 'repeating-linear-gradient(to bottom, var(--border) 0px, var(--border) 4px, transparent 4px, transparent 8px)',
@@ -83,7 +83,7 @@ export default function PublicMemoryPage() {
           <div className="flex items-start justify-between gap-4 mb-6">
             <h1 className="font-display text-[32px] text-[var(--ink)] leading-tight">{memory.title}</h1>
             {memory.memory_date && (
-              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(74,107,138,0.04)] flex-shrink-0 mt-2">
+              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(122,79,99,0.04)] flex-shrink-0 mt-2">
                 <span>{formatDate(memory.memory_date)}</span>
               </div>
             )}
@@ -138,14 +138,14 @@ export default function PublicMemoryPage() {
           <div className="text-center mt-8 p-6 bg-[var(--vellum)] rounded-[14px] border border-[var(--border)]">
             <h3 className="font-display text-lg mb-2">Join {memory.family_name}</h3>
             <p className="text-[var(--ink-light)] text-sm mb-4">Preserve your family's letters and memories</p>
-            <Link to="/login" className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(168,85,66,0.2)]">Get Started</Link>
+            <Link to="/login" className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)]">Get Started</Link>
           </div>
         )}
       </div>
 
       {lightboxImg && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          style={{ background: 'rgba(28,26,23,0.85)' }} onClick={() => setLightboxImg(null)}>
+          style={{ background: 'rgba(36,31,26,0.85)' }} onClick={() => setLightboxImg(null)}>
           <img src={lightboxImg} alt="Memory" className="max-w-full max-h-[90vh] rounded-[6px] object-contain" />
         </div>
       )}

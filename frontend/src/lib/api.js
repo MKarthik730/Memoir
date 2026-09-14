@@ -104,27 +104,13 @@ export const uploadAPI = {
   },
 };
 
-// ─── Feed / Posts / Social Features ───────────────────────────────────────────
+// ─── Diary Entries ─────────────────────────────────────────────────────────────
 
 export const feedAPI = {
   getFeed: (familyId, cursor, limit = 10) =>
     api.get(`/feed?family_id=${familyId}${cursor ? `&cursor=${cursor}` : ''}&limit=${limit}`).then((r) => r.data),
   createPost: (formData) =>
     api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data),
-  toggleLike: (postId) => api.post(`/posts/${postId}/like`).then((r) => r.data),
-  addComment: (postId, text) => {
-    const fd = new FormData();
-    fd.append('text', text);
-    return api.post(`/posts/${postId}/comment`, fd).then((r) => r.data);
-  },
-  getComments: (postId) => api.get(`/posts/${postId}/comments`).then((r) => r.data),
-};
-
-export const storiesAPI = {
-  getActive: (familyId) => api.get(`/stories?family_id=${familyId}`).then((r) => r.data),
-  create: (formData) =>
-    api.post('/stories', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data),
-  markViewed: (storyId) => api.post(`/stories/${storyId}/view`).then((r) => r.data),
 };
 
 export const vaultAPI = {
@@ -149,6 +135,24 @@ export const birthdaysAPI = {
   getUpcoming: (familyId) => api.get(`/birthdays?family_id=${familyId}`).then((r) => r.data),
 };
 
+// ─── Life Assistant: On This Day, Resurfacing, Neglected, Calendar ────────────
+
+export const lifeAPI = {
+  onThisDay: (familyId) => api.get(`/family/${familyId}/on-this-day`).then((r) => r.data),
+  resurface: () => api.get('/home/resurface').then((r) => r.data),
+  reviewMemory: (memoryId, quality) => {
+    const fd = new FormData();
+    fd.append('quality', quality);
+    return api.post(`/memories/${memoryId}/review`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
+  },
+  neglected: (familyId) => api.get(`/family/${familyId}/neglected`).then((r) => r.data),
+};
+
+export const calendarAPI = {
+  getMonth: (familyId, year, month) =>
+    api.get(`/family/${familyId}/calendar?year=${year}&month=${month}`).then((r) => r.data),
+};
+
 // ─── Trips ────────────────────────────────────────────────────────────────────
 
 export const tripsAPI = {
@@ -161,12 +165,12 @@ export const tripsAPI = {
   addPerson: (tripId, personId) => {
     const fd = new FormData();
     fd.append('person_id', personId);
-    return api.post(`/home/trip/${tripId}/person`, fd).then((r) => r.data);
+    return api.post(`/home/trip/${tripId}/person`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
   },
   addMemory: (tripId, memoryId) => {
     const fd = new FormData();
     fd.append('memory_id', memoryId);
-    return api.post(`/home/trip/${tripId}/memory`, fd).then((r) => r.data);
+    return api.post(`/home/trip/${tripId}/memory`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
   },
 };
 

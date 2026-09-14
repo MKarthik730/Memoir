@@ -133,8 +133,8 @@ def generate_embedding(self, memory_id: str):
     _update_job_status(job_id, "processing", 0.1)
 
     try:
-        from backend.database.config import SessionLocal, PGVECTOR_AVAILABLE
-        from backend.rag.vector_store import _get_embedding
+        from backend.database.config import SessionLocal
+        from backend.rag.vector_store import get_embedding, embedding_to_storage
 
         db = SessionLocal()
         try:
@@ -144,18 +144,15 @@ def generate_embedding(self, memory_id: str):
                 return {"status": "failed"}
 
             text = f"{memory.title} {memory.story_text or ''}"
-            embedding = _get_embedding(text)
+            embedding = get_embedding(text)
 
-            if embedding and PGVECTOR_AVAILABLE:
-                memory.embedding = embedding
+            if embedding:
+                memory.embedding = embedding_to_storage(embedding)
                 db.commit()
                 _update_job_status(job_id, "completed", 1.0)
             else:
                 _update_job_status(job_id, "completed", 1.0,
-                                   {"message": "pgvector unavailable, embedding stored as text"})
-                if embedding:
-                    memory.embedding = str(embedding)
-                    db.commit()
+                                   {"message": "embedding model unavailable, keyword search only"})
 
             return {"status": "completed", "job_id": job_id}
         finally:

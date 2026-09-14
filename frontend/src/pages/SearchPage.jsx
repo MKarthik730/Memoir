@@ -36,7 +36,7 @@ export default function SearchPage() {
       <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)]">
         <div className="px-4 py-4 max-w-3xl mx-auto">
           <div className="flex items-center gap-3 mb-4">
-            <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors">
+            <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
               <ArrowLeft size={18} />
             </button>
             <h1 className="text-[17px] font-medium text-[var(--ink)]">Search the Archive</h1>
@@ -105,7 +105,7 @@ export default function SearchPage() {
                       </Link>
                     </div>
                     {result.memory?.memory_date && (
-                      <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(74,107,138,0.04)]">
+                      <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(122,79,99,0.04)]">
                         <span>
                           {new Date(result.memory.memory_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>

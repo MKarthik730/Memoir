@@ -85,7 +85,7 @@ export default function AssistantPage() {
     <div className="min-h-screen bg-[var(--page)] flex flex-col">
       {/* Header */}
       <div className="bg-[var(--vellum)] border-b border-[var(--border)] h-[56px] flex items-center px-4 gap-3">
-        <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors flex-shrink-0">
+        <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors flex-shrink-0">
           <ArrowLeft size={18} />
         </button>
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -97,7 +97,7 @@ export default function AssistantPage() {
             <p className="text-[11px] font-mono text-[var(--ink-muted)]">Ask about your family archive</p>
           </div>
         </div>
-        <button className="px-3 py-1.5 rounded-full bg-transparent text-[var(--ink-muted)] text-[11px] font-mono hover:bg-[rgba(168,85,66,0.05)] hover:text-[var(--ink)] transition-colors">
+        <button className="px-3 py-1.5 rounded-full bg-transparent text-[var(--ink-muted)] text-[11px] font-mono hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-colors">
           Clear chat
         </button>
       </div>
@@ -124,7 +124,7 @@ export default function AssistantPage() {
                     <button
                       key={s}
                       onClick={() => setMessage(s)}
-                      className="px-4 py-2 rounded-full border border-[var(--border)] text-[12px] text-[var(--ink-light)] bg-[var(--vellum)] hover:bg-[rgba(168,85,66,0.06)] hover:text-[var(--seal)] transition-colors"
+                      className="px-4 py-2 rounded-full border border-[var(--border)] text-[12px] text-[var(--ink-light)] bg-[var(--vellum)] hover:bg-[rgba(63,93,70,0.06)] hover:text-[var(--seal)] transition-colors"
                     >
                       {s}
                     </button>
@@ -179,7 +179,7 @@ export default function AssistantPage() {
                     <button
                       key={s}
                       onClick={() => setMessage(s)}
-                      className="px-4 py-2 rounded-full border border-[var(--border)] text-[12px] text-[var(--ink-light)] bg-[var(--vellum)] hover:bg-[rgba(168,85,66,0.06)] hover:text-[var(--seal)] transition-colors"
+                      className="px-4 py-2 rounded-full border border-[var(--border)] text-[12px] text-[var(--ink-light)] bg-[var(--vellum)] hover:bg-[rgba(63,93,70,0.06)] hover:text-[var(--seal)] transition-colors"
                     >
                       {s}
                     </button>

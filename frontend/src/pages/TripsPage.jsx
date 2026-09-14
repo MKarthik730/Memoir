@@ -91,7 +91,7 @@ export default function TripsPage() {
               </p>
               <button
                 onClick={() => navigate('/trips/new')}
-                className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all active:scale-[0.98] shadow-[0_2px_8px_rgba(168,85,66,0.2)]"
+                className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all active:scale-[0.98] shadow-[0_2px_8px_rgba(63,93,70,0.2)]"
               >
                 <Plus size={18} className="inline mr-2" />Plan Your First Trip
               </button>
@@ -135,7 +135,7 @@ export default function TripsPage() {
                         <span>{trip.memory_count || 0}</span>
                       </div>
                       {trip.start_date && (
-                        <div className="hidden sm:block font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(74,107,138,0.04)]">
+                        <div className="hidden sm:block font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(122,79,99,0.04)]">
                           {new Date(trip.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                         </div>
                       )}

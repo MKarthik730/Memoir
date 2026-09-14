@@ -508,3 +508,238 @@ def build_agent_response(
         "suggestions": suggestions,
         "tool_calls": tool_calls,
     }
+
+
+# ─── LLM Tool-Calling Agent (used when the user has an API key configured) ───
+#
+# The router above (build_agent_response) is a keyword-matching fallback that
+# needs no API key. When the user has added a key in Settings, this function
+# instead lets a real LLM decide which tool(s) to call and reason over the
+# results — genuine tool-calling, not string matching.
+
+TOOL_SPECS = [
+    {
+        "name": "query_memories",
+        "description": (
+            "Search the family's memories (dated stories/letters written for a person) "
+            "by keyword, optionally scoped to one person or a date range. "
+            "Always call this before answering any question about what happened, "
+            "what was written, or what someone remembers."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "keyword": {"type": "string", "description": "Search terms — required."},
+                "person_name": {"type": "string", "description": "Restrict to this family member, if named."},
+                "start_date": {"type": "string", "description": "ISO date, inclusive lower bound."},
+                "end_date": {"type": "string", "description": "ISO date, inclusive upper bound."},
+            },
+            "required": ["keyword"],
+        },
+    },
+    {
+        "name": "query_relationship",
+        "description": "Find how two family members are related, or list all relationships in the family.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "person_a_name": {"type": "string"},
+                "person_b_name": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "query_trips",
+        "description": "Search the family's recorded trips by location or family member.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string"},
+                "person_name": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "get_resurfacing_suggestions",
+        "description": "Get memories the spaced-repetition scheduler has due for review today.",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_neglected_connections",
+        "description": "Find family members nobody has written a memory for in a while.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "threshold_days": {"type": "integer", "description": "Days of silence to count as neglected (default 90)."},
+            },
+        },
+    },
+]
+
+SYSTEM_PROMPT = (
+    "You are the Memoir assistant — a private family memory archive, not a general "
+    "chatbot. You must call a tool before making any factual claim about the family's "
+    "memories, relationships, trips, or resurfacing/neglect status; never invent an "
+    "answer from general knowledge. Keep replies short (2-4 sentences) and warm, like "
+    "a knowledgeable family archivist. If a tool returns nothing relevant, say so "
+    "plainly instead of guessing."
+)
+
+
+def _resolve_person_id(db: Session, family_id: str, name: Optional[str]) -> Optional[str]:
+    if not name:
+        return None
+    from backend.database.models import Person
+    person = db.query(Person).filter(
+        Person.family_id == family_id,
+        Person.name.ilike(f"%{name}%"),
+    ).first()
+    return str(person.id) if person else None
+
+
+def _execute_tool(name: str, tool_input: dict, db: Session, user_id: str, family_id: str) -> dict:
+    """Dispatch one LLM-requested tool call to its Python implementation."""
+    try:
+        if name == "query_memories":
+            date_range = None
+            if tool_input.get("start_date") or tool_input.get("end_date"):
+                date_range = {"start": tool_input.get("start_date"), "end": tool_input.get("end_date")}
+            results = tool_query_memories(
+                db, family_id,
+                person_id=_resolve_person_id(db, family_id, tool_input.get("person_name")),
+                date_range=date_range,
+                keyword=tool_input.get("keyword"),
+            )
+            return {"results": results, "count": len(results)}
+
+        if name == "query_relationship":
+            return tool_query_relationship(
+                db, family_id,
+                person_a_id=_resolve_person_id(db, family_id, tool_input.get("person_a_name")),
+                person_b_id=_resolve_person_id(db, family_id, tool_input.get("person_b_name")),
+            )
+
+        if name == "query_trips":
+            return {"trips": tool_query_trips(
+                db, family_id,
+                person_id=_resolve_person_id(db, family_id, tool_input.get("person_name")),
+                location=tool_input.get("location"),
+            )}
+
+        if name == "get_resurfacing_suggestions":
+            return {"memories": tool_get_resurfacing_suggestions(user_id, db)}
+
+        if name == "get_neglected_connections":
+            return {"neglected": tool_get_neglected_connections(
+                db, family_id, threshold_days=tool_input.get("threshold_days", 90)
+            )}
+
+        return {"error": f"Unknown tool: {name}"}
+    except Exception as e:
+        logger.error(f"Tool {name} failed: {e}")
+        return {"error": str(e)}
+
+
+MAX_TOOL_ROUNDS = 3
+
+
+def _run_anthropic_agent(client, user_message: str, db: Session, user_id: str, family_id: str) -> Dict:
+    tools = [{"name": t["name"], "description": t["description"], "input_schema": t["parameters"]} for t in TOOL_SPECS]
+    messages = [{"role": "user", "content": user_message}]
+    tool_calls_made = []
+
+    for _ in range(MAX_TOOL_ROUNDS):
+        response = client.messages.create(
+            model="claude-opus-5",
+            max_tokens=1024,
+            system=SYSTEM_PROMPT,
+            tools=tools,
+            messages=messages,
+        )
+
+        if response.stop_reason != "tool_use":
+            final_text = "".join(b.text for b in response.content if b.type == "text")
+            return {"response": final_text or "I'm not sure how to help with that.", "tool_calls": tool_calls_made}
+
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            tool_calls_made.append(block.name)
+            result = _execute_tool(block.name, block.input, db, user_id, family_id)
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": json.dumps(result),
+            })
+        messages.append({"role": "user", "content": tool_results})
+
+    return {"response": "I looked into that but couldn't reach a clear answer — could you rephrase?", "tool_calls": tool_calls_made}
+
+
+def _run_openai_style_agent(client, model: str, user_message: str, db: Session, user_id: str, family_id: str) -> Dict:
+    """Shared by OpenAI and Groq — both speak the OpenAI chat-completions tool-calling format."""
+    tools = [{"type": "function", "function": {"name": t["name"], "description": t["description"], "parameters": t["parameters"]}} for t in TOOL_SPECS]
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
+    tool_calls_made = []
+
+    for _ in range(MAX_TOOL_ROUNDS):
+        response = client.chat.completions.create(model=model, messages=messages, tools=tools)
+        msg = response.choices[0].message
+
+        if not msg.tool_calls:
+            return {"response": msg.content or "I'm not sure how to help with that.", "tool_calls": tool_calls_made}
+
+        messages.append({"role": "assistant", "content": msg.content, "tool_calls": [tc.model_dump() for tc in msg.tool_calls]})
+        for tc in msg.tool_calls:
+            tool_calls_made.append(tc.function.name)
+            try:
+                tool_input = json.loads(tc.function.arguments)
+            except (TypeError, ValueError):
+                tool_input = {}
+            result = _execute_tool(tc.function.name, tool_input, db, user_id, family_id)
+            messages.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)})
+
+    return {"response": "I looked into that but couldn't reach a clear answer — could you rephrase?", "tool_calls": tool_calls_made}
+
+
+def build_llm_agent_response(
+    user_message: str,
+    user_id: str,
+    family_id: str,
+    db: Session,
+    provider: str,
+    client,
+) -> Dict:
+    """Real LLM tool-calling, for when the user has configured an API key.
+
+    Args:
+        provider: 'anthropic' | 'openai' | 'groq'.
+        client: the provider client from backend.utils.get_user_llm_client.
+
+    Falls back to the keyword router's response shape on any API error so a
+    transient provider failure doesn't break the chat experience.
+    """
+    try:
+        if provider == "anthropic":
+            result = _run_anthropic_agent(client, user_message, db, user_id, family_id)
+        elif provider in ("openai", "groq"):
+            model = "gpt-4o-mini" if provider == "openai" else "llama-3.3-70b-versatile"
+            result = _run_openai_style_agent(client, model, user_message, db, user_id, family_id)
+        else:
+            return build_agent_response(user_message, user_id, family_id, db)
+
+        result["suggestions"] = [
+            "Who have I been neglecting?",
+            "What memories are due for review?",
+            "Tell me about a trip",
+            "How are Mom and Dad related?",
+        ]
+        return result
+    except Exception as e:
+        logger.error(f"LLM agent failed, falling back to keyword router: {e}")
+        return build_agent_response(user_message, user_id, family_id, db)

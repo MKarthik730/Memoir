@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Search, Share2, Settings, MessageCircle, LogOut, Archive, Heart, User, BookOpen, Route } from 'lucide-react';
+import { Home, Search, Share2, Settings, MessageCircle, LogOut, Archive, Bell, User, BookOpen, Route, CalendarDays } from 'lucide-react';
 import Avatar from './ui/Avatar';
 
 export default function Sidebar({ family, familyId, activePage }) {
@@ -15,14 +15,15 @@ export default function Sidebar({ family, familyId, activePage }) {
   const visibleMembers = members.slice(0, 5);
   const remainingCount = members.length - 5;
 
-  const MEMBER_COLORS = ['#A85542', '#4A6B8A', '#C4984F', '#5A8A7A', '#8B6B8B'];
+  const MEMBER_COLORS = ['#3F5D46', '#7A4F63', '#BC8A4E', '#5A8A7A', '#8B6B8B'];
 
   const navItems = [
-    { id: 'feed', label: 'Feed', icon: Home, path: '/' },
-    { id: 'journal', label: 'Journal', icon: BookOpen, path: `/family/${familyId || ''}` },
+    { id: 'feed', label: 'Diary', icon: Home, path: '/' },
+    { id: 'journal', label: 'People', icon: BookOpen, path: `/family/${familyId || ''}` },
     { id: 'trips', label: 'Trips', icon: Route, path: '/trips' },
+    { id: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { id: 'vault', label: 'Vault', icon: Archive, path: '/vault' },
-    { id: 'notifications', label: 'Alerts', icon: Heart, path: '/notifications' },
+    { id: 'notifications', label: 'Alerts', icon: Bell, path: '/notifications' },
     { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
     { id: 'search', label: 'Search', icon: Search, path: `/family/${familyId}/search` },
     { id: 'graph', label: 'Tree', icon: Share2, path: `/family/${familyId}/graph` },
@@ -53,8 +54,8 @@ export default function Sidebar({ family, familyId, activePage }) {
               to={item.path}
               className={`relative flex items-center gap-3 pl-4 pr-4 py-[10px] rounded-[8px] text-sm transition-all no-underline ${
                 isActive
-                  ? 'bg-[rgba(168,85,66,0.1)] text-[var(--seal)] font-medium'
-                  : 'text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] hover:text-[var(--ink)]'
+                  ? 'bg-[rgba(63,93,70,0.1)] text-[var(--seal)] font-medium'
+                  : 'text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)]'
               }`}
             >
               {isActive && (
@@ -93,7 +94,7 @@ export default function Sidebar({ family, familyId, activePage }) {
 
         <Link
           to="/settings"
-          className="flex items-center gap-3 w-full px-4 py-[8px] rounded-[8px] text-[13px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] hover:text-[var(--ink)] transition-all no-underline"
+          className="flex items-center gap-3 w-full px-4 py-[8px] rounded-[8px] text-[13px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-all no-underline"
         >
           <Settings size={18} className="flex-shrink-0" />
           <span>Settings</span>
@@ -101,7 +102,7 @@ export default function Sidebar({ family, familyId, activePage }) {
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-[8px] rounded-[8px] text-[13px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] hover:text-[var(--ink)] transition-all no-underline"
+          className="flex items-center gap-3 w-full px-4 py-[8px] rounded-[8px] text-[13px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-all no-underline"
         >
           <LogOut size={18} className="flex-shrink-0" />
           <span>Sign out</span>

@@ -27,7 +27,7 @@ export default function CreateFamilyPage() {
   return (
     <div className="min-h-screen bg-[var(--page)] flex items-center justify-center p-4">
       <div className="w-full max-w-[400px] animate-fade-in-up">
-        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[14px] shadow-[0_8px_32px_rgba(28,26,23,0.1)] p-8 text-center">
+        <div className="bg-[var(--vellum)] border border-[var(--border)] rounded-[14px] shadow-[0_8px_32px_rgba(36,31,26,0.1)] p-8 text-center">
           <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
             <Users size={22} className="text-[var(--seal)]" />
           </div>

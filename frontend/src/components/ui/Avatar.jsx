@@ -1,6 +1,6 @@
 const AVATAR_COLORS = [
-  '#A85542', '#4A6B8A', '#C4984F', '#5A8A7A',
-  '#8B6B8B', '#B87A5A', '#6B8B9E', '#9E7E6B',
+  '#3F5D46', '#7A4F63', '#BC8A4E', '#5A8A7A',
+  '#8B6B8B', '#B87A5A', '#7A5C3E', '#9E7E6B',
 ];
 
 function getColor(name) {

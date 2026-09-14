@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, MessageCircle, AtSign, Cake, Bell, ArrowLeft } from 'lucide-react';
-import Avatar from '../components/ui/Avatar';
+import { AtSign, Cake, Bell, ArrowLeft } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import BottomTabBar from '../components/BottomTabBar';
 import { familyAPI, notificationsAPI } from '../lib/api';
 
 const typeConfig = {
-  like: { icon: Heart, color: 'var(--seal)', bg: 'rgba(168,85,66,0.08)' },
-  comment: { icon: MessageCircle, color: 'var(--postmark)', bg: 'rgba(74,107,138,0.08)' },
-  tag: { icon: AtSign, color: 'var(--gilt)', bg: 'rgba(196,152,79,0.06)' },
-  birthday: { icon: Cake, color: 'var(--gilt)', bg: 'rgba(196,152,79,0.06)' },
-  story: { icon: Heart, color: 'var(--postmark)', bg: 'rgba(74,107,138,0.08)' },
+  tag: { icon: AtSign, color: 'var(--gilt)', bg: 'rgba(188,138,78,0.06)' },
+  birthday: { icon: Cake, color: 'var(--gilt)', bg: 'rgba(188,138,78,0.06)' },
 };
 
 export default function NotificationsPage() {
@@ -49,14 +45,10 @@ export default function NotificationsPage() {
   };
 
   const getMessage = (n) => {
-    const name = n.from_user?.name || 'Someone';
     switch (n.type) {
-      case 'like': return `liked your post`;
-      case 'comment': return `commented on your post`;
-      case 'tag': return `tagged you in a post`;
+      case 'tag': return `tagged you in an entry`;
       case 'birthday': return `Send birthday wishes!`;
-      case 'story': return `posted a story`;
-      default: return `interacted with your post`;
+      default: return `shared something with the family`;
     }
   };
 
@@ -69,7 +61,7 @@ export default function NotificationsPage() {
         <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
           <div className="max-w-2xl mx-auto px-4 h-full flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors">
+              <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
                 <ArrowLeft size={18} />
               </button>
               <h1 className="text-[17px] font-medium text-[var(--ink)]">Notifications</h1>
@@ -93,12 +85,12 @@ export default function NotificationsPage() {
               <Bell size={40} className="mx-auto mb-4 text-[var(--ink-muted)] opacity-30" />
               <div className="thread-divider max-w-[80px] mx-auto mb-6" />
               <h2 className="font-display text-xl mb-2">All quiet</h2>
-              <p className="text-[var(--ink-light)] text-sm max-w-xs mx-auto">No notifications yet. When someone likes or comments, you'll see it here.</p>
+              <p className="text-[var(--ink-light)] text-sm max-w-xs mx-auto">No notifications yet. When a birthday's near or someone tags you in an entry, you'll see it here.</p>
             </div>
           ) : (
             <div className="space-y-1">
               {notifications.map((n, i) => {
-                const config = typeConfig[n.type] || typeConfig.like;
+                const config = typeConfig[n.type] || typeConfig.birthday;
                 const Icon = config.icon;
                 return (
                   <motion.div key={n.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}

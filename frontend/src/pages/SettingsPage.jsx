@@ -72,7 +72,7 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
         <div className="max-w-2xl mx-auto px-4 h-full flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] transition-colors">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
             <ArrowLeft size={18} />
           </button>
           <h1 className="text-[17px] font-medium text-[var(--ink)]">Settings</h1>
@@ -155,7 +155,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Info */}
-        <div className="p-[14px] border rounded-[8px] flex items-start gap-3" style={{ background: 'rgba(74,107,138,0.06)', borderColor: 'rgba(74,107,138,0.15)' }}>
+        <div className="p-[14px] border rounded-[8px] flex items-start gap-3" style={{ background: 'rgba(122,79,99,0.06)', borderColor: 'rgba(122,79,99,0.15)' }}>
           <Key size={16} className="text-[var(--postmark)] flex-shrink-0 mt-[2px]" />
           <div>
             <h3 className="text-[13px] font-medium text-[var(--ink)] mb-1">About API Keys</h3>

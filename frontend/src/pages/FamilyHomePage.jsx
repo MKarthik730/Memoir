@@ -96,15 +96,15 @@ export default function FamilyHomePage() {
           <div className="px-4 max-w-4xl mx-auto h-full flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <h1 className="text-[15px] font-medium text-[var(--ink)] truncate">{family?.name || 'Family'}</h1>
-              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(74,107,138,0.05)] flex-shrink-0">
+              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(122,79,99,0.05)] flex-shrink-0">
                 <span>{people.length} {people.length === 1 ? 'page' : 'pages'}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button onClick={() => setShowInvite(!showInvite)} className="w-9 h-9 flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--page)] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] hover:text-[var(--ink)] transition-colors" title="Invite members">
+              <button onClick={() => setShowInvite(!showInvite)} className="w-9 h-9 flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--page)] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-colors" title="Invite members">
                 <Share2 size={18} />
               </button>
-              <Link to={`/family/${family_id}/search`} className="w-9 h-9 flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--page)] text-[var(--ink-light)] hover:bg-[rgba(168,85,66,0.05)] hover:text-[var(--ink)] transition-colors">
+              <Link to={`/family/${family_id}/search`} className="w-9 h-9 flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--page)] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-colors">
                 <Search size={18} />
               </Link>
               <button onClick={() => setShowAddPerson(true)} className="px-4 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors flex items-center gap-1">
@@ -121,7 +121,7 @@ export default function FamilyHomePage() {
                 <p className="text-[11px] font-mono tracking-[0.05em] text-[var(--ink-muted)] mb-2 uppercase">Send an invitation</p>
                 <div className="flex gap-2">
                   <input type="text" value={inviteLink} readOnly className="flex-1 px-3 py-2 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-sm font-mono" />
-                  <button onClick={copyInviteLink} className="px-3 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(168,85,66,0.08)] transition-colors flex items-center gap-1">
+                  <button onClick={copyInviteLink} className="px-3 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors flex items-center gap-1">
                     {copied ? <><Check size={14} />Copied</> : <><Copy size={14} />Copy</>}
                   </button>
                 </div>
@@ -140,7 +140,7 @@ export default function FamilyHomePage() {
               <p className="text-[var(--ink-light)] text-sm max-w-sm mx-auto mb-8 leading-relaxed">
                 Every family story begins with a name. Add your first family member and begin writing your story together.
               </p>
-              <button onClick={() => setShowAddPerson(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(168,85,66,0.2)] active:scale-[0.98]">
+              <button onClick={() => setShowAddPerson(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)] active:scale-[0.98]">
                 <Plus size={18} className="inline mr-2" />Add Your First Page
               </button>
             </div>
@@ -197,7 +197,7 @@ export default function FamilyHomePage() {
 
       {/* Add Person Modal */}
       {showAddPerson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(28,26,23,0.25)', backdropFilter: 'blur(4px)' }}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(36,31,26,0.25)', backdropFilter: 'blur(4px)' }}
           onClick={() => setShowAddPerson(false)}>
           <div className="w-full max-w-[400px] bg-[var(--vellum)] rounded-[14px] shadow-[var(--shadow-lg)] animate-fade-in"
             onClick={(e) => e.stopPropagation()}>
@@ -225,7 +225,7 @@ export default function FamilyHomePage() {
                 <textarea value={newPerson.bio} onChange={(e) => setNewPerson({ ...newPerson, bio: e.target.value })} placeholder="A short description..." rows={3} className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] outline-none resize-vertical focus:border-[var(--seal)] transition-colors" />
               </div>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setShowAddPerson(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(168,85,66,0.08)] transition-colors">Cancel</button>
+                <button type="button" onClick={() => setShowAddPerson(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">Cancel</button>
                 <button type="submit" disabled={adding || !newPerson.name.trim()} className="flex-1 px-4 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] text-[13px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-colors">
                   {adding ? 'Adding...' : 'Add Page'}
                 </button>

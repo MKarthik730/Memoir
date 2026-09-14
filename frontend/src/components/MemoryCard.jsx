@@ -26,7 +26,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
               <h3 className="font-display text-[16px] text-[var(--ink)]">{memory.title}</h3>
             </div>
             {memory.memory_date && (
-              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(74,107,138,0.04)] flex-shrink-0 mt-0.5">
+              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(122,79,99,0.04)] flex-shrink-0 mt-0.5">
                 <span>{formatDate(memory.memory_date)}</span>
               </div>
             )}
@@ -67,7 +67,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
                 </button>
               ))}
               {photos.length > 4 && (
-                <div className="flex-shrink-0 w-[48px] h-[44px] rounded-[6px] bg-[rgba(28,26,23,0.06)] flex items-center justify-center text-[var(--ink-muted)] text-sm font-mono">
+                <div className="flex-shrink-0 w-[48px] h-[44px] rounded-[6px] bg-[rgba(36,31,26,0.06)] flex items-center justify-center text-[var(--ink-muted)] text-sm font-mono">
                   +{photos.length - 4}
                 </div>
               )}
@@ -76,7 +76,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
 
           {/* Voice Note */}
           {memory.voice_note_url && (
-            <div className="mb-3 p-3 bg-[rgba(74,107,138,0.06)] border border-[rgba(74,107,138,0.15)] rounded-[6px]">
+            <div className="mb-3 p-3 bg-[rgba(122,79,99,0.06)] border border-[rgba(122,79,99,0.15)] rounded-[6px]">
               <audio controls className="w-full h-10">
                 <source src={memory.voice_note_url} />
               </audio>
@@ -135,7 +135,7 @@ export default function MemoryCard({ memory, personName, compact = false }) {
       {lightboxImg && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          style={{ background: 'rgba(28,26,23,0.85)' }}
+          style={{ background: 'rgba(36,31,26,0.85)' }}
           onClick={() => setLightboxImg(null)}
         >
           <img src={lightboxImg} alt="Memory" className="max-w-full max-h-[90vh] rounded-[6px] object-contain" />

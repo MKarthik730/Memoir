@@ -25,13 +25,13 @@ from backend.database.models import (
     RelationshipCreate, RelationshipResponse,
     MemoryCreate, MemoryResponse, SearchQuery, UploadResponse,
 )
-from backend.database.config import engine, SessionLocal, get_db, check_pgvector, init_db, PGVECTOR_AVAILABLE
+from backend.database.config import engine, SessionLocal, get_db, init_db
 from backend.utils import encrypt_api_key, decrypt_api_key, mask_api_key, get_user_llm_client
-from backend.rag.vector_store import hybrid_query
+from backend.rag.vector_store import hybrid_query, get_embedding, embedding_to_storage
 from backend.graph.algorithms import shortest_path, detect_communities, centrality_ranking, build_adjacency_list
-from backend.scheduling.sm2 import sm2_update, get_due_memories, get_today_memories_for_user
+from backend.scheduling.sm2 import sm2_update, get_due_memories, get_today_memories_for_user, DEFAULT_INTERVAL_DAYS
 
-from backend.agent import build_agent_response
+from backend.agent import build_agent_response, build_llm_agent_response, tool_get_neglected_connections
 
 import json
 from starlette.responses import StreamingResponse
@@ -155,17 +155,6 @@ def serialize_person(person: Person, db: Session) -> dict:
         "created_at": person.created_at.isoformat() if person.created_at else None,
         "memory_count": memory_count,
     }
-
-
-def get_embedding(text: str) -> Optional[list]:
-    """Generate embedding for text using sentence-transformers. Returns None if unavailable."""
-    try:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        return model.encode(text).tolist()
-    except Exception as e:
-        logger.warning(f"Embedding generation failed: {e}")
-        return None
 
 
 # ─── Auth Routes ──────────────────────────────────────────────────────────────
@@ -598,12 +587,11 @@ async def create_memory(
     if voice_note and voice_note.filename:
         voice_note_url = save_upload(voice_note)
     
-    # Generate embedding
+    # Generate embedding for semantic search (best-effort — None if the
+    # embedding model isn't installed, search falls back to keyword-only)
     embedding_text = f"{title} {story_text or ''}"
-    embedding = get_embedding(embedding_text)
-    # Store as JSON string if pgvector is not available (PGVECTOR_AVAILABLE is imported from config at top of file)
-    embedding_value = embedding if PGVECTOR_AVAILABLE else (str(embedding) if embedding else None)
-    
+    embedding_value = embedding_to_storage(get_embedding(embedding_text))
+
     memory = Memory(
         id=uuid.uuid4(),
         person_id=person_id,
@@ -614,6 +602,8 @@ async def create_memory(
         voice_note_url=voice_note_url,
         created_by_user_id=current_user.id,
         embedding=embedding_value,
+        # SM-2 spaced repetition: due for its first resurfacing tomorrow
+        next_review_at=datetime.utcnow() + timedelta(days=DEFAULT_INTERVAL_DAYS),
     )
     db.add(memory)
     db.flush()
@@ -700,66 +690,139 @@ async def search_family(family_id: str, data: SearchQuery, current_user: User = 
     if not member:
         raise HTTPException(status_code=403, detail="Not a family member")
     
-    query_text = data.query
+    hits = hybrid_query(family_id=family_id, query_text=data.query, db=db, mode="hybrid", limit=20)
+
+    return [
+        {
+            "memory": {
+                "id": h["id"],
+                "title": h["title"],
+                "story_text": h["story_text"],
+                "memory_date": h["memory_date"],
+                "person_id": h.get("person_id"),
+            },
+            "person_name": h["person_name"],
+            "score": h["score"],
+        }
+        for h in hits
+    ]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Life Assistant: On This Day, Resurfacing, Neglected Connections
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/family/{family_id}/on-this-day")
+async def on_this_day(family_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Diary entries and memories from this same month/day in previous years.
+
+    Pure calendar-date lookup — not the SM-2 scheduler (see /home/resurface).
+    O(n) over the family's dated memories and posts; fine at personal scale.
+    """
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    from backend.database.models import Post
+    today = date.today()
     results = []
-    
-    # Try pgvector semantic search first
-    pgvector_ok = PGVECTOR_AVAILABLE and check_pgvector()
-    
-    if pgvector_ok:
-        try:
-            embedding = get_embedding(query_text)
-            if embedding:
-                embedding_str = "[" + ",".join(str(v) for v in embedding) + "]"
-                sql = text("""
-                    SELECT m.id, m.title, m.story_text, m.memory_date, p.name as person_name,
-                           1 - (m.embedding <=> :embedding) as score
-                    FROM memories m
-                    JOIN people p ON p.id = m.person_id
-                    WHERE m.family_id = :family_id AND m.embedding IS NOT NULL
-                    ORDER BY m.embedding <=> :embedding
-                    LIMIT 20
-                """)
-                rows = db.execute(sql, {"embedding": embedding_str, "family_id": family_id}).fetchall()
-                for row in rows:
-                    results.append({
-                        "memory": {
-                            "id": str(row[0]),
-                            "title": row[1],
-                            "story_text": row[2],
-                            "memory_date": row[3].isoformat() if row[3] else None,
-                        },
-                        "person_name": row[4],
-                        "score": float(row[5]) if row[5] else 0,
-                    })
-        except Exception as e:
-            logger.warning(f"Vector search failed, falling back to ILIKE: {e}")
-            pgvector_ok = False
-    
-    # Fallback: ILIKE search
-    if not pgvector_ok:
-        memories = db.query(Memory).filter(
-            Memory.family_id == family_id,
-            or_(
-                Memory.title.ilike(f"%{query_text}%"),
-                Memory.story_text.ilike(f"%{query_text}%"),
-            )
-        ).order_by(Memory.memory_date.desc().nullslast()).limit(20).all()
-        
-        for memory in memories:
-            person = db.query(Person).filter(Person.id == memory.person_id).first()
+
+    memories = db.query(Memory).filter(Memory.family_id == family_id, Memory.memory_date.isnot(None)).all()
+    for mem in memories:
+        d = mem.memory_date
+        if d.month == today.month and d.day == today.day and d.year < today.year:
+            person = db.query(Person).filter(Person.id == mem.person_id).first()
             results.append({
-                "memory": {
-                    "id": str(memory.id),
-                    "title": memory.title,
-                    "story_text": memory.story_text,
-                    "memory_date": memory.memory_date.isoformat() if memory.memory_date else None,
-                },
+                "type": "memory",
+                "id": str(mem.id),
+                "title": mem.title,
+                "story_text": mem.story_text,
+                "date": d.isoformat(),
+                "years_ago": today.year - d.year,
+                "person_id": str(mem.person_id),
                 "person_name": person.name if person else "Unknown",
-                "score": 0.5,
             })
-    
-    return results
+
+    posts = db.query(Post).filter(Post.family_id == family_id, Post.created_at.isnot(None)).all()
+    for post in posts:
+        d = post.created_at.date()
+        if d.month == today.month and d.day == today.day and d.year < today.year:
+            user = db.query(User).filter(User.id == post.user_id).first()
+            results.append({
+                "type": "entry",
+                "id": str(post.id),
+                "title": post.caption[:80] if post.caption else "Untitled entry",
+                "story_text": post.caption,
+                "date": d.isoformat(),
+                "years_ago": today.year - d.year,
+                "person_id": None,
+                "person_name": user.name if user else "Unknown",
+            })
+
+    results.sort(key=lambda r: r["years_ago"])
+    return {"today": today.isoformat(), "results": results}
+
+
+@app.get("/home/resurface")
+async def resurface_memories(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Memories the SM-2 scheduler has due for review today (or, if none are
+    due yet, a small set the user hasn't seen recently). See sm2.py."""
+    return {"memories": get_today_memories_for_user(str(current_user.id), db, limit=5)}
+
+
+@app.post("/memories/{memory_id}/review")
+async def review_memory(
+    memory_id: str,
+    quality: int = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record a resurfacing review and reschedule via SM-2.
+
+    quality: 0-5 (0-2 = "let it fade", 3-5 = "still meaningful"). See sm2.py.
+    """
+    memory = db.query(Memory).filter(Memory.id == memory_id).first()
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == memory.family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    update = sm2_update(quality, memory.interval_days or DEFAULT_INTERVAL_DAYS, memory.ease_factor or 2.5)
+    memory.interval_days = update["interval_days"]
+    memory.ease_factor = update["ease_factor"]
+    memory.next_review_at = datetime.fromisoformat(update["next_review_at"])
+    memory.last_shown_at = datetime.utcnow()
+    db.commit()
+
+    return {
+        "id": str(memory.id),
+        "interval_days": memory.interval_days,
+        "ease_factor": memory.ease_factor,
+        "next_review_at": memory.next_review_at.isoformat(),
+    }
+
+
+@app.get("/family/{family_id}/neglected")
+async def neglected_connections(
+    family_id: str,
+    threshold_days: int = Query(90),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Family members nobody has written a memory for in a while."""
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    return {"neglected": tool_get_neglected_connections(db, family_id, threshold_days)}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1316,28 +1379,34 @@ async def assistant_chat(
     if not member:
         raise HTTPException(status_code=403, detail="Not a family member")
 
-    # Check if user has an API key for LLM calls
+    # Prefer a real LLM tool-calling agent when the user has a key configured;
+    # otherwise fall back to the keyword-routed agent (needs no API key).
     api_key_record = db.query(ApiKey).filter(ApiKey.user_id == current_user.id).first()
 
-    agent_result = build_agent_response(
-        user_message=message,
-        user_id=str(current_user.id),
-        family_id=family_id,
-        db=db,
-    )
+    if api_key_record:
+        try:
+            decrypted_key = decrypt_api_key(api_key_record.encrypted_key)
+            llm_client = get_user_llm_client(str(current_user.id), api_key_record.provider, decrypted_key)
+            agent_result = build_llm_agent_response(
+                user_message=message,
+                user_id=str(current_user.id),
+                family_id=family_id,
+                db=db,
+                provider=api_key_record.provider,
+                client=llm_client,
+            )
+        except Exception as e:
+            logger.error(f"LLM client setup failed, falling back to keyword router: {e}")
+            agent_result = build_agent_response(
+                user_message=message, user_id=str(current_user.id), family_id=family_id, db=db,
+            )
+    else:
+        agent_result = build_agent_response(
+            user_message=message, user_id=str(current_user.id), family_id=family_id, db=db,
+        )
 
     async def event_stream():
         response_text = agent_result.get("response", "I couldn't process that request.")
-
-        # Check if user needs to add an API key for LLM-powered features
-        if not api_key_record and any(
-            kw in message.lower()
-            for kw in ["llm", "gpt", "claude", "ai", "summarize", "analyze"]
-        ):
-            response_text = (
-                "Add your API key in Settings to use AI-powered features. "
-                "You can still search memories and explore relationships!"
-            )
 
         # Stream the response token by token
         words = response_text.split(" ")
@@ -1369,7 +1438,7 @@ async def assistant_chat(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Instagram-style Feed & Posts
+# Diary Feed & Posts
 # ═══════════════════════════════════════════════════════════════════════════════
 
 from backend.database.models import (
@@ -1955,6 +2024,100 @@ async def get_upcoming_birthdays(
     return birthdays
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Calendar — read-only month view over existing data
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/family/{family_id}/calendar")
+async def get_calendar_month(
+    family_id: str,
+    year: int = Query(...),
+    month: int = Query(..., ge=1, le=12),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Diary entries, memories, birthdays, and trips for one calendar month.
+
+    Pure read-over-existing-data — no new model, everything is derived from
+    tables the app already has. Days are returned as 'YYYY-MM-DD' keys.
+    """
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    from backend.database.models import Post, Trip
+    import calendar as _cal
+
+    days_in_month = _cal.monthrange(year, month)[1]
+    month_start = date(year, month, 1)
+    month_end = date(year, month, days_in_month)
+
+    days: dict = {}
+
+    def add(day: date, item: dict):
+        key = day.isoformat()
+        days.setdefault(key, []).append(item)
+
+    # Diary entries (posts)
+    posts = db.query(Post).filter(Post.family_id == family_id).all()
+    for post in posts:
+        d = post.created_at.date() if post.created_at else None
+        if d and month_start <= d <= month_end:
+            user = db.query(User).filter(User.id == post.user_id).first()
+            add(d, {
+                "type": "entry",
+                "id": str(post.id),
+                "title": (post.caption[:60] if post.caption else "Diary entry"),
+                "by": user.name if user else "Unknown",
+            })
+
+    # Memories (person letters)
+    memories = db.query(Memory).filter(
+        Memory.family_id == family_id, Memory.memory_date.isnot(None)
+    ).all()
+    for mem in memories:
+        if month_start <= mem.memory_date <= month_end:
+            person = db.query(Person).filter(Person.id == mem.person_id).first()
+            add(mem.memory_date, {
+                "type": "memory",
+                "id": str(mem.id),
+                "title": mem.title,
+                "by": person.name if person else "Unknown",
+                "person_id": str(mem.person_id),
+            })
+
+    # Birthdays (recurring — projected onto this month/year)
+    people = db.query(Person).filter(Person.family_id == family_id, Person.dob.isnot(None)).all()
+    for p in people:
+        try:
+            occurrence = date(year, p.dob.month, p.dob.day)
+        except ValueError:
+            continue  # e.g. Feb 29 in a non-leap year
+        if month_start <= occurrence <= month_end:
+            add(occurrence, {
+                "type": "birthday",
+                "id": str(p.id),
+                "title": f"{p.name}'s birthday",
+                "person_id": str(p.id),
+            })
+
+    # Trips (any day the trip spans that falls within this month)
+    trips = db.query(Trip).filter(Trip.family_id == family_id).all()
+    for trip in trips:
+        if not trip.start_date:
+            continue
+        span_end = trip.end_date or trip.start_date
+        d = max(trip.start_date, month_start)
+        last = min(span_end, month_end)
+        while d <= last:
+            add(d, {"type": "trip", "id": str(trip.id), "title": trip.name})
+            d += timedelta(days=1)
+
+    return {"year": year, "month": month, "days": days}
+
+
 # ─── File Upload Route ────────────────────────────────────────────────────────
 
 @app.post("/upload")
@@ -1967,4 +2130,5 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "pgvector": PGVECTOR_AVAILABLE and check_pgvector()}
+    from backend.rag.vector_store import _get_model
+    return {"status": "ok", "semantic_search": _get_model() is not None}

@@ -1,36 +1,36 @@
 @import "tailwindcss";
 
 :root {
-  /* Core */
-  --page: #F7F8FA;
-  --vellum: #F0F1F3;
-  --ink: #1C1A17;
-  --ink-light: #6B6560;
-  --ink-muted: #9E9890;
-  --seal: #A85542;
-  --postmark: #4A6B8A;
-  --gilt: #C4984F;
-  --border: #E0E2E6;
+  /* Core — warm parchment & ink, with a forest/plum accent duo */
+  --page: #FAF6EC;
+  --vellum: #F2ECDC;
+  --ink: #241F1A;
+  --ink-light: #6B6255;
+  --ink-muted: #9C9280;
+  --seal: #3F5D46;
+  --postmark: #7A4F63;
+  --gilt: #BC8A4E;
+  --border: #E3D9C4;
 
   /* Derived */
-  --seal-hover: #904535;
-  --seal-light: rgba(168, 85, 66, 0.08);
-  --seal-lighter: rgba(168, 85, 66, 0.04);
-  --postmark-light: rgba(74, 107, 138, 0.08);
-  --gilt-light: rgba(196, 152, 79, 0.12);
-  --gilt-pale: rgba(196, 152, 79, 0.06);
-  --border-light: #E8EAED;
+  --seal-hover: #32492F;
+  --seal-light: rgba(63, 93, 70, 0.10);
+  --seal-lighter: rgba(63, 93, 70, 0.05);
+  --postmark-light: rgba(122, 79, 99, 0.08);
+  --gilt-light: rgba(188, 138, 78, 0.14);
+  --gilt-pale: rgba(188, 138, 78, 0.07);
+  --border-light: #ECE3D0;
   --success: #2E7D6E;
   --success-bg: rgba(46, 125, 110, 0.08);
-  --danger: #B8453A;
-  --danger-bg: rgba(184, 69, 58, 0.08);
-  --info: #4A6B8A;
-  --info-bg: rgba(74, 107, 138, 0.08);
+  --danger: #A85542;
+  --danger-bg: rgba(168, 85, 66, 0.08);
+  --info: #7A4F63;
+  --info-bg: rgba(122, 79, 99, 0.08);
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(28, 26, 23, 0.05);
-  --shadow-md: 0 4px 12px rgba(28, 26, 23, 0.06);
-  --shadow-lg: 0 8px 28px rgba(28, 26, 23, 0.08);
+  --shadow-sm: 0 1px 2px rgba(36, 31, 26, 0.05);
+  --shadow-md: 0 4px 12px rgba(36, 31, 26, 0.06);
+  --shadow-lg: 0 8px 28px rgba(36, 31, 26, 0.08);
 
   /* Radii */
   --radius-sm: 6px;
@@ -47,28 +47,34 @@
 }
 
 @theme {
-  --color-page: #F7F8FA;
-  --color-vellum: #F0F1F3;
-  --color-ink: #1C1A17;
-  --color-ink-light: #6B6560;
-  --color-ink-muted: #9E9890;
-  --color-seal: #A85542;
-  --color-seal-hover: #904535;
-  --color-postmark: #4A6B8A;
-  --color-gilt: #C4984F;
-  --color-border: #E0E2E6;
+  --color-page: #FAF6EC;
+  --color-vellum: #F2ECDC;
+  --color-ink: #241F1A;
+  --color-ink-light: #6B6255;
+  --color-ink-muted: #9C9280;
+  --color-seal: #3F5D46;
+  --color-seal-hover: #32492F;
+  --color-postmark: #7A4F63;
+  --color-gilt: #BC8A4E;
+  --color-border: #E3D9C4;
   --color-success: #2E7D6E;
-  --color-danger: #B8453A;
+  --color-danger: #A85542;
   --font-display: 'DM Serif Display', Georgia, serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'DM Mono', 'Courier New', monospace;
 }
 
 /* ─── Reset & Base ─────────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Layered so Tailwind utilities (mt-*, mb-*, space-y-*, p-*, …) — which Tailwind
+   itself emits inside @layer utilities — can still override this reset. Plain
+   unlayered CSS always beats layered CSS regardless of specificity, so leaving
+   this un-layered silently zeroed out every margin/padding utility in the app. */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {
@@ -90,7 +96,7 @@ body, #root {
 /* Paper grain — subtle, felt more than seen. The whole app sits on "paper". */
 body {
   background-image:
-    radial-gradient(circle at 1px 1px, rgba(28,26,23,0.035) 1px, transparent 0);
+    radial-gradient(circle at 1px 1px, rgba(36,31,26,0.035) 1px, transparent 0);
   background-size: 22px 22px;
 }
 
@@ -107,7 +113,7 @@ select:focus-visible,
 }
 
 ::selection {
-  background: rgba(168, 85, 66, 0.12);
+  background: rgba(63, 93, 70, 0.14);
 }
 
 ::-webkit-scrollbar {
@@ -184,7 +190,7 @@ input, textarea, select {
 
 input:focus, textarea:focus, select:focus {
   border-color: var(--seal);
-  box-shadow: 0 0 0 3px rgba(168, 85, 66, 0.08);
+  box-shadow: 0 0 0 3px rgba(63, 93, 70, 0.10);
 }
 
 input::placeholder, textarea::placeholder {
@@ -326,12 +332,12 @@ label {
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
-  box-shadow: 0 2px 8px rgba(168, 85, 66, 0.2);
+  box-shadow: 0 2px 8px rgba(63, 93, 70, 0.25);
 }
 
 .btn-seal:hover:not(:disabled) {
   background: var(--seal-hover);
-  box-shadow: 0 4px 14px rgba(168, 85, 66, 0.3);
+  box-shadow: 0 4px 14px rgba(63, 93, 70, 0.35);
   transform: translateY(-1px);
 }
 
@@ -393,7 +399,7 @@ label {
   height: 16px;
   background: linear-gradient(135deg, transparent 50%, var(--page) 50%);
   border-bottom-left-radius: 3px;
-  box-shadow: -1px 1px 2px rgba(28,26,23,0.08);
+  box-shadow: -1px 1px 2px rgba(36,31,26,0.08);
   pointer-events: none;
 }
 
@@ -407,7 +413,7 @@ label {
   background: radial-gradient(circle at 32% 28%, var(--seal-hover) 0%, var(--seal) 55%, var(--seal-hover) 100%);
   color: var(--page);
   box-shadow:
-    0 2px 4px rgba(168, 85, 66, 0.35),
+    0 2px 4px rgba(63, 93, 70, 0.4),
     inset 0 1px 1px rgba(255,255,255,0.25),
     inset 0 -2px 3px rgba(0,0,0,0.15);
 }
@@ -505,7 +511,7 @@ label {
   padding: 2px 8px;
   border: 1px solid var(--postmark);
   border-radius: 2px;
-  background: rgba(74, 107, 138, 0.04);
+  background: rgba(122, 79, 99, 0.05);
 }
 
 .postmark-circle {
@@ -529,7 +535,7 @@ label {
   letter-spacing: 0.03em !important;
   color: var(--postmark) !important;
   border-color: var(--postmark) !important;
-  background: rgba(74, 107, 138, 0.04) !important;
+  background: rgba(122, 79, 99, 0.05) !important;
   border-radius: 2px !important;
   padding: 8px 12px !important;
 }

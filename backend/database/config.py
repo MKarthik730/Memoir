@@ -11,15 +11,6 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./memoir.db")
 
-# Detect if pgvector is available
-PGVECTOR_AVAILABLE = False
-if DATABASE_URL.startswith("postgresql"):
-    try:
-        from pgvector.sqlalchemy import Vector
-        PGVECTOR_AVAILABLE = True
-    except ImportError:
-        PGVECTOR_AVAILABLE = False
-
 # Create engine
 if DATABASE_URL.startswith("postgresql"):
     engine = create_engine(
@@ -34,18 +25,6 @@ else:
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def check_pgvector():
-    """Check if pgvector extension is available in PostgreSQL."""
-    if not DATABASE_URL.startswith("postgresql"):
-        return False
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT * FROM pg_extension WHERE extname = 'vector'"))
-            return result.fetchone() is not None
-    except Exception:
-        return False
 
 
 def init_db():
@@ -73,27 +52,13 @@ def init_db():
                         conn.execute(text(f"ALTER TABLE memories ADD COLUMN {col_name} {col_type}"))
                         logger.info(f"Added column {col_name} to memories table")
                 conn.commit()
-            
-            # PostgreSQL migration
+
+            # PostgreSQL: embedding column predates this migration on some
+            # deployments as a pgvector `vector` type; make sure it's plain
+            # text so the Python-side cosine-similarity search can read it.
             if DATABASE_URL.startswith("postgresql"):
                 try:
-                    conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-                    try:
-                        conn.execute(text("""
-                            ALTER TABLE memories ADD COLUMN IF NOT EXISTS search_vector tsvector
-                            GENERATED ALWAYS AS (
-                                to_tsvector('english', coalesce(title, '') || ' ' || coalesce(story_text, ''))
-                            ) STORED;
-                        """))
-                    except Exception:
-                        pass
-                    try:
-                        conn.execute(text("""
-                            CREATE INDEX IF NOT EXISTS idx_memories_search_vector
-                            ON memories USING GIN(search_vector);
-                        """))
-                    except Exception:
-                        pass
+                    conn.execute(text("ALTER TABLE memories ALTER COLUMN embedding TYPE TEXT"))
                     conn.commit()
                 except Exception:
                     pass
