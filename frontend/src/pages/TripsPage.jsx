@@ -101,9 +101,9 @@ export default function TripsPage() {
               {trips.map((trip, i) => (
                 <motion.div
                   key={trip.id}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 3 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04 }}
+                  transition={{ duration: 0.16, delay: i * 0.02, ease: 'easeOut' }}
                   onClick={() => navigate(`/trips/${trip.id}`)}
                   className="bg-[var(--vellum)] border border-[var(--border)] rounded-[10px] p-5 cursor-pointer hover:shadow-[var(--shadow-md)] transition-shadow"
                 >

@@ -8,13 +8,14 @@ export default function BottomTabBar({ activeTab, familyId }) {
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'journal', label: 'People', icon: BookOpen, path: familyId ? `/family/${familyId}` : '/family' },
+    { id: 'diary', label: 'My Diary', icon: BookOpen, path: '/my-diary' },
     { id: 'vault', label: 'Vault', icon: Archive, path: '/vault' },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { id: 'more', label: 'More', icon: Grid3X3, isMore: true },
   ];
 
   const moreItems = [
+    { id: 'journal', label: 'People', icon: BookOpen, path: familyId ? `/family/${familyId}` : '/family' },
     { id: 'trips', label: 'Trips', icon: Route, path: '/trips' },
     { id: 'tree', label: 'Tree', icon: Share2, path: familyId ? `/family/${familyId}/graph` : '/' },
     { id: 'search', label: 'Search', icon: Search, path: familyId ? `/family/${familyId}/search` : '/' },
@@ -76,14 +77,15 @@ export default function BottomTabBar({ activeTab, familyId }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.14, ease: 'easeOut' }}
               className="fixed inset-0 z-[60] bg-black/30"
               onClick={() => setShowMore(false)}
             />
             <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
               className="fixed bottom-0 left-0 right-0 z-[70] bg-[var(--vellum)] rounded-t-[var(--radius-lg)] border border-[var(--border)] shadow-[var(--shadow-lg)]"
             >
               <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">

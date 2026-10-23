@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { formatDate, getInitials } from '../lib/api';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react';
 
-export default function MemoryCard({ memory, personName, compact = false }) {
+export default function MemoryCard({ memory, personName, compact = false, onEdit, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const [lightboxImg, setLightboxImg] = useState(null);
   const isTruncated = (memory.story_text?.length || 0) > 150;
@@ -96,6 +96,20 @@ export default function MemoryCard({ memory, personName, compact = false }) {
                 <span className="text-[12px] text-[var(--ink-muted)]">{personName || memory.person_name}</span>
               )}
             </div>
+            {(onEdit || onDelete) && (
+              <div className="flex items-center gap-2">
+                {onEdit && (
+                  <button onClick={() => onEdit(memory)} className="flex items-center gap-1 text-[11px] text-[var(--ink-muted)] hover:text-[var(--seal)] transition-colors" aria-label={`Edit ${memory.title}`}>
+                    <Pencil size={13} />Edit
+                  </button>
+                )}
+                {onDelete && (
+                  <button onClick={() => onDelete(memory)} className="flex items-center gap-1 text-[11px] text-[var(--ink-muted)] hover:text-[var(--danger)] transition-colors" aria-label={`Delete ${memory.title}`}>
+                    <Trash2 size={13} />Delete
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

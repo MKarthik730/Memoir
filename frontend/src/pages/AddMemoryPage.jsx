@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { memoriesAPI, peopleAPI } from '../lib/api';
 import { ArrowLeft, Image, Mic, Upload, X, Check } from 'lucide-react';
 
 export default function AddMemoryPage() {
   const { person_id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [person, setPerson] = useState(null);
   const [form, setForm] = useState({ title: '', story_text: '', memory_date: '' });
   const [photos, setPhotos] = useState([]);
@@ -98,7 +99,7 @@ export default function AddMemoryPage() {
       photos.forEach(photo => formData.append('photos', photo));
       if (voiceNote) formData.append('voice_note', voiceNote);
       await memoriesAPI.create(person_id, formData);
-      navigate(`/people/${person_id}`);
+      navigate(`/people/${person_id}${location.search}`);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to save memory');
     } finally {

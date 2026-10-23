@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import (
-    Column, String, Integer, Text, DateTime, Date, ForeignKey, Enum,
+    Column, String, Integer, Text, DateTime, Date, ForeignKey, Enum, Boolean, text,
     UniqueConstraint, Index, Float, LargeBinary, TypeDecorator
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -116,7 +116,19 @@ class Person(Base):
     dob = Column(Date, nullable=True)
     bio = Column(Text, nullable=True)
     created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    is_personal_diary = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index(
+            "uq_people_personal_diary",
+            "family_id",
+            "created_by",
+            unique=True,
+            sqlite_where=text("is_personal_diary = 1"),
+            postgresql_where=text("is_personal_diary IS TRUE"),
+        ),
+    )
 
     family = relationship("Family", back_populates="people")
     memories = relationship("Memory", back_populates="person", cascade="all, delete-orphan")

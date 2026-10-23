@@ -233,9 +233,9 @@ export default function TripDetailPage() {
                 {trip.memories?.map((m, i) => (
                   <motion.div
                     key={m.id}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 3 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
+                    transition={{ duration: 0.16, delay: i * 0.02, ease: 'easeOut' }}
                     onClick={() => navigate(`/people/${m.person_id || ''}`)}
                     className="px-4 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[8px] cursor-pointer hover:bg-[rgba(63,93,70,0.04)] transition-colors"
                   >

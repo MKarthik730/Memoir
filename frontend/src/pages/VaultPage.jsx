@@ -152,7 +152,7 @@ export default function VaultPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {items.map((item, i) => (
-                <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                <motion.div key={item.id} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.16, delay: i * 0.02, ease: 'easeOut' }}
                   className="group relative bg-[var(--vellum)] border border-[var(--border)] rounded-[8px] overflow-hidden hover:shadow-[var(--shadow-md)] transition-shadow">
                   {item.file_type === 'image' ? (
                     <img src={item.file_url} alt={item.name} className="w-full h-[120px] object-cover cursor-pointer" onClick={() => setPreviewUrl(item.file_url)} />

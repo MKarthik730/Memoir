@@ -11,6 +11,7 @@ export default function Sidebar({ familyId, activePage }) {
   };
 
   const navItems = [
+    { id: 'diary', label: 'My Diary', icon: BookOpen, path: '/my-diary' },
     { id: 'journal', label: 'People', icon: BookOpen, path: `/family/${familyId || ''}` },
     { id: 'trips', label: 'Trips', icon: Route, path: '/trips' },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/calendar' },

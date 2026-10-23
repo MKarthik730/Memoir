@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, or_
+from sqlalchemy.exc import IntegrityError
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from dotenv import load_dotenv
@@ -288,6 +289,50 @@ async def get_people(family_id: str, current_user: User = Depends(get_current_us
     
     people = db.query(Person).filter(Person.family_id == family_id).order_by(Person.created_at.desc()).all()
     return [serialize_person(p, db) for p in people]
+
+
+@app.get("/family/{family_id}/my-diary")
+async def get_or_create_my_diary(
+    family_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+
+    person = db.query(Person).filter(
+        Person.family_id == family_id,
+        Person.created_by == current_user.id,
+        Person.is_personal_diary.is_(True),
+    ).order_by(Person.created_at.asc()).first()
+    if person is None:
+        person = Person(
+            id=uuid.uuid4(),
+            family_id=family_id,
+            name=current_user.name,
+            created_by=current_user.id,
+            is_personal_diary=True,
+        )
+        db.add(person)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            person = db.query(Person).filter(
+                Person.family_id == family_id,
+                Person.created_by == current_user.id,
+                Person.is_personal_diary.is_(True),
+            ).first()
+            if person is None:
+                raise
+            return serialize_person(person, db)
+        db.refresh(person)
+
+    return serialize_person(person, db)
 
 
 @app.post("/family/{family_id}/people")
@@ -609,6 +654,41 @@ async def delete_memory(memory_id: str, current_user: User = Depends(get_current
     db.delete(memory)
     db.commit()
     return {"message": "Memory deleted"}
+
+
+@app.patch("/memories/{memory_id}")
+async def update_memory(
+    memory_id: str,
+    title: str = Form(...),
+    story_text: Optional[str] = Form(None),
+    memory_date: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    memory = db.query(Memory).filter(Memory.id == memory_id).first()
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    member = db.query(FamilyMember).filter(
+        FamilyMember.family_id == memory.family_id,
+        FamilyMember.user_id == current_user.id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a family member")
+    if memory.created_by_user_id != current_user.id and member.role != MemberRole.admin:
+        raise HTTPException(status_code=403, detail="Only the creator or family admin can edit")
+
+    memory.title = title.strip()
+    memory.story_text = story_text
+    if memory_date is not None:
+        try:
+            memory.memory_date = date.fromisoformat(memory_date) if memory_date.strip() else None
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Invalid memory date") from exc
+
+    db.commit()
+    db.refresh(memory)
+    return serialize_memory(memory, db)
 
 
 # ─── Search Route ─────────────────────────────────────────────────────────────
