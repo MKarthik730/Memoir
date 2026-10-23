@@ -177,8 +177,7 @@ export default function PersonDetailPage() {
       doc.text('Created with Memoir', pageWidth / 2, pageHeight / 2, { align: 'center' });
       doc.setFontSize(10);
       doc.setTextColor(200, 190, 180);
-      const memberNames = family?.members?.map(m => m.name).join(', ') || 'Family';
-      doc.text(memberNames, pageWidth / 2, pageHeight / 2 + 20, { align: 'center' });
+      doc.text(family?.name || 'Family archive', pageWidth / 2, pageHeight / 2 + 20, { align: 'center' });
 
       const fileName = `${(person?.name || 'Memoir').replace(/\s+/g, '_')}_Memoir_${new Date().getFullYear()}.pdf`;
       doc.save(fileName);
@@ -218,7 +217,7 @@ export default function PersonDetailPage() {
 
   return (
     <div className="min-h-screen bg-[var(--page)] flex flex-col md:flex-row">
-      <Sidebar family={family} familyId={person.family_id} activePage="home" />
+      <Sidebar familyId={person.family_id} activePage="journal" />
 
       <div className="flex-1 min-w-0" style={{ paddingBottom: 80 }}>
         {/* Hero */}
@@ -327,7 +326,7 @@ export default function PersonDetailPage() {
       )}
 
       <FloatingChatButton familyId={person.family_id} />
-      <BottomTabBar familyId={person.family_id} activeTab="home" />
+      <BottomTabBar familyId={person.family_id} activeTab="journal" />
     </div>
   );
 }

@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 from backend.database.models import (
     Base, User, Family, FamilyMember, Person, Relationship, Memory, MemoryPhoto,
-    ApiKey, Trip, TripPerson, TripMemory,
+    ApiKey, Trip, TripPerson, TripMemory, VaultItem,
     MemberRole, RelationshipTag,
     UserCreate, UserLogin, UserResponse, LoginResponse, FamilyCreate, FamilyResponse,
     PersonCreate, PersonResponse, PersonDetailResponse,
@@ -239,26 +239,12 @@ async def create_family(data: FamilyCreate, current_user: User = Depends(get_cur
 
 
 def _serialize_family(family, db):
-    members = db.query(FamilyMember).filter(FamilyMember.family_id == family.id).all()
-    member_list = []
-    for m in members:
-        user = db.query(User).filter(User.id == m.user_id).first()
-        if user:
-            member_list.append({
-                "id": str(m.id),
-                "name": user.name,
-                "avatar_url": user.avatar_url,
-                "role": m.role.value,
-            })
-    
     return {
         "id": str(family.id),
         "name": family.name,
         "cover_photo_url": family.cover_photo_url,
-        "invite_token": str(family.invite_token),
         "created_by": str(family.created_by),
         "created_at": family.created_at.isoformat() if family.created_at else None,
-        "members": member_list,
     }
 
 
@@ -274,45 +260,6 @@ async def get_family(family_id: str, current_user: User = Depends(get_current_us
     ).first()
     if not member:
         raise HTTPException(status_code=403, detail="Not a family member")
-    
-    return _serialize_family(family, db)
-
-
-@app.get("/family/{family_id}/invite-link")
-async def get_invite_link(family_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    family = db.query(Family).filter(Family.id == family_id).first()
-    if not family:
-        raise HTTPException(status_code=404, detail="Family not found")
-    
-    member = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
-    ).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="Not a family member")
-    
-    return {"invite_url": f"http://localhost:5173/join/{family.invite_token}"}
-
-
-@app.post("/family/join/{invite_token}")
-async def join_family(invite_token: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    family = db.query(Family).filter(Family.invite_token == invite_token).first()
-    if not family:
-        raise HTTPException(status_code=404, detail="Invalid invite token")
-    
-    existing = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family.id, FamilyMember.user_id == current_user.id
-    ).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Already a member of this family")
-    
-    member = FamilyMember(
-        id=uuid.uuid4(),
-        user_id=current_user.id,
-        family_id=family.id,
-        role=MemberRole.member,
-    )
-    db.add(member)
-    db.commit()
     
     return _serialize_family(family, db)
 
@@ -642,22 +589,6 @@ async def get_person_memories(person_id: str, current_user: User = Depends(get_c
     return [serialize_memory(m, db) for m in memories]
 
 
-@app.get("/memories/{memory_id}/public")
-async def get_public_memory(memory_id: str, db: Session = Depends(get_db)):
-    """No auth required - for sharing."""
-    memory = db.query(Memory).filter(Memory.id == memory_id).first()
-    if not memory:
-        raise HTTPException(status_code=404, detail="Memory not found")
-    
-    person = db.query(Person).filter(Person.id == memory.person_id).first()
-    family = db.query(Family).filter(Family.id == memory.family_id).first()
-    
-    result = serialize_memory(memory, db)
-    result["family_name"] = family.name if family else None
-    result["person_name"] = person.name if person else None
-    return result
-
-
 @app.delete("/memories/{memory_id}")
 async def delete_memory(memory_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     memory = db.query(Memory).filter(Memory.id == memory_id).first()
@@ -714,10 +645,10 @@ async def search_family(family_id: str, data: SearchQuery, current_user: User = 
 
 @app.get("/family/{family_id}/on-this-day")
 async def on_this_day(family_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Diary entries and memories from this same month/day in previous years.
+    """Memories from this same month/day in previous years.
 
     Pure calendar-date lookup — not the SM-2 scheduler (see /home/resurface).
-    O(n) over the family's dated memories and posts; fine at personal scale.
+    O(n) over the family's dated memories; fine at personal scale.
     """
     member = db.query(FamilyMember).filter(
         FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id
@@ -725,7 +656,6 @@ async def on_this_day(family_id: str, current_user: User = Depends(get_current_u
     if not member:
         raise HTTPException(status_code=403, detail="Not a family member")
 
-    from backend.database.models import Post
     today = date.today()
     results = []
 
@@ -743,22 +673,6 @@ async def on_this_day(family_id: str, current_user: User = Depends(get_current_u
                 "years_ago": today.year - d.year,
                 "person_id": str(mem.person_id),
                 "person_name": person.name if person else "Unknown",
-            })
-
-    posts = db.query(Post).filter(Post.family_id == family_id, Post.created_at.isnot(None)).all()
-    for post in posts:
-        d = post.created_at.date()
-        if d.month == today.month and d.day == today.day and d.year < today.year:
-            user = db.query(User).filter(User.id == post.user_id).first()
-            results.append({
-                "type": "entry",
-                "id": str(post.id),
-                "title": post.caption[:80] if post.caption else "Untitled entry",
-                "story_text": post.caption,
-                "date": d.isoformat(),
-                "years_ago": today.year - d.year,
-                "person_id": None,
-                "person_name": user.name if user else "Unknown",
             })
 
     results.sort(key=lambda r: r["years_ago"])
@@ -1438,354 +1352,6 @@ async def assistant_chat(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Diary Feed & Posts
-# ═══════════════════════════════════════════════════════════════════════════════
-
-from backend.database.models import (
-    Post, PostPhoto, PostLike, PostComment,
-    Story, StoryView, VaultItem, Notification,
-)
-
-
-def serialize_post(post: Post, db: Session, current_user_id: str) -> dict:
-    """Serialize a post with photos, likes, comments, and user info."""
-    photos = db.query(PostPhoto).filter(PostPhoto.post_id == post.id).order_by(PostPhoto.display_order).all()
-    likes = db.query(PostLike).filter(PostLike.post_id == post.id).count()
-    comments_q = db.query(PostComment).filter(PostComment.post_id == post.id).order_by(PostComment.created_at.desc()).limit(2).all()
-    total_comments = db.query(PostComment).filter(PostComment.post_id == post.id).count()
-    user_liked = db.query(PostLike).filter(PostLike.post_id == post.id, PostLike.user_id == current_user_id).first() is not None
-    user = db.query(User).filter(User.id == post.user_id).first()
-    tagged_people = db.query(Person).filter(Person.id.in_(
-        db.query(PostPhoto.photo_url).filter(PostPhoto.post_id == post.id)  # placeholder — tag via caption parse
-    )).all() if False else []
-
-    return {
-        "id": str(post.id),
-        "user_id": str(post.user_id),
-        "family_id": str(post.family_id),
-        "caption": post.caption,
-        "location": post.location,
-        "created_at": post.created_at.isoformat() if post.created_at else None,
-        "photos": [{"id": str(p.id), "photo_url": p.photo_url, "caption": p.caption, "display_order": p.display_order} for p in photos],
-        "user": {"id": str(user.id), "name": user.name, "avatar_url": user.avatar_url} if user else None,
-        "likes_count": likes,
-        "comments_count": total_comments,
-        "user_has_liked": user_liked,
-        "recent_comments": [{
-            "id": str(c.id),
-            "user_id": str(c.user_id),
-            "user_name": db.query(User).filter(User.id == c.user_id).first().name if db.query(User).filter(User.id == c.user_id).first() else "Unknown",
-            "text": c.text,
-            "created_at": c.created_at.isoformat() if c.created_at else None,
-        } for c in reversed(comments_q)],
-    }
-
-
-@app.post("/posts")
-async def create_post(
-    family_id: str = Form(...),
-    caption: Optional[str] = Form(None),
-    location: Optional[str] = Form(None),
-    photos: List[UploadFile] = File(default=[]),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Create a new post with optional photos."""
-    member = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family_id,
-        FamilyMember.user_id == current_user.id,
-    ).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="Not a family member")
-
-    post = Post(
-        id=uuid.uuid4(),
-        user_id=current_user.id,
-        family_id=family_id,
-        caption=caption,
-        location=location,
-    )
-    db.add(post)
-    db.flush()
-
-    for i, photo in enumerate(photos):
-        if photo.filename:
-            photo_url = save_upload(photo)
-            pp = PostPhoto(
-                id=uuid.uuid4(),
-                post_id=post.id,
-                photo_url=photo_url,
-                display_order=i,
-            )
-            db.add(pp)
-
-    db.commit()
-    db.refresh(post)
-    return serialize_post(post, db, str(current_user.id))
-
-
-@app.get("/feed")
-async def get_feed(
-    family_id: str = Query(...),
-    cursor: Optional[str] = Query(None),
-    limit: int = Query(10, le=50),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Cursor-based paginated feed."""
-    member = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family_id,
-        FamilyMember.user_id == current_user.id,
-    ).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="Not a family member")
-
-    query = db.query(Post).filter(Post.family_id == family_id)
-    if cursor:
-        try:
-            cursor_dt = datetime.fromisoformat(cursor)
-            query = query.filter(Post.created_at < cursor_dt)
-        except ValueError:
-            pass
-
-    posts = query.order_by(Post.created_at.desc()).limit(limit + 1).all()
-    has_more = len(posts) > limit
-    if has_more:
-        posts = posts[:limit]
-
-    return {
-        "posts": [serialize_post(p, db, str(current_user.id)) for p in posts],
-        "next_cursor": posts[-1].created_at.isoformat() if has_more and posts else None,
-        "has_more": has_more,
-    }
-
-
-@app.post("/posts/{post_id}/like")
-async def toggle_like(
-    post_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Like or unlike a post."""
-    post = db.query(Post).filter(Post.id == post_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    existing = db.query(PostLike).filter(
-        PostLike.post_id == post_id,
-        PostLike.user_id == current_user.id,
-    ).first()
-
-    if existing:
-        db.delete(existing)
-        db.commit()
-        return {"liked": False, "likes_count": db.query(PostLike).filter(PostLike.post_id == post_id).count()}
-    else:
-        like = PostLike(id=uuid.uuid4(), post_id=post_id, user_id=current_user.id)
-        db.add(like)
-        db.commit()
-        # Create notification
-        if str(post.user_id) != str(current_user.id):
-            notif = Notification(
-                id=uuid.uuid4(),
-                user_id=post.user_id,
-                type="like",
-                payload='{"post_id": "' + post_id + '"}',
-                post_id=post_id,
-                from_user_id=current_user.id,
-            )
-            db.add(notif)
-            db.commit()
-        return {"liked": True, "likes_count": db.query(PostLike).filter(PostLike.post_id == post_id).count()}
-
-
-@app.post("/posts/{post_id}/comment")
-async def add_comment(
-    post_id: str,
-    text: str = Form(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Add a comment to a post."""
-    post = db.query(Post).filter(Post.id == post_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    comment = PostComment(
-        id=uuid.uuid4(),
-        post_id=post_id,
-        user_id=current_user.id,
-        text=text,
-    )
-    db.add(comment)
-    db.commit()
-    db.refresh(comment)
-
-    # Create notification
-    if str(post.user_id) != str(current_user.id):
-        notif = Notification(
-            id=uuid.uuid4(),
-            user_id=post.user_id,
-            type="comment",
-            payload='{"post_id": "' + post_id + '"}',
-            post_id=post_id,
-            from_user_id=current_user.id,
-        )
-        db.add(notif)
-        db.commit()
-
-    user = db.query(User).filter(User.id == current_user.id).first()
-    return {
-        "id": str(comment.id),
-        "user_id": str(current_user.id),
-        "user_name": user.name if user else "Unknown",
-        "text": comment.text,
-        "created_at": comment.created_at.isoformat() if comment.created_at else None,
-    }
-
-
-@app.get("/posts/{post_id}/comments")
-async def get_comments(
-    post_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get all comments for a post."""
-    post = db.query(Post).filter(Post.id == post_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    comments = db.query(PostComment).filter(PostComment.post_id == post_id).order_by(PostComment.created_at.asc()).all()
-    result = []
-    for c in comments:
-        user = db.query(User).filter(User.id == c.user_id).first()
-        result.append({
-            "id": str(c.id),
-            "user_id": str(c.user_id),
-            "user_name": user.name if user else "Unknown",
-            "avatar_url": user.avatar_url if user else None,
-            "text": c.text,
-            "created_at": c.created_at.isoformat() if c.created_at else None,
-        })
-    return result
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Stories
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@app.post("/stories")
-async def create_story(
-    family_id: str = Form(...),
-    caption: Optional[str] = Form(None),
-    media: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Create a 24hr story."""
-    member = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family_id,
-        FamilyMember.user_id == current_user.id,
-    ).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="Not a family member")
-
-    media_url = save_upload(media)
-    ext = media.filename.rsplit(".", 1)[-1].lower() if media.filename else ""
-    media_type = "video" if ext in ("mp4", "mov", "avi", "webm") else "image"
-
-    story = Story(
-        id=uuid.uuid4(),
-        user_id=current_user.id,
-        family_id=family_id,
-        media_url=media_url,
-        media_type=media_type,
-        caption=caption,
-        expires_at=datetime.utcnow() + timedelta(hours=24),
-    )
-    db.add(story)
-    db.commit()
-    db.refresh(story)
-
-    return {
-        "id": str(story.id),
-        "media_url": story.media_url,
-        "media_type": story.media_type,
-        "caption": story.caption,
-        "expires_at": story.expires_at.isoformat(),
-    }
-
-
-@app.get("/stories")
-async def get_active_stories(
-    family_id: str = Query(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get active (non-expired) stories for a family."""
-    member = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family_id,
-        FamilyMember.user_id == current_user.id,
-    ).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="Not a family member")
-
-    now = datetime.utcnow()
-    stories = db.query(Story).filter(
-        Story.family_id == family_id,
-        Story.expires_at > now,
-    ).order_by(Story.created_at.desc()).all()
-
-    # Group by user
-    users_map = {}
-    for story in stories:
-        uid = str(story.user_id)
-        if uid not in users_map:
-            user = db.query(User).filter(User.id == story.user_id).first()
-            users_map[uid] = {
-                "user_id": uid,
-                "user_name": user.name if user else "Unknown",
-                "avatar_url": user.avatar_url,
-                "stories": [],
-            }
-        has_viewed = db.query(StoryView).filter(
-            StoryView.story_id == story.id,
-            StoryView.viewer_id == current_user.id,
-        ).first() is not None
-        view_count = db.query(StoryView).filter(StoryView.story_id == story.id).count()
-        users_map[uid]["stories"].append({
-            "id": str(story.id),
-            "media_url": story.media_url,
-            "media_type": story.media_type,
-            "caption": story.caption,
-            "created_at": story.created_at.isoformat() if story.created_at else None,
-            "expires_at": story.expires_at.isoformat() if story.expires_at else None,
-            "has_viewed": has_viewed,
-            "view_count": view_count,
-        })
-
-    return list(users_map.values())
-
-
-@app.post("/stories/{story_id}/view")
-async def view_story(
-    story_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Mark a story as viewed."""
-    existing = db.query(StoryView).filter(
-        StoryView.story_id == story_id,
-        StoryView.viewer_id == current_user.id,
-    ).first()
-    if not existing:
-        view = StoryView(id=uuid.uuid4(), story_id=story_id, viewer_id=current_user.id)
-        db.add(view)
-        db.commit()
-    return {"viewed": True}
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # Family Vault
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1910,121 +1476,6 @@ async def delete_vault_item(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Notifications
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@app.get("/notifications")
-async def get_notifications(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get all notifications for the current user."""
-    notifs = db.query(Notification).filter(
-        Notification.user_id == current_user.id,
-    ).order_by(Notification.created_at.desc()).limit(50).all()
-
-    result = []
-    for n in notifs:
-        from_user = db.query(User).filter(User.id == n.from_user_id).first() if n.from_user_id else None
-        result.append({
-            "id": str(n.id),
-            "type": n.type,
-            "payload": n.payload,
-            "post_id": str(n.post_id) if n.post_id else None,
-            "from_user": {
-                "id": str(from_user.id),
-                "name": from_user.name,
-                "avatar_url": from_user.avatar_url,
-            } if from_user else None,
-            "read": bool(n.read),
-            "created_at": n.created_at.isoformat() if n.created_at else None,
-        })
-    return result
-
-
-@app.post("/notifications/read-all")
-async def mark_all_read(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Mark all notifications as read."""
-    db.query(Notification).filter(
-        Notification.user_id == current_user.id,
-        Notification.read == 0,
-    ).update({"read": 1})
-    db.commit()
-    return {"message": "All notifications marked as read"}
-
-
-@app.get("/notifications/unread-count")
-async def unread_count(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get unread notification count."""
-    count = db.query(Notification).filter(
-        Notification.user_id == current_user.id,
-        Notification.read == 0,
-    ).count()
-    return {"count": count}
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Birthdays
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@app.get("/birthdays")
-async def get_upcoming_birthdays(
-    family_id: str = Query(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get upcoming birthdays in the next 30 days."""
-    member = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family_id,
-        FamilyMember.user_id == current_user.id,
-    ).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="Not a family member")
-
-    from sqlalchemy import func, extract
-    today = date.today()
-    people = db.query(Person).filter(
-        Person.family_id == family_id,
-        Person.dob.isnot(None),
-    ).all()
-
-    birthdays = []
-    for p in people:
-        if not p.dob:
-            continue
-        # Calculate next birthday
-        try:
-            next_bday = date(today.year, p.dob.month, p.dob.day)
-            if next_bday < today:
-                next_bday = date(today.year + 1, p.dob.month, p.dob.day)
-            days_until = (next_bday - today).days
-            if days_until <= 30:
-                age = today.year - p.dob.year
-                if next_bday.year > today.year:
-                    age += 1
-                birthdays.append({
-                    "person_id": str(p.id),
-                    "person_name": p.name,
-                    "photo_url": p.photo_url,
-                    "dob": p.dob.isoformat(),
-                    "next_birthday": next_bday.isoformat(),
-                    "days_until": days_until,
-                    "turning_age": age,
-                })
-        except ValueError:
-            continue
-
-    birthdays.sort(key=lambda b: b["days_until"])
-    return birthdays
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # Calendar — read-only month view over existing data
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2036,7 +1487,7 @@ async def get_calendar_month(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Diary entries, memories, birthdays, and trips for one calendar month.
+    """Memories, birthdays, and trips for one calendar month.
 
     Pure read-over-existing-data — no new model, everything is derived from
     tables the app already has. Days are returned as 'YYYY-MM-DD' keys.
@@ -2047,7 +1498,7 @@ async def get_calendar_month(
     if not member:
         raise HTTPException(status_code=403, detail="Not a family member")
 
-    from backend.database.models import Post, Trip
+    from backend.database.models import Trip
     import calendar as _cal
 
     days_in_month = _cal.monthrange(year, month)[1]
@@ -2059,19 +1510,6 @@ async def get_calendar_month(
     def add(day: date, item: dict):
         key = day.isoformat()
         days.setdefault(key, []).append(item)
-
-    # Diary entries (posts)
-    posts = db.query(Post).filter(Post.family_id == family_id).all()
-    for post in posts:
-        d = post.created_at.date() if post.created_at else None
-        if d and month_start <= d <= month_end:
-            user = db.query(User).filter(User.id == post.user_id).first()
-            add(d, {
-                "type": "entry",
-                "id": str(post.id),
-                "title": (post.caption[:60] if post.caption else "Diary entry"),
-                "by": user.name if user else "Unknown",
-            })
 
     # Memories (person letters)
     memories = db.query(Memory).filter(

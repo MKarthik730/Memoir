@@ -1,24 +1,21 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Bell, Archive, Feather, Grid3X3, Search, Share2, MessageCircle, Settings, X, BookOpen, Route, CalendarDays } from 'lucide-react';
+import { Archive, Grid3X3, Search, Share2, MessageCircle, Settings, X, BookOpen, Route, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
+export default function BottomTabBar({ activeTab, familyId }) {
   const [showMore, setShowMore] = useState(false);
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'feed', label: 'Diary', icon: Home, path: '/' },
+    { id: 'journal', label: 'People', icon: BookOpen, path: familyId ? `/family/${familyId}` : '/family' },
     { id: 'vault', label: 'Vault', icon: Archive, path: '/vault' },
-    { id: 'post', label: '', icon: null, path: '/post/new', isPost: true },
-    { id: 'notifications', label: 'Alerts', icon: Bell, path: '/notifications' },
+    { id: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { id: 'more', label: 'More', icon: Grid3X3, isMore: true },
   ];
 
   const moreItems = [
-    { id: 'journal', label: 'People', icon: BookOpen, path: familyId ? `/family/${familyId}` : '/' },
     { id: 'trips', label: 'Trips', icon: Route, path: '/trips' },
-    { id: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { id: 'tree', label: 'Tree', icon: Share2, path: familyId ? `/family/${familyId}/graph` : '/' },
     { id: 'search', label: 'Search', icon: Search, path: familyId ? `/family/${familyId}/search` : '/' },
     { id: 'assistant', label: 'Assistant', icon: MessageCircle, path: familyId ? `/family/${familyId}/assistant` : '/' },
@@ -35,17 +32,6 @@ export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--vellum)] border-t border-[var(--border)] safe-area-bottom">
         <div className="flex items-center justify-around py-1">
           {tabs.map((tab) => {
-            if (tab.isPost) {
-              return (
-                <Link
-                  key={tab.id}
-                  to={tab.path}
-                  className="wax-seal w-12 h-12 -mt-3 transition-transform active:scale-95"
-                >
-                  <Feather size={20} />
-                </Link>
-              );
-            }
             if (tab.isMore) {
               return (
                 <button
@@ -73,11 +59,6 @@ export default function BottomTabBar({ activeTab, unreadCount = 0, familyId }) {
               >
                 <Icon size={20} />
                 <span className="text-[9px] font-mono tracking-[0.03em]">{tab.label}</span>
-                {tab.id === 'notifications' && unreadCount > 0 && (
-                  <span className="absolute top-0 right-2 w-4 h-4 rounded-full bg-[var(--seal)] text-[var(--page)] text-[8px] font-bold flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
                 {isActive && (
                   <div className="w-5 h-[3px] bg-[var(--seal)] rounded-full" />
                 )}

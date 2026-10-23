@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, CalendarDays, Feather, Cake, BookOpen, Route, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Cake, BookOpen, Route, X } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import BottomTabBar from '../components/BottomTabBar';
 import { familyAPI, calendarAPI } from '../lib/api';
 
 const TYPE_META = {
-  entry: { icon: Feather, color: 'var(--seal)' },
   memory: { icon: BookOpen, color: 'var(--postmark)' },
   birthday: { icon: Cake, color: 'var(--gilt)' },
   trip: { icon: Route, color: 'var(--seal)' },
@@ -61,7 +60,6 @@ export default function CalendarPage() {
   const openItem = (item) => {
     setSelectedDay(null);
     if (item.type === 'memory' || item.type === 'birthday') navigate(`/people/${item.person_id}`);
-    else if (item.type === 'entry') navigate('/');
     else if (item.type === 'trip') navigate(`/trips/${item.id}`);
   };
 
@@ -116,7 +114,7 @@ export default function CalendarPage() {
                   <span className={`font-mono text-[11px] ${isToday ? 'text-[var(--seal)] font-medium' : 'text-[var(--ink-light)]'}`}>{d}</span>
                   <div className="flex flex-wrap gap-[3px] mt-auto">
                     {items.slice(0, 4).map((item, idx) => {
-                      const meta = TYPE_META[item.type] || TYPE_META.entry;
+                      const meta = TYPE_META[item.type] || TYPE_META.memory;
                       return <span key={idx} className="w-[6px] h-[6px] rounded-full flex-shrink-0" style={{ background: meta.color }} />;
                     })}
                   </div>
@@ -129,7 +127,7 @@ export default function CalendarPage() {
             {Object.entries(TYPE_META).map(([type, meta]) => (
               <div key={type} className="flex items-center gap-1.5">
                 <span className="w-[8px] h-[8px] rounded-full" style={{ background: meta.color }} />
-                <span className="font-mono text-[11px] text-[var(--ink-muted)] capitalize">{type === 'entry' ? 'diary entry' : type}</span>
+                <span className="font-mono text-[11px] text-[var(--ink-muted)] capitalize">{type}</span>
               </div>
             ))}
           </div>
@@ -155,7 +153,7 @@ export default function CalendarPage() {
               </div>
               <div className="p-3 space-y-1 max-h-[320px] overflow-y-auto">
                 {selectedDay.items.map((item, i) => {
-                  const meta = TYPE_META[item.type] || TYPE_META.entry;
+                  const meta = TYPE_META[item.type] || TYPE_META.memory;
                   const Icon = meta.icon;
                   return (
                     <button key={i} onClick={() => openItem(item)}

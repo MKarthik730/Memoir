@@ -31,8 +31,8 @@ export default function CreateFamilyPage() {
           <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-[var(--seal)] flex items-center justify-center">
             <Users size={22} className="text-[var(--seal)]" />
           </div>
-          <h1 className="font-display italic text-[28px] text-[var(--ink)] mb-2">Start Your Family's Story</h1>
-          <p className="font-mono text-[12px] text-[var(--ink-muted)] mb-6">Name your family archive</p>
+          <h1 className="font-display italic text-[28px] text-[var(--ink)] mb-2">Create Your Private Archive</h1>
+          <p className="font-mono text-[12px] text-[var(--ink-muted)] mb-6">Choose a name for your archive</p>
 
           {error && (
             <div className="mb-5 px-4 py-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-[6px] text-[var(--danger)] text-[13px] font-mono text-xs text-left">

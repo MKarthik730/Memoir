@@ -1,6 +1,6 @@
 # Memoir
 
-> *A private family diary — write it down today, and get it handed back to you on this day next year.*
+> *A private family archive for preserving the people, memories, and stories that matter.*
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-latest-009688?style=flat-square)
@@ -12,9 +12,9 @@
 
 ## What is Memoir?
 
-Memoir is a **private family diary**, not a social feed. Family members write dated entries and letters for one another — no likes, no comments, no stories, no algorithm. Just a running, chronological record of what happened, who it happened to, and when.
+Memoir is a **private family archive** for documenting people, relationships, and memories. Create an archive for your account, add the people whose stories you want to preserve, and keep dated memories, photos, and voice notes organized in one place.
 
-On top of the diary, Memoir actively helps you keep it: it resurfaces "On This Day" entries from previous years, nudges you toward memories worth revisiting with a spaced-repetition scheduler, points out family members nobody's written about in a while, plots everything on a calendar, and lets you ask a conversational assistant about your family's history. A relationship graph visualizes how everyone connects, and any person's memories can be bound into a one-click PDF memoir.
+Memoir helps you revisit that history with "On This Day" reminders, a spaced-repetition scheduler, a calendar, hybrid search, and a conversational assistant. A relationship graph visualizes how everyone connects, and a person's memories can be bound into a one-click PDF memoir. There is no social feed, post/story system, public memory sharing, or family invitation flow.
 
 Built on a warm, stationery-inspired design system — parchment backgrounds, wax-seal accents, postmark-style date stamps.
 
@@ -24,18 +24,16 @@ Built on a warm, stationery-inspired design system — parchment backgrounds, wa
 
 | Feature | Description |
 |---|---|
-| 📓 **Diary Feed** | Chronological family diary — dated, postmarked entries with photos and location, no engagement metrics |
-| ✨ **On This Day** | Surfaces entries and memories from this same date in past years |
+| 🗂️ **Private Memory Archive** | Dated memories, photos, and voice notes organized by person |
+| ✨ **On This Day** | Finds memories from this same date in past years |
 | 💚 **Worth Revisiting** | SM-2 spaced-repetition scheduler resurfaces older memories to keep or let fade |
-| 👥 **Neglected Connections** | Nudges you toward family members nobody's written a memory for in a while |
-| 📅 **Calendar** | Month view of diary entries, memories, birthdays, and trips |
-| 🎂 **Birthday Alerts** | Auto-detects upcoming birthdays, one tap to write a wish |
-| 🗄️ **Family Vault** | Shared archive for important documents, photos, and videos |
+| 📅 **Calendar** | Month view of memories, birthdays, and trips |
+| 🗄️ **Family Vault** | Private archive for important documents, photos, and videos |
 | 🕸️ **Relationship Graph** | Interactive D3.js force graph visualizing how everyone connects |
 | 🔍 **Hybrid Memory Search** | Semantic (embeddings) + keyword search over every memory, weighted and re-ranked |
 | 🤖 **Memory Assistant** | Conversational agent that calls real tools (search, relationships, trips, resurfacing) — upgrades to genuine LLM tool-calling once you add your own API key |
 | 📄 **PDF Memoir Export** | One-click, beautifully formatted memoir PDF per person |
-| 🔐 **Invite-Only Auth** | No public signup — join a family via invite link only |
+| 🔐 **Private Account** | Each account creates and manages its own archive; there are no family invite links |
 
 ---
 
@@ -86,7 +84,7 @@ Memoir/
 │   │   │   ├── MemoryCard.jsx
 │   │   │   ├── FloatingChatButton.jsx
 │   │   │   └── ui/           # Avatar, Button, Modal, Toast
-│   │   ├── pages/            # Diary, Calendar, Vault, Graph, Profile, Trips...
+│   │   ├── pages/            # People, memories, Calendar, Vault, Graph, Trips...
 │   │   ├── lib/
 │   │   │   └── api.js        # Axios instance + all API wrappers
 │   │   ├── App.jsx
@@ -175,12 +173,6 @@ Each user can add their own OpenAI, Anthropic, or Groq API key in **Settings** t
 | POST | `/auth/login` | Sign in |
 | GET | `/auth/me` | Current user |
 
-### Diary
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/feed` | Paginated diary timeline |
-| POST | `/posts` | Write a diary entry |
-
 ### Memories & People
 | Method | Endpoint | Description |
 |---|---|---|
@@ -192,11 +184,11 @@ Each user can add their own OpenAI, Anthropic, or Groq API key in **Settings** t
 ### Life Assistant
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/family/:id/on-this-day` | Entries/memories from this date in past years |
+| GET | `/family/:id/on-this-day` | Memories from this date in past years |
 | GET | `/home/resurface` | Memories due for spaced-repetition review |
 | POST | `/memories/:id/review` | Record a review (reschedules via SM-2) |
 | GET | `/family/:id/neglected` | Family members nobody's written about lately |
-| GET | `/family/:id/calendar` | Month view of entries, memories, birthdays, trips |
+| GET | `/family/:id/calendar` | Month view of memories, birthdays, and trips |
 | POST | `/home/assistant/chat` | Conversational assistant (streamed) |
 
 ### Family Vault
@@ -216,12 +208,11 @@ Each user can add their own OpenAI, Anthropic, or Groq API key in **Settings** t
 
 ## Roadmap
 
-- [x] Auth + invite-only family system
+- [x] Auth + private archive creation
 - [x] People + relationship graph
 - [x] Memory storage with photos
 - [x] Hybrid semantic + keyword search
 - [x] PDF memoir export
-- [x] Diary feed (chronological, no social metrics)
 - [x] On This Day + spaced-repetition resurfacing
 - [x] Calendar view
 - [x] LLM tool-calling assistant (BYOK)

@@ -45,8 +45,6 @@ export const authAPI = {
 export const familyAPI = {
   create: (data) => api.post('/family', data).then((r) => r.data),
   get: (id) => api.get(`/family/${id}`).then((r) => r.data),
-  getInviteLink: (id) => api.get(`/family/${id}/invite-link`).then((r) => r.data),
-  join: (token) => api.post(`/family/join/${token}`).then((r) => r.data),
   getMyFamilies: () => api.get('/user/families').then((r) => r.data),
 };
 
@@ -78,11 +76,10 @@ export const relationshipsAPI = {
 export const memoriesAPI = {
   create: (personId, formData) =>
     api.post(`/people/${personId}/memories`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }).then((r) => r.data),
-  list: (personId) => api.get(`/people/${personId}/memories`).then((r) => r.data),
-  getPublic: (id) => api.get(`/memories/${id}/public`).then((r) => r.data),
-  delete: (id) => api.delete(`/memories/${id}`).then((r) => r.data),
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then((r) => r.data),
+    list: (personId) => api.get(`/people/${personId}/memories`).then((r) => r.data),
+    delete: (id) => api.delete(`/memories/${id}`).then((r) => r.data),
 };
 
 // ─── Search ───────────────────────────────────────────────────────────────────
@@ -104,15 +101,6 @@ export const uploadAPI = {
   },
 };
 
-// ─── Diary Entries ─────────────────────────────────────────────────────────────
-
-export const feedAPI = {
-  getFeed: (familyId, cursor, limit = 10) =>
-    api.get(`/feed?family_id=${familyId}${cursor ? `&cursor=${cursor}` : ''}&limit=${limit}`).then((r) => r.data),
-  createPost: (formData) =>
-    api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data),
-};
-
 export const vaultAPI = {
   list: (familyId, folder, fileType) => {
     let url = `/vault?family_id=${familyId}`;
@@ -123,16 +111,6 @@ export const vaultAPI = {
   upload: (formData) =>
     api.post('/vault/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data),
   delete: (itemId) => api.delete(`/vault/${itemId}`).then((r) => r.data),
-};
-
-export const notificationsAPI = {
-  list: () => api.get('/notifications').then((r) => r.data),
-  markAllRead: () => api.post('/notifications/read-all').then((r) => r.data),
-  unreadCount: () => api.get('/notifications/unread-count').then((r) => r.data),
-};
-
-export const birthdaysAPI = {
-  getUpcoming: (familyId) => api.get(`/birthdays?family_id=${familyId}`).then((r) => r.data),
 };
 
 // ─── Life Assistant: On This Day, Resurfacing, Neglected, Calendar ────────────
