@@ -1,8 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Search, Share2, Settings, MessageCircle, LogOut, Archive, Bell, User, BookOpen, Route, CalendarDays } from 'lucide-react';
-import Avatar from './ui/Avatar';
+import { Search, Share2, Settings, MessageCircle, LogOut, Archive, BookOpen, Route, CalendarDays } from 'lucide-react';
 
-export default function Sidebar({ family, familyId, activePage }) {
+export default function Sidebar({ familyId, activePage }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -11,20 +10,11 @@ export default function Sidebar({ family, familyId, activePage }) {
     navigate('/login');
   };
 
-  const members = family?.members || [];
-  const visibleMembers = members.slice(0, 5);
-  const remainingCount = members.length - 5;
-
-  const MEMBER_COLORS = ['#3F5D46', '#7A4F63', '#BC8A4E', '#5A8A7A', '#8B6B8B'];
-
   const navItems = [
-    { id: 'feed', label: 'Diary', icon: Home, path: '/' },
     { id: 'journal', label: 'People', icon: BookOpen, path: `/family/${familyId || ''}` },
     { id: 'trips', label: 'Trips', icon: Route, path: '/trips' },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { id: 'vault', label: 'Vault', icon: Archive, path: '/vault' },
-    { id: 'notifications', label: 'Alerts', icon: Bell, path: '/notifications' },
-    { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
     { id: 'search', label: 'Search', icon: Search, path: `/family/${familyId}/search` },
     { id: 'graph', label: 'Tree', icon: Share2, path: `/family/${familyId}/graph` },
     { id: 'assistant', label: 'Assistant', icon: MessageCircle, path: `/family/${familyId}/assistant` },
@@ -69,29 +59,6 @@ export default function Sidebar({ family, familyId, activePage }) {
       </nav>
 
       <div className="px-5 py-4 border-t border-[var(--border)]">
-        {members.length > 0 && (
-          <>
-            <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)] mb-2">MEMBERS</p>
-            <div className="flex items-center mb-3">
-              {visibleMembers.map((member, i) => (
-                <div
-                  key={member.id}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium text-[var(--page)] border-2 border-[var(--vellum)]"
-                  style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length], marginLeft: i === 0 ? 0 : -8, zIndex: visibleMembers.length - i }}
-                >
-                  {member.name?.charAt(0).toUpperCase()}
-                </div>
-              ))}
-              {remainingCount > 0 && (
-                <div className="w-7 h-7 rounded-full bg-[var(--page)] flex items-center justify-center text-[10px] text-[var(--ink-muted)] border-2 border-[var(--vellum)] font-mono" style={{ marginLeft: -8 }}>
-                  +{remainingCount}
-                </div>
-              )}
-            </div>
-            <div className="thread-line mb-3" />
-          </>
-        )}
-
         <Link
           to="/settings"
           className="flex items-center gap-3 w-full px-4 py-[8px] rounded-[8px] text-[13px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-all no-underline"

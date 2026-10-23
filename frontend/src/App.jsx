@@ -3,20 +3,14 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import LoginPage from './pages/LoginPage';
 import CreateFamilyPage from './pages/CreateFamilyPage';
-import JoinFamilyPage from './pages/JoinFamilyPage';
 import FamilyHomePage from './pages/FamilyHomePage';
 import GraphPage from './pages/GraphPage';
 import SearchPage from './pages/SearchPage';
 import PersonDetailPage from './pages/PersonDetailPage';
 import AddMemoryPage from './pages/AddMemoryPage';
-import PublicMemoryPage from './pages/PublicMemoryPage';
 import SettingsPage from './pages/SettingsPage';
 import AssistantPage from './pages/AssistantPage';
-import FeedPage from './pages/FeedPage';
-import CreatePostPage from './pages/CreatePostPage';
 import VaultPage from './pages/VaultPage';
-import NotificationsPage from './pages/NotificationsPage';
-import ProfilePage from './pages/ProfilePage';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import CreateTripPage from './pages/CreateTripPage';
@@ -49,15 +43,9 @@ function AnimatedRoutes() {
       >
         <Routes location={location}>
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/join/:invite_token" element={<JoinFamilyPage />} />
-          <Route path="/memories/:memory_id/public" element={<PublicMemoryPage />} />
 
-          {/* Diary timeline */}
-          <Route path="/" element={<PrivateRoute><FeedPage /></PrivateRoute>} />
-          <Route path="/post/new" element={<PrivateRoute><CreatePostPage /></PrivateRoute>} />
+          <Route path="/" element={<PrivateRoute><FamilyRedirect /></PrivateRoute>} />
           <Route path="/vault" element={<PrivateRoute><VaultPage /></PrivateRoute>} />
-          <Route path="/notifications" element={<PrivateRoute><NotificationsPage /></PrivateRoute>} />
-          <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="/trips" element={<PrivateRoute><TripsPage /></PrivateRoute>} />
           <Route path="/trips/new" element={<PrivateRoute><CreateTripPage /></PrivateRoute>} />
           <Route path="/trips/:trip_id" element={<PrivateRoute><TripDetailPage /></PrivateRoute>} />

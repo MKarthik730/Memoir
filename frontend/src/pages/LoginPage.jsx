@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authAPI } from '../lib/api';
 
 export default function LoginPage() {
@@ -182,15 +182,6 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* Bottom link */}
-          <div className="mt-6 pt-5 border-t border-[var(--border)]">
-            <p className="text-[13px] text-[var(--ink-light)]">
-              Joining a family that's already on Memoir?{' '}
-              <Link to="/join/demo" className="text-[var(--seal)] hover:underline font-medium">
-                Use your invite link
-              </Link>
-            </p>
-          </div>
         </div>
       </div>
     </div>

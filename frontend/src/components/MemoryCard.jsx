@@ -1,17 +1,11 @@
 import { useState } from 'react';
 import { formatDate, getInitials } from '../lib/api';
-import { MessageCircle, ChevronDown, ChevronUp, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function MemoryCard({ memory, personName, compact = false }) {
   const [expanded, setExpanded] = useState(false);
   const [lightboxImg, setLightboxImg] = useState(null);
   const isTruncated = (memory.story_text?.length || 0) > 150;
-
-  const handleWhatsAppShare = () => {
-    const text = `📖 ${memory.title}\n\n${memory.story_text || ''}\n\n- ${personName || memory.person_name || 'Family'}`;
-    const url = `${window.location.origin}/memories/${memory.id}/public`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n\n' + url)}`, '_blank');
-  };
 
   const photos = memory.photos || [];
 
@@ -102,14 +96,6 @@ export default function MemoryCard({ memory, personName, compact = false }) {
                 <span className="text-[12px] text-[var(--ink-muted)]">{personName || memory.person_name}</span>
               )}
             </div>
-            <button
-              onClick={handleWhatsAppShare}
-              className="px-3 py-1 rounded-full text-[11px] text-[var(--success)] bg-[var(--success-bg)] border border-[var(--success)] hover:bg-[rgba(46,125,110,0.15)] transition-colors flex items-center gap-1"
-              title="Share to WhatsApp"
-            >
-              <MessageCircle size={12} />
-              <span className="hidden sm:inline">Share</span>
-            </button>
           </div>
         </div>
       </div>

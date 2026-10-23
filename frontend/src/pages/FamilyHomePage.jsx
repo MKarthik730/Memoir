@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import BottomTabBar from '../components/BottomTabBar';
 import FloatingChatButton from '../components/FloatingChatButton';
 import Avatar from '../components/ui/Avatar';
-import { Plus, Users, Search, Share2, UserPlus, Image, Copy, Check, X, BookOpen } from 'lucide-react';
+import { Plus, Users, Search, UserPlus, Image, X, BookOpen } from 'lucide-react';
 
 export default function FamilyHomePage() {
   const { family_id } = useParams();
@@ -16,9 +16,6 @@ export default function FamilyHomePage() {
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [newPerson, setNewPerson] = useState({ name: '', relationship_tag: 'Other', bio: '' });
   const [adding, setAdding] = useState(false);
-  const [inviteLink, setInviteLink] = useState('');
-  const [showInvite, setShowInvite] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => { fetchData(); }, [family_id]);
 
@@ -31,10 +28,6 @@ export default function FamilyHomePage() {
       ]);
       setFamily(familyData);
       setPeople(peopleData);
-      try {
-        const linkData = await familyAPI.getInviteLink(family_id);
-        setInviteLink(linkData.invite_url);
-      } catch {}
     } catch (err) {
       if (err.response?.status === 403 || err.response?.status === 401) {
         navigate('/login');
@@ -62,12 +55,6 @@ export default function FamilyHomePage() {
     } finally {
       setAdding(false);
     }
-  };
-
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const relationshipTags = ['Grandparent', 'Parent', 'Sibling', 'Child', 'Uncle/Aunt', 'Spouse', 'Friend', 'Other'];
@@ -101,9 +88,6 @@ export default function FamilyHomePage() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button onClick={() => setShowInvite(!showInvite)} className="w-9 h-9 flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--page)] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-colors" title="Invite members">
-                <Share2 size={18} />
-              </button>
               <Link to={`/family/${family_id}/search`} className="w-9 h-9 flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--page)] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-colors">
                 <Search size={18} />
               </Link>
@@ -113,21 +97,6 @@ export default function FamilyHomePage() {
               </button>
             </div>
           </div>
-
-          {/* Invite Link */}
-          {showInvite && inviteLink && (
-            <div className="px-4 pb-4 max-w-4xl mx-auto">
-              <div className="p-4 bg-[var(--page)] rounded-[6px] border border-[var(--border)]">
-                <p className="text-[11px] font-mono tracking-[0.05em] text-[var(--ink-muted)] mb-2 uppercase">Send an invitation</p>
-                <div className="flex gap-2">
-                  <input type="text" value={inviteLink} readOnly className="flex-1 px-3 py-2 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-sm font-mono" />
-                  <button onClick={copyInviteLink} className="px-3 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors flex items-center gap-1">
-                    {copied ? <><Check size={14} />Copied</> : <><Copy size={14} />Copy</>}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Content */}
@@ -138,7 +107,7 @@ export default function FamilyHomePage() {
               <div className="thread-divider max-w-[100px] mx-auto mb-6" />
               <h2 className="font-display text-2xl mb-3">Start the first page</h2>
               <p className="text-[var(--ink-light)] text-sm max-w-sm mx-auto mb-8 leading-relaxed">
-                Every family story begins with a name. Add your first family member and begin writing your story together.
+                Begin your archive by adding a person whose memories you want to preserve.
               </p>
               <button onClick={() => setShowAddPerson(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)] active:scale-[0.98]">
                 <Plus size={18} className="inline mr-2" />Add Your First Page
