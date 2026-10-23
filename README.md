@@ -12,11 +12,11 @@
 
 ## What is Memoir?
 
-Memoir is a **private family archive** for documenting people, relationships, and memories. Create an archive for your account, add the people whose stories you want to preserve, and keep dated memories, photos, and voice notes organized in one place.
+Memoir is a **private family archive** for documenting people, relationships, and memories. Create an archive for your account, add the people whose stories you want to preserve, and keep dated memories, photos, and voice notes organized in one place. Add or change a person's profile photo directly from the photo control on their page.
 
-Memoir helps you revisit that history with "On This Day" reminders, a spaced-repetition scheduler, a calendar, hybrid search, and a conversational assistant. A relationship graph visualizes how everyone connects, and a person's memories can be bound into a one-click PDF memoir. There is no social feed, post/story system, public memory sharing, or family invitation flow.
+The **My Diary** entry stores your personal entries on your own person page, where you can add, edit, and delete your writing. Memoir also helps you revisit family history with "On This Day" reminders, a spaced-repetition scheduler, a calendar, hybrid search, and a conversational assistant. A relationship graph visualizes how people connect, and a person's memories can be bound into a one-click PDF memoir. There is no social feed, post/story system, public memory sharing, or family invitation flow.
 
-Built on a warm, stationery-inspired design system — parchment backgrounds, wax-seal accents, postmark-style date stamps.
+Built on a warm, stationery-inspired design system — parchment backgrounds, wax-seal accents, postmark-style date stamps, and gentle page transitions.
 
 ---
 
@@ -24,7 +24,8 @@ Built on a warm, stationery-inspired design system — parchment backgrounds, wa
 
 | Feature | Description |
 |---|---|
-| 🗂️ **Private Memory Archive** | Dated memories, photos, and voice notes organized by person |
+| 🗂️ **Private Memory Archive** | Dated memories, profile photos, and voice notes organized by person |
+| ✍️ **My Diary** | A personal entry space with dated writing you can add, edit, and delete |
 | ✨ **On This Day** | Finds memories from this same date in past years |
 | 💚 **Worth Revisiting** | SM-2 spaced-repetition scheduler resurfaces older memories to keep or let fade |
 | 📅 **Calendar** | Month view of memories, birthdays, and trips |
@@ -178,6 +179,10 @@ Each user can add their own OpenAI, Anthropic, or Groq API key in **Settings** t
 |---|---|---|
 | GET | `/people/:id/memories` | List memories for a person |
 | POST | `/people/:id/memories` | Add a memory |
+| PATCH | `/people/:id` | Update a person's profile, including their photo |
+| GET | `/family/:id/my-diary` | Open or create your personal diary page |
+| PATCH | `/memories/:id` | Edit a memory |
+| DELETE | `/memories/:id` | Delete a memory |
 | POST | `/family/:id/search` | Hybrid semantic + keyword search |
 | POST | `/home/rag/query` | Search with an explicit mode (`semantic` \| `keyword` \| `hybrid`) |
 

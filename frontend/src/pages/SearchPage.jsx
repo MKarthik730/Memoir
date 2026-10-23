@@ -36,20 +36,19 @@ export default function SearchPage() {
       <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)]">
         <div className="px-4 py-4 max-w-3xl mx-auto">
           <div className="flex items-center gap-3 mb-4">
-            <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
+            <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(47,93,70,0.05)] transition-colors">
               <ArrowLeft size={18} />
             </button>
             <h1 className="text-[17px] font-medium text-[var(--ink)]">Search the Archive</h1>
           </div>
 
           <form onSubmit={handleSearch} className="relative">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search letters, names, dates..."
-              className="w-full h-[44px] rounded-full pl-11 pr-[88px] bg-[var(--vellum)] border border-[var(--border)] focus:border-[var(--seal)] text-[var(--ink)] text-sm outline-none transition-all"
+              className="w-full h-[44px] rounded-full pl-4 pr-[88px] bg-[var(--vellum)] border border-[var(--border)] focus:border-[var(--seal)] text-[var(--ink)] text-sm outline-none transition-all"
             />
             <button type="submit" disabled={loading || !query.trim()}
               className="absolute right-1.5 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[12px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-40 transition-all">
@@ -105,7 +104,7 @@ export default function SearchPage() {
                       </Link>
                     </div>
                     {result.memory?.memory_date && (
-                      <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(122,79,99,0.04)]">
+                      <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(140,47,57,0.04)]">
                         <span>
                           {new Date(result.memory.memory_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>

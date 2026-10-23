@@ -51,12 +51,33 @@ def init_db():
                     if col_name not in existing_cols:
                         conn.execute(text(f"ALTER TABLE memories ADD COLUMN {col_name} {col_type}"))
                         logger.info(f"Added column {col_name} to memories table")
+
+                people_columns = {
+                    row[1] for row in conn.execute(text("PRAGMA table_info(people)")).fetchall()
+                }
+                if "is_personal_diary" not in people_columns:
+                    conn.execute(text(
+                        "ALTER TABLE people ADD COLUMN is_personal_diary BOOLEAN NOT NULL DEFAULT 0"
+                    ))
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_people_personal_diary "
+                    "ON people (family_id, created_by) WHERE is_personal_diary = 1"
+                ))
                 conn.commit()
 
             # PostgreSQL: embedding column predates this migration on some
             # deployments as a pgvector `vector` type; make sure it's plain
             # text so the Python-side cosine-similarity search can read it.
             if DATABASE_URL.startswith("postgresql"):
+                conn.execute(text(
+                    "ALTER TABLE people ADD COLUMN IF NOT EXISTS "
+                    "is_personal_diary BOOLEAN NOT NULL DEFAULT FALSE"
+                ))
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_people_personal_diary "
+                    "ON people (family_id, created_by) WHERE is_personal_diary IS TRUE"
+                ))
+                conn.commit()
                 try:
                     conn.execute(text("ALTER TABLE memories ALTER COLUMN embedding TYPE TEXT"))
                     conn.commit()

@@ -1,13 +1,3 @@
-const AVATAR_COLORS = [
-  '#3F5D46', '#7A4F63', '#BC8A4E', '#5A8A7A',
-  '#8B6B8B', '#B87A5A', '#7A5C3E', '#9E7E6B',
-];
-
-function getColor(name) {
-  if (!name) return AVATAR_COLORS[0];
-  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
-}
-
 function getInitials(name) {
   if (!name) return '?';
   return name
@@ -36,7 +26,7 @@ export default function Avatar({ name, url, size = 36, className = '', onClick }
   return (
     <div
       className={`rounded-full flex items-center justify-center flex-shrink-0 font-[var(--font-display)] text-[var(--page)] ${onClick ? 'cursor-pointer' : ''} ${className}`}
-      style={{ width: size, height: size, background: getColor(name), fontSize }}
+      style={{ width: size, height: size, background: 'var(--primary)', fontSize }}
       onClick={onClick}
       title={name}
     >

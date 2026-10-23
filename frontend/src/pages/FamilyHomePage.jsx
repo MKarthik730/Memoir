@@ -83,12 +83,12 @@ export default function FamilyHomePage() {
           <div className="px-4 max-w-4xl mx-auto h-full flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <h1 className="text-[15px] font-medium text-[var(--ink)] truncate">{family?.name || 'Family'}</h1>
-              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(122,79,99,0.05)] flex-shrink-0">
+              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(140,47,57,0.05)] flex-shrink-0">
                 <span>{people.length} {people.length === 1 ? 'page' : 'pages'}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Link to={`/family/${family_id}/search`} className="w-9 h-9 flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--page)] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] hover:text-[var(--ink)] transition-colors">
+              <Link to={`/family/${family_id}/search`} className="w-9 h-9 flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--page)] text-[var(--ink-light)] hover:bg-[rgba(47,93,70,0.05)] hover:text-[var(--ink)] transition-colors">
                 <Search size={18} />
               </Link>
               <button onClick={() => setShowAddPerson(true)} className="px-4 py-1.5 rounded-full bg-[var(--seal)] text-[var(--page)] text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors flex items-center gap-1">
@@ -109,7 +109,7 @@ export default function FamilyHomePage() {
               <p className="text-[var(--ink-light)] text-sm max-w-sm mx-auto mb-8 leading-relaxed">
                 Begin your archive by adding a person whose memories you want to preserve.
               </p>
-              <button onClick={() => setShowAddPerson(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)] active:scale-[0.98]">
+              <button onClick={() => setShowAddPerson(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(47,93,70,0.2)] active:scale-[0.98]">
                 <Plus size={18} className="inline mr-2" />Add Your First Page
               </button>
             </div>
@@ -194,7 +194,7 @@ export default function FamilyHomePage() {
                 <textarea value={newPerson.bio} onChange={(e) => setNewPerson({ ...newPerson, bio: e.target.value })} placeholder="A short description..." rows={3} className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] outline-none resize-vertical focus:border-[var(--seal)] transition-colors" />
               </div>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setShowAddPerson(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">Cancel</button>
+                <button type="button" onClick={() => setShowAddPerson(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors">Cancel</button>
                 <button type="submit" disabled={adding || !newPerson.name.trim()} className="flex-1 px-4 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] text-[13px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-colors">
                   {adding ? 'Adding...' : 'Add Page'}
                 </button>

@@ -7,7 +7,7 @@ import BottomTabBar from '../components/BottomTabBar';
 import FloatingChatButton from '../components/FloatingChatButton';
 import { ZoomIn, ZoomOut, RotateCcw, Plus, X, Users } from 'lucide-react';
 
-const COMMUNITY_COLORS = ['#3F5D46', '#7A4F63', '#BC8A4E', '#5A8A7A', '#8B6B8B', '#B87A5A'];
+const COMMUNITY_COLORS = ['#2F5D46', '#8C2F39', '#C9A24D', '#5A8A7A', '#8B6B8B', '#B87A5A'];
 
 function getColor(name, communityIdx = -1) {
   if (communityIdx >= 0) return COMMUNITY_COLORS[communityIdx % COMMUNITY_COLORS.length];
@@ -19,16 +19,20 @@ export default function GraphPage() {
   const navigate = useNavigate();
   const svgRef = useRef(null);
   const containerRef = useRef(null);
+  const simulationRef = useRef(null);
+  const zoomRef = useRef(null);
   const [people, setPeople] = useState([]);
   const [relationships, setRelationships] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [family, setFamily] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [tooltip, setTooltip] = useState(null);
   const [showAddRel, setShowAddRel] = useState(false);
   const [newRel, setNewRel] = useState({ person_a_id: '', person_b_id: '', label: '' });
   const [communities, setCommunities] = useState([]);
 
   useEffect(() => { fetchData(); }, [family_id]);
+
+  useEffect(() => () => simulationRef.current?.stop(), []);
 
   // Draw graph when data is loaded AND the canvas/svg are in the DOM
   useEffect(() => {
@@ -39,21 +43,25 @@ export default function GraphPage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const [familyData, peopleData, relsData] = await Promise.all([
+      const [, peopleData, relsData] = await Promise.all([
         familyAPI.get(family_id),
         peopleAPI.list(family_id),
         relationshipsAPI.list(family_id),
       ]);
-      setFamily(familyData);
       setPeople(peopleData);
       setRelationships(relsData);
       try {
         const communitiesData = await api.get(`/graph/communities?family_id=${family_id}`).then(r => r.data);
-        setCommunities(communitiesData.communities || []);
+        const groups = communitiesData.communities;
+        setCommunities(Array.isArray(groups)
+          ? groups.map((group) => Array.isArray(group) ? group : Array.isArray(group.members) ? group.members : [])
+          : []);
       } catch {}
     } catch (err) {
       console.error('Failed to fetch graph data:', err);
+      setLoadError('The family tree could not be loaded. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -63,6 +71,7 @@ export default function GraphPage() {
     const container = containerRef.current;
     if (!container) return;
 
+    simulationRef.current?.stop();
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
@@ -109,11 +118,13 @@ export default function GraphPage() {
       .force('charge', d3.forceManyBody().strength(-280))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius(60));
+    simulationRef.current = simulation;
 
     const g = svg.append('g');
     const zoom = d3.zoom()
       .scaleExtent([0.25, 3])
       .on('zoom', (event) => g.attr('transform', event.transform));
+    zoomRef.current = zoom;
     svg.call(zoom);
 
     const link = g.append('g').selectAll('line').data(links).join('line')
@@ -157,22 +168,22 @@ export default function GraphPage() {
           });
         }
         d3.select(event.currentTarget).select('ellipse')
-          .transition().duration(200)
+          .transition().duration(120)
           .attr('stroke', getColor(d.name, d.communityIdx))
           .attr('stroke-width', 2.5);
         link.filter(l => l.source.id === d.id || l.target.id === d.id)
-          .transition().duration(200)
+          .transition().duration(120)
           .attr('opacity', 1)
           .attr('stroke', getColor(d.name, d.communityIdx));
       })
       .on('mouseleave', (event, d) => {
         setTooltip(null);
         d3.select(event.currentTarget).select('ellipse')
-          .transition().duration(200)
+          .transition().duration(120)
           .attr('stroke', 'var(--vellum)')
           .attr('stroke-width', 2);
         link.filter(l => l.source.id === d.id || l.target.id === d.id)
-          .transition().duration(200)
+          .transition().duration(120)
           .attr('opacity', 0.7)
           .attr('stroke', 'var(--border)');
       })
@@ -245,7 +256,7 @@ export default function GraphPage() {
         const scale = Math.min(width / (bounds.width + 100), height / (bounds.height + 100), 1.5);
         const tx = width / 2 - (bounds.x + bounds.width / 2) * scale;
         const ty = height / 2 - (bounds.y + bounds.height / 2) * scale;
-        svg.transition().duration(500).call(d3.zoom().transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+        svg.transition().duration(180).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
       }
     }, 200);
   }, [people, relationships, communities, navigate]);
@@ -270,32 +281,36 @@ export default function GraphPage() {
     }
   };
 
-  const handleZoomIn = () => {
-    d3.select(svgRef.current).transition().duration(300).call(d3.zoom().scaleBy, 1.3);
-  };
+  const handleZoomIn = () => zoomRef.current &&
+    d3.select(svgRef.current).transition().duration(160).call(zoomRef.current.scaleBy, 1.3);
 
-  const handleZoomOut = () => {
-    d3.select(svgRef.current).transition().duration(300).call(d3.zoom().scaleBy, 0.7);
-  };
+  const handleZoomOut = () => zoomRef.current &&
+    d3.select(svgRef.current).transition().duration(160).call(zoomRef.current.scaleBy, 0.7);
 
-  const handleReset = () => {
-    d3.select(svgRef.current).transition().duration(300).call(d3.zoom().transform, d3.zoomIdentity);
-  };
+  const handleReset = () => zoomRef.current &&
+    d3.select(svgRef.current).transition().duration(160).call(zoomRef.current.transform, d3.zoomIdentity);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--page)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="thread-line w-32 mx-auto mb-4" />
-          <p className="text-[var(--ink-muted)] text-sm font-mono text-xs tracking-wider">Binding the threads...</p>
-        </div>
+      <div className="h-screen bg-[var(--page)] flex flex-col md:flex-row">
+        <Sidebar familyId={family_id} activePage="graph" />
+        <main className="flex-1 min-w-0 p-4 md:p-6">
+          <h1 className="font-display text-xl text-[var(--ink)] mb-4">Family Tree</h1>
+          <div className="h-[calc(100%-3rem)] min-h-64 rounded-[10px] bg-[var(--vellum)] border border-[var(--border)] flex items-center justify-center">
+            <div className="text-center">
+              <div className="thread-line w-32 mx-auto mb-4" />
+              <p className="text-[var(--ink-muted)] text-sm font-mono tracking-wider">Loading your family tree...</p>
+            </div>
+          </div>
+        </main>
+        <BottomTabBar familyId={family_id} activeTab="graph" />
       </div>
     );
   }
 
   return (
     <div className="h-screen bg-[var(--page)] flex flex-col md:flex-row">
-      <Sidebar family={family} familyId={family_id} activePage="graph" />
+      <Sidebar familyId={family_id} activePage="graph" />
       <div className="flex-1 flex flex-col min-w-0 p-4 md:p-6 pb-20 md:pb-6 min-h-0">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
@@ -306,10 +321,17 @@ export default function GraphPage() {
             </p>
           </div>
           <button onClick={() => setShowAddRel(true)}
-            className="px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors flex items-center gap-1">
+            className="px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors flex items-center gap-1">
             <Plus size={14} /> Add Thread
           </button>
         </div>
+
+        {loadError && (
+          <div role="alert" className="mb-3 flex items-center justify-between gap-3 rounded-[8px] border border-[var(--danger)]/30 bg-[var(--danger-bg)] px-4 py-2 text-sm text-[var(--danger)]">
+            <span>{loadError}</span>
+            <button onClick={fetchData} className="font-medium underline">Retry</button>
+          </div>
+        )}
 
         {/* Canvas */}
         <div
@@ -319,13 +341,14 @@ export default function GraphPage() {
           <svg ref={svgRef} style={{ width: '100%', height: '100%', display: 'block' }} />
 
           {people.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full border-[1.5px] border-dashed border-[var(--border)] flex items-center justify-center">
                   <Users size={26} className="text-[var(--ink-muted)] opacity-40" />
                 </div>
-                <p className="font-display text-lg text-[var(--ink-muted)]">No threads yet</p>
-                <p className="text-[var(--ink-light)] text-sm mt-1">Add people and connect them</p>
+                <p className="font-display text-lg text-[var(--ink-muted)]">No people added yet</p>
+                <p className="text-[var(--ink-light)] text-sm mt-1 mb-4">Add people to start building your tree.</p>
+                <button onClick={() => navigate(`/family/${family_id}`)} className="btn btn-primary">Add people</button>
               </div>
             </div>
           )}
@@ -362,7 +385,7 @@ export default function GraphPage() {
 
           {tooltip && (
             <div className="fixed z-20 pointer-events-none"
-              style={{ left: tooltip.x + 15, top: tooltip.y - 30, background: '#241F1A', borderRadius: 8, padding: '8px 12px' }}>
+              style={{ left: tooltip.x + 15, top: tooltip.y - 30, background: '#2A2622', borderRadius: 8, padding: '8px 12px' }}>
               <p className="text-[12px] font-medium text-[var(--page)]">{tooltip.name}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {tooltip.tag && (
@@ -414,7 +437,7 @@ export default function GraphPage() {
                   className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] outline-none focus:border-[var(--seal)] transition-colors" />
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setShowAddRel(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">Cancel</button>
+                <button onClick={() => setShowAddRel(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors">Cancel</button>
                 <button onClick={handleAddRelationship} className="flex-1 px-4 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] hover:bg-[var(--seal-hover)] transition-colors">Add Thread</button>
               </div>
             </div>

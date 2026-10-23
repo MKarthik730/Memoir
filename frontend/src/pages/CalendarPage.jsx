@@ -140,7 +140,8 @@ export default function CalendarPage() {
         {selectedDay && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(36,31,26,0.25)', backdropFilter: 'blur(4px)' }}
             onClick={() => setSelectedDay(null)}>
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
+            <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.14, ease: 'easeOut' }}
               className="w-full max-w-[380px] bg-[var(--vellum)] rounded-[14px] shadow-[var(--shadow-lg)] border border-[var(--border)]"
               onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">

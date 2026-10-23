@@ -89,7 +89,7 @@ export default function VaultPage() {
         <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
           <div className="max-w-4xl mx-auto px-4 h-full flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
+              <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(47,93,70,0.05)] transition-colors">
                 <ArrowLeft size={18} />
               </button>
               <Archive size={20} className="text-[var(--seal)]" />
@@ -127,7 +127,7 @@ export default function VaultPage() {
               <button key={t.key || 'all'} onClick={() => setActiveType(t.key)}
                 className={`px-3 py-1.5 rounded-full text-[11px] font-mono transition-all ${
                   activeType === t.key
-                    ? 'bg-[rgba(122,79,99,0.1)] text-[var(--postmark)]'
+                    ? 'bg-[rgba(140,47,57,0.1)] text-[var(--postmark)]'
                     : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
                 }`}>
                 {t.label}
@@ -145,14 +145,14 @@ export default function VaultPage() {
               <div className="thread-divider max-w-[80px] mx-auto mb-6" />
               <h2 className="font-display text-xl mb-2">Nothing here yet</h2>
               <p className="text-[var(--ink-light)] text-sm max-w-sm mx-auto mb-6">Start preserving memories — upload photos, documents, and videos to your family vault.</p>
-              <button onClick={() => setShowUpload(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)]">
+              <button onClick={() => setShowUpload(true)} className="px-6 py-3 rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(47,93,70,0.2)]">
                 <Upload size={18} className="inline mr-2" />Upload to Vault
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {items.map((item, i) => (
-                <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                <motion.div key={item.id} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.16, delay: i * 0.02, ease: 'easeOut' }}
                   className="group relative bg-[var(--vellum)] border border-[var(--border)] rounded-[8px] overflow-hidden hover:shadow-[var(--shadow-md)] transition-shadow">
                   {item.file_type === 'image' ? (
                     <img src={item.file_url} alt={item.name} className="w-full h-[120px] object-cover cursor-pointer" onClick={() => setPreviewUrl(item.file_url)} />

@@ -1,22 +1,35 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { peopleAPI } from '../lib/api';
 import Sidebar from '../components/Sidebar';
 import BottomTabBar from '../components/BottomTabBar';
 import FloatingChatButton from '../components/FloatingChatButton';
 import MemoryCard from '../components/MemoryCard';
 import Avatar from '../components/ui/Avatar';
-import { Plus, BookOpen, Calendar, ArrowLeft } from 'lucide-react';
-import { formatDate } from '../lib/api';
+import { Plus, BookOpen, Calendar, ArrowLeft, Camera, X } from 'lucide-react';
+import { formatDate, memoriesAPI } from '../lib/api';
+import { useToast } from '../components/ui';
 
 export default function PersonDetailPage() {
   const { person_id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isPersonalDiary = new URLSearchParams(location.search).get('diary') === '1';
   const [person, setPerson] = useState(null);
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [family, setFamily] = useState(null);
   const [pdfProgress, setPdfProgress] = useState(null);
+  const [editingMemory, setEditingMemory] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', story_text: '', memory_date: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const profilePhotoInput = useRef(null);
+  const toast = useToast();
+  const currentUser = JSON.parse(localStorage.getItem('memoir_user') || '{}') || {};
+  const currentUserId = currentUser.id;
+  const memoryPath = `/people/${person_id}/add-memory${isPersonalDiary ? '?diary=1' : ''}`;
 
   useEffect(() => { fetchPersonData(); }, [person_id]);
 
@@ -52,7 +65,7 @@ export default function PersonDetailPage() {
       const pageHeight = doc.internal.pageSize.getHeight();
 
       // Cover
-      doc.setFillColor(63, 93, 70);
+      doc.setFillColor(47, 93, 70);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'italic');
@@ -67,7 +80,7 @@ export default function PersonDetailPage() {
 
       // TOC
       doc.addPage();
-      doc.setTextColor(63, 93, 70);
+      doc.setTextColor(47, 93, 70);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'italic');
       doc.text('Contents', pageWidth / 2, 30, { align: 'center' });
@@ -105,7 +118,7 @@ export default function PersonDetailPage() {
         // Title
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(20);
-        doc.setTextColor(63, 93, 70);
+        doc.setTextColor(47, 93, 70);
         const titleLines = doc.splitTextToSize(memory.title || 'Untitled', pageWidth - 40);
         doc.text(titleLines, 20, yPos);
         yPos += titleLines.length * 8 + 5;
@@ -169,7 +182,7 @@ export default function PersonDetailPage() {
 
       // Back
       doc.addPage();
-      doc.setFillColor(63, 93, 70);
+      doc.setFillColor(47, 93, 70);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(16);
@@ -186,6 +199,66 @@ export default function PersonDetailPage() {
       console.error('PDF generation failed:', err);
       setPdfProgress(null);
       alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  const startEditingMemory = (memory) => {
+    setEditingMemory(memory);
+    setEditForm({
+      title: memory.title || '',
+      story_text: memory.story_text || '',
+      memory_date: memory.memory_date || '',
+    });
+    setEditError('');
+  };
+
+  const handleUpdateMemory = async (event) => {
+    event.preventDefault();
+    if (!editForm.title.trim()) return;
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      const formData = new FormData();
+      formData.append('title', editForm.title.trim());
+      formData.append('story_text', editForm.story_text);
+      formData.append('memory_date', editForm.memory_date);
+      const updated = await memoriesAPI.update(editingMemory.id, formData);
+      setMemories((current) => current.map((memory) => memory.id === updated.id ? updated : memory));
+      setEditingMemory(null);
+    } catch (err) {
+      setEditError(err.response?.data?.detail || 'Could not update this entry.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteMemory = async (memory) => {
+    if (!window.confirm(`Delete "${memory.title}" from your diary?`)) return;
+    try {
+      await memoriesAPI.delete(memory.id);
+      setMemories((current) => current.filter((entry) => entry.id !== memory.id));
+    } catch (err) {
+      window.alert(err.response?.data?.detail || 'Could not delete this entry.');
+    }
+  };
+
+  const handleProfilePhotoChange = async (event) => {
+    const photo = event.target.files?.[0];
+    if (!photo) return;
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('photo', photo);
+      const updatedPerson = await peopleAPI.update(person_id, formData);
+      setPerson(updatedPerson);
+      toast('Profile photo updated.', 'success');
+    } catch (err) {
+      console.error('Failed to update profile photo:', err);
+      toast(err.response?.data?.detail || 'Could not update the profile photo.', 'error');
+    } finally {
+      setUploadingPhoto(false);
+      event.target.value = '';
     }
   };
 
@@ -217,19 +290,20 @@ export default function PersonDetailPage() {
 
   return (
     <div className="min-h-screen bg-[var(--page)] flex flex-col md:flex-row">
-      <Sidebar familyId={person.family_id} activePage="journal" />
+      <Sidebar familyId={person.family_id} activePage={isPersonalDiary ? 'diary' : 'journal'} />
 
       <div className="flex-1 min-w-0" style={{ paddingBottom: 80 }}>
         {/* Hero */}
-        <div className="relative h-[280px] overflow-hidden">
+        <div className="relative h-[240px] overflow-hidden">
           {person.photo_url ? (
-            <img src={person.photo_url} alt="" className="w-full h-full object-cover" style={{ filter: 'brightness(0.65)' }} />
+            <img src={person.photo_url} alt="" className="w-full h-full object-cover" style={{ filter: 'brightness(0.78)' }} />
           ) : (
-            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--seal) 0%, var(--postmark) 100%)' }} />
+            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #526B5B 0%, #735A62 100%)' }} />
           )}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(36,31,26,0.75) 0%, transparent 60%)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(42,38,34,0.18) 0%, transparent 72%)' }} />
 
           <div className="absolute bottom-0 left-0 right-0 px-6 pb-6">
+            {isPersonalDiary && <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--vellum)]/80 mb-1">My Diary</p>}
             <h1 className="font-display text-[26px] text-[var(--page)] mb-1">{person.name}</h1>
             <div className="flex items-center gap-3">
               {person.relationship_tag && (
@@ -248,19 +322,39 @@ export default function PersonDetailPage() {
         </div>
 
         {/* Avatar overlap */}
-        <div className="px-6" style={{ marginTop: -36 }}>
+        <div className="relative z-10 px-6" style={{ marginTop: -36 }}>
           <div className="flex items-end justify-between">
-            <Avatar
-              name={person.name}
-              url={person.photo_url}
-              size={72}
-              className="border-[3px] border-[var(--vellum)]"                    />
+            <div className="relative">
+              <Avatar
+                name={person.name}
+                url={person.photo_url}
+                size={72}
+                className="border-[3px] border-[var(--bg)]"
+              />
+              <button
+                type="button"
+                onClick={() => profilePhotoInput.current?.click()}
+                disabled={uploadingPhoto}
+                className="profile-photo-button"
+                aria-label={uploadingPhoto ? 'Uploading profile photo' : 'Add or change profile photo'}
+                title={uploadingPhoto ? 'Uploading photo...' : 'Add or change profile photo'}
+              >
+                <Camera />
+              </button>
+              <input
+                ref={profilePhotoInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={handleProfilePhotoChange}
+              />
+            </div>
             <div className="flex gap-2 pb-1">
-              <Link to={`/people/${person_id}/add-memory`} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[var(--seal)] text-white text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors no-underline">
-                <Plus size={14} />Add Entry
+              <Link to={memoryPath} className="diary-action diary-action--primary">
+                <Plus />Add Entry
               </Link>
-              <button onClick={handleGeneratePDF} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">
-                <BookOpen size={14} />Bind Book
+              <button onClick={handleGeneratePDF} className="diary-action diary-action--secondary">
+                <BookOpen />Bind Book
               </button>
           </div>
         </div>
@@ -277,13 +371,13 @@ export default function PersonDetailPage() {
         <div className="max-w-3xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <h2 className="font-display text-lg">Entries</h2>
+              <h2 className="font-display text-lg">{isPersonalDiary ? 'Diary Entries' : 'Entries'}</h2>
               <span className="font-mono text-[12px] text-[var(--ink-muted)]">
                 {memories.length} {memories.length === 1 ? 'letter' : 'letters'}
               </span>
             </div>
-            <Link to={`/people/${person_id}/add-memory`} className="px-4 py-1.5 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-colors" style={{ color: 'var(--page)', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
-              <Plus size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />New Entry
+            <Link to={memoryPath} className="diary-action diary-action--primary">
+              <Plus />New Entry
             </Link>
           </div>
 
@@ -295,14 +389,20 @@ export default function PersonDetailPage() {
               <p className="text-[var(--ink-light)] text-sm max-w-xs mx-auto mb-6 leading-relaxed">
                 Nothing has been written yet. Start {person.name}'s story with the first memory.
               </p>
-              <Link to={`/people/${person_id}/add-memory`} className="px-6 py-3 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)]" style={{ color: 'var(--page)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
-                <Plus size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />Write the First Entry
+              <Link to={memoryPath} className="diary-action diary-action--primary">
+                <Plus />Write the First Entry
               </Link>
             </div>
           ) : (
             <div className="space-y-4">
               {memories.map((memory) => (
-                <MemoryCard key={memory.id} memory={memory} personName={person.name} />
+              <MemoryCard
+                key={memory.id}
+                memory={memory}
+                personName={person.name}
+                onEdit={isPersonalDiary && memory.created_by_user_id === currentUserId ? startEditingMemory : undefined}
+                onDelete={isPersonalDiary && memory.created_by_user_id === currentUserId ? handleDeleteMemory : undefined}
+              />
               ))}
             </div>
           )}
@@ -310,6 +410,28 @@ export default function PersonDetailPage() {
       </div>
 
       {/* PDF Progress Modal */}
+      {editingMemory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30" onClick={() => setEditingMemory(null)}>
+          <form onSubmit={handleUpdateMemory} className="w-full max-w-lg rounded-[14px] border border-[var(--border)] bg-[var(--vellum)] p-6 shadow-[var(--shadow-lg)]" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-display text-lg">Edit diary entry</h2>
+              <button type="button" onClick={() => setEditingMemory(null)} className="btn-icon" aria-label="Close edit dialog"><X size={18} /></button>
+            </div>
+            {editError && <p role="alert" className="mb-4 text-sm text-[var(--danger)]">{editError}</p>}
+            <label className="block text-xs font-medium text-[var(--ink-light)] mb-2" htmlFor="diary-title">Title</label>
+            <input id="diary-title" value={editForm.title} onChange={(event) => setEditForm({ ...editForm, title: event.target.value })} required className="mb-4" />
+            <label className="block text-xs font-medium text-[var(--ink-light)] mb-2" htmlFor="diary-story">Entry</label>
+            <textarea id="diary-story" value={editForm.story_text} onChange={(event) => setEditForm({ ...editForm, story_text: event.target.value })} rows={6} className="mb-4" />
+            <label className="block text-xs font-medium text-[var(--ink-light)] mb-2" htmlFor="diary-date">Date</label>
+            <input id="diary-date" type="date" value={editForm.memory_date} onChange={(event) => setEditForm({ ...editForm, memory_date: event.target.value })} className="mb-5" />
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setEditingMemory(null)} className="btn btn-secondary">Cancel</button>
+              <button type="submit" disabled={savingEdit} className="btn btn-primary">{savingEdit ? 'Saving...' : 'Save changes'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {pdfProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(36,31,26,0.3)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-[var(--vellum)] rounded-[14px] p-8 shadow-[var(--shadow-lg)] max-w-sm w-full text-center animate-fade-in border border-[var(--border)]">
@@ -326,7 +448,7 @@ export default function PersonDetailPage() {
       )}
 
       <FloatingChatButton familyId={person.family_id} />
-      <BottomTabBar familyId={person.family_id} activeTab="journal" />
+      <BottomTabBar familyId={person.family_id} activeTab={isPersonalDiary ? 'diary' : 'journal'} />
     </div>
   );
 }

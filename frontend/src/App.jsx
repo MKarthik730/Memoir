@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import LoginPage from './pages/LoginPage';
@@ -15,6 +15,8 @@ import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import CreateTripPage from './pages/CreateTripPage';
 import CalendarPage from './pages/CalendarPage';
+import { familyAPI, peopleAPI } from './lib/api';
+import Sidebar from './components/Sidebar';
 import { ToastProvider } from './components/ui';
 
 function PrivateRoute({ children }) {
@@ -36,10 +38,11 @@ function AnimatedRoutes() {
     <AnimatePresence mode="wait">
       <motion.div
         key={location.pathname}
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        style={{ willChange: 'opacity, transform' }}
       >
         <Routes location={location}>
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
@@ -50,6 +53,7 @@ function AnimatedRoutes() {
           <Route path="/trips/new" element={<PrivateRoute><CreateTripPage /></PrivateRoute>} />
           <Route path="/trips/:trip_id" element={<PrivateRoute><TripDetailPage /></PrivateRoute>} />
           <Route path="/calendar" element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
+          <Route path="/my-diary" element={<PrivateRoute><PersonalDiaryRedirect /></PrivateRoute>} />
 
           {/* Legacy routes (kept for backward compat) */}
           <Route path="/create-family" element={<PrivateRoute><CreateFamilyPage /></PrivateRoute>} />
@@ -104,6 +108,66 @@ function FamilyRedirect() {
   if (loading) return <LoadingScreen />;
   if (familyId) return <Navigate to={`/family/${familyId}`} replace />;
   return <Navigate to="/create-family" replace />;
+}
+
+function PersonalDiaryRedirect() {
+  const navigate = useNavigate();
+  const [familyId, setFamilyId] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const openDiary = async () => {
+      try {
+        const families = await familyAPI.getMyFamilies();
+        if (!Array.isArray(families) || families.length === 0) {
+          navigate('/create-family', { replace: true });
+          return;
+        }
+
+        const currentFamilyId = families[0].id;
+        if (active) setFamilyId(currentFamilyId);
+        const person = await peopleAPI.getMyDiary(currentFamilyId);
+        if (active) {
+          navigate(`/people/${person.id}?diary=1`, {
+            replace: true,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to open personal diary:', err);
+        if (active) setError('Could not open your diary. Please try again.');
+      }
+    };
+
+    openDiary();
+    return () => { active = false; };
+  }, [navigate]);
+
+  if (!error) {
+    return (
+      <div className="min-h-screen bg-[var(--page)] flex">
+        <div className="hidden md:block" style={{ width: 240 }} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="thread-line w-32 mx-auto mb-4" />
+            <p className="text-[var(--ink-muted)] text-sm font-mono tracking-wider">Opening your diary...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[var(--page)] flex flex-col md:flex-row">
+      <Sidebar familyId={familyId} activePage="diary" />
+      <main className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center">
+          <p className="text-[var(--danger)] mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="btn btn-primary">Try again</button>
+        </div>
+      </main>
+    </div>
+  );
 }
 
 function LoadingScreen() {

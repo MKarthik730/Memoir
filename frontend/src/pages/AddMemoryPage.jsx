@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { memoriesAPI, peopleAPI } from '../lib/api';
 import { ArrowLeft, Image, Mic, Upload, X, Check } from 'lucide-react';
 
 export default function AddMemoryPage() {
   const { person_id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [person, setPerson] = useState(null);
   const [form, setForm] = useState({ title: '', story_text: '', memory_date: '' });
   const [photos, setPhotos] = useState([]);
@@ -98,7 +99,7 @@ export default function AddMemoryPage() {
       photos.forEach(photo => formData.append('photos', photo));
       if (voiceNote) formData.append('voice_note', voiceNote);
       await memoriesAPI.create(person_id, formData);
-      navigate(`/people/${person_id}`);
+      navigate(`/people/${person_id}${location.search}`);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to save memory');
     } finally {
@@ -111,7 +112,7 @@ export default function AddMemoryPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
         <div className="max-w-2xl mx-auto px-4 h-full flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(47,93,70,0.05)] transition-colors">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -177,7 +178,7 @@ export default function AddMemoryPage() {
               onDragLeave={() => setDragOver(false)}
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-[10px] h-[100px] flex flex-col items-center justify-center cursor-pointer transition-all ${
-                dragOver ? 'border-[var(--seal)] bg-[rgba(63,93,70,0.04)]' : 'border-[var(--border)] hover:border-[var(--seal)]'
+                dragOver ? 'border-[var(--seal)] bg-[rgba(47,93,70,0.04)]' : 'border-[var(--border)] hover:border-[var(--seal)]'
               }`}
             >
               <Image size={24} className="mb-1 text-[var(--ink-muted)]" />
@@ -240,7 +241,7 @@ export default function AddMemoryPage() {
           </div>
 
           <button type="submit" disabled={loading || !form.title.trim()}
-            className="w-full h-[48px] rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(63,93,70,0.2)]">
+            className="w-full h-[48px] rounded-full bg-[var(--seal)] text-[var(--page)] text-[14px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(47,93,70,0.2)]">
             {loading ? (
               <><svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />

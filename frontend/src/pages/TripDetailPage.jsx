@@ -115,7 +115,7 @@ export default function TripDetailPage() {
         {/* Header */}
         <div className="sticky top-0 z-40 bg-[var(--vellum)] border-b border-[var(--border)] h-[56px]">
           <div className="max-w-4xl mx-auto px-4 h-full flex items-center gap-3">
-            <button onClick={() => navigate('/trips')} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(63,93,70,0.05)] transition-colors">
+            <button onClick={() => navigate('/trips')} className="w-9 h-9 flex items-center justify-center rounded-[6px] text-[var(--ink-light)] hover:bg-[rgba(47,93,70,0.05)] transition-colors">
               <ArrowLeft size={18} />
             </button>
             <h1 className="text-[17px] font-medium text-[var(--ink)] truncate">{trip.name}</h1>
@@ -183,7 +183,7 @@ export default function TripDetailPage() {
               </div>
               <button
                 onClick={() => setShowAddPerson(true)}
-                className="px-3 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[11px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[11px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors flex items-center gap-1"
               >
                 <UserPlus size={13} />Add
               </button>
@@ -199,7 +199,7 @@ export default function TripDetailPage() {
                   <div
                     key={p.id}
                     onClick={() => navigate(`/people/${p.id}`)}
-                    className="flex items-center gap-2 px-3 py-2 bg-[var(--vellum)] border border-[var(--border)] rounded-[8px] cursor-pointer hover:bg-[rgba(63,93,70,0.04)] transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 bg-[var(--vellum)] border border-[var(--border)] rounded-[8px] cursor-pointer hover:bg-[rgba(47,93,70,0.04)] transition-colors"
                   >
                     <Avatar name={p.name} size={28} />
                     <span className="text-[13px] text-[var(--ink)] font-medium">{p.name}</span>
@@ -218,7 +218,7 @@ export default function TripDetailPage() {
               </div>
               <button
                 onClick={() => setShowAddMemory(true)}
-                className="px-3 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[11px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[11px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors flex items-center gap-1"
               >
                 <Plus size={13} />Add
               </button>
@@ -233,11 +233,11 @@ export default function TripDetailPage() {
                 {trip.memories?.map((m, i) => (
                   <motion.div
                     key={m.id}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 3 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
+                    transition={{ duration: 0.16, delay: i * 0.02, ease: 'easeOut' }}
                     onClick={() => navigate(`/people/${m.person_id || ''}`)}
-                    className="px-4 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[8px] cursor-pointer hover:bg-[rgba(63,93,70,0.04)] transition-colors"
+                    className="px-4 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[8px] cursor-pointer hover:bg-[rgba(47,93,70,0.04)] transition-colors"
                   >
                     <p className="text-[14px] text-[var(--ink)] font-medium">{m.title}</p>
                     {m.story_text && (
@@ -269,7 +269,7 @@ export default function TripDetailPage() {
                 {availablePeople.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <div className="flex gap-3">
-                <button onClick={() => setShowAddPerson(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">Cancel</button>
+                <button onClick={() => setShowAddPerson(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors">Cancel</button>
                 <button onClick={handleAddPerson} disabled={adding || !selectedPerson} className="flex-1 px-4 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] text-[13px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-colors">{adding ? 'Adding...' : 'Add'}</button>
               </div>
             </div>
@@ -293,7 +293,7 @@ export default function TripDetailPage() {
                 {availableMemories.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
               </select>
               <div className="flex gap-3">
-                <button onClick={() => setShowAddMemory(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">Cancel</button>
+                <button onClick={() => setShowAddMemory(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors">Cancel</button>
                 <button onClick={handleAddMemory} disabled={adding || !selectedMemory} className="flex-1 px-4 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] text-[13px] font-medium hover:bg-[var(--seal-hover)] disabled:opacity-45 transition-colors">{adding ? 'Linking...' : 'Link'}</button>
               </div>
             </div>

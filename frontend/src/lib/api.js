@@ -52,6 +52,7 @@ export const familyAPI = {
 
 export const peopleAPI = {
   list: (familyId) => api.get(`/family/${familyId}/people`).then((r) => r.data),
+  getMyDiary: (familyId) => api.get(`/family/${familyId}/my-diary`).then((r) => r.data),
   create: (familyId, formData) =>
     api.post(`/family/${familyId}/people`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -79,6 +80,10 @@ export const memoriesAPI = {
         headers: { 'Content-Type': 'multipart/form-data' },
       }).then((r) => r.data),
     list: (personId) => api.get(`/people/${personId}/memories`).then((r) => r.data),
+    update: (id, formData) =>
+      api.patch(`/memories/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then((r) => r.data),
     delete: (id) => api.delete(`/memories/${id}`).then((r) => r.data),
 };
 
