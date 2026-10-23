@@ -7,7 +7,7 @@ import BottomTabBar from '../components/BottomTabBar';
 import FloatingChatButton from '../components/FloatingChatButton';
 import { ZoomIn, ZoomOut, RotateCcw, Plus, X, Users } from 'lucide-react';
 
-const COMMUNITY_COLORS = ['#3F5D46', '#7A4F63', '#BC8A4E', '#5A8A7A', '#8B6B8B', '#B87A5A'];
+const COMMUNITY_COLORS = ['#2F5D46', '#8C2F39', '#C9A24D', '#5A8A7A', '#8B6B8B', '#B87A5A'];
 
 function getColor(name, communityIdx = -1) {
   if (communityIdx >= 0) return COMMUNITY_COLORS[communityIdx % COMMUNITY_COLORS.length];
@@ -54,7 +54,10 @@ export default function GraphPage() {
       setRelationships(relsData);
       try {
         const communitiesData = await api.get(`/graph/communities?family_id=${family_id}`).then(r => r.data);
-        setCommunities(communitiesData.communities || []);
+        const groups = communitiesData.communities;
+        setCommunities(Array.isArray(groups)
+          ? groups.map((group) => Array.isArray(group) ? group : Array.isArray(group.members) ? group.members : [])
+          : []);
       } catch {}
     } catch (err) {
       console.error('Failed to fetch graph data:', err);
@@ -318,7 +321,7 @@ export default function GraphPage() {
             </p>
           </div>
           <button onClick={() => setShowAddRel(true)}
-            className="px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors flex items-center gap-1">
+            className="px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors flex items-center gap-1">
             <Plus size={14} /> Add Thread
           </button>
         </div>
@@ -382,7 +385,7 @@ export default function GraphPage() {
 
           {tooltip && (
             <div className="fixed z-20 pointer-events-none"
-              style={{ left: tooltip.x + 15, top: tooltip.y - 30, background: '#241F1A', borderRadius: 8, padding: '8px 12px' }}>
+              style={{ left: tooltip.x + 15, top: tooltip.y - 30, background: '#2A2622', borderRadius: 8, padding: '8px 12px' }}>
               <p className="text-[12px] font-medium text-[var(--page)]">{tooltip.name}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {tooltip.tag && (
@@ -434,7 +437,7 @@ export default function GraphPage() {
                   className="w-full px-3 py-3 bg-[var(--vellum)] border border-[var(--border)] rounded-[6px] text-[14px] outline-none focus:border-[var(--seal)] transition-colors" />
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setShowAddRel(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">Cancel</button>
+                <button onClick={() => setShowAddRel(false)} className="flex-1 px-4 py-2 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[13px] font-medium hover:bg-[rgba(47,93,70,0.08)] transition-colors">Cancel</button>
                 <button onClick={handleAddRelationship} className="flex-1 px-4 py-2 rounded-full bg-[var(--seal)] text-[var(--page)] hover:bg-[var(--seal-hover)] transition-colors">Add Thread</button>
               </div>
             </div>

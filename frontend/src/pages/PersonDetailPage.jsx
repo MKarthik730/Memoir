@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { peopleAPI } from '../lib/api';
 import Sidebar from '../components/Sidebar';
@@ -6,8 +6,9 @@ import BottomTabBar from '../components/BottomTabBar';
 import FloatingChatButton from '../components/FloatingChatButton';
 import MemoryCard from '../components/MemoryCard';
 import Avatar from '../components/ui/Avatar';
-import { Plus, BookOpen, Calendar, ArrowLeft, X } from 'lucide-react';
+import { Plus, BookOpen, Calendar, ArrowLeft, Camera, X } from 'lucide-react';
 import { formatDate, memoriesAPI } from '../lib/api';
+import { useToast } from '../components/ui';
 
 export default function PersonDetailPage() {
   const { person_id } = useParams();
@@ -23,6 +24,9 @@ export default function PersonDetailPage() {
   const [editForm, setEditForm] = useState({ title: '', story_text: '', memory_date: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const profilePhotoInput = useRef(null);
+  const toast = useToast();
   const currentUser = JSON.parse(localStorage.getItem('memoir_user') || '{}') || {};
   const currentUserId = currentUser.id;
   const memoryPath = `/people/${person_id}/add-memory${isPersonalDiary ? '?diary=1' : ''}`;
@@ -61,7 +65,7 @@ export default function PersonDetailPage() {
       const pageHeight = doc.internal.pageSize.getHeight();
 
       // Cover
-      doc.setFillColor(63, 93, 70);
+      doc.setFillColor(47, 93, 70);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'italic');
@@ -76,7 +80,7 @@ export default function PersonDetailPage() {
 
       // TOC
       doc.addPage();
-      doc.setTextColor(63, 93, 70);
+      doc.setTextColor(47, 93, 70);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'italic');
       doc.text('Contents', pageWidth / 2, 30, { align: 'center' });
@@ -114,7 +118,7 @@ export default function PersonDetailPage() {
         // Title
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(20);
-        doc.setTextColor(63, 93, 70);
+        doc.setTextColor(47, 93, 70);
         const titleLines = doc.splitTextToSize(memory.title || 'Untitled', pageWidth - 40);
         doc.text(titleLines, 20, yPos);
         yPos += titleLines.length * 8 + 5;
@@ -178,7 +182,7 @@ export default function PersonDetailPage() {
 
       // Back
       doc.addPage();
-      doc.setFillColor(63, 93, 70);
+      doc.setFillColor(47, 93, 70);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(16);
@@ -238,6 +242,26 @@ export default function PersonDetailPage() {
     }
   };
 
+  const handleProfilePhotoChange = async (event) => {
+    const photo = event.target.files?.[0];
+    if (!photo) return;
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('photo', photo);
+      const updatedPerson = await peopleAPI.update(person_id, formData);
+      setPerson(updatedPerson);
+      toast('Profile photo updated.', 'success');
+    } catch (err) {
+      console.error('Failed to update profile photo:', err);
+      toast(err.response?.data?.detail || 'Could not update the profile photo.', 'error');
+    } finally {
+      setUploadingPhoto(false);
+      event.target.value = '';
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--page)] flex items-center justify-center">
@@ -270,13 +294,13 @@ export default function PersonDetailPage() {
 
       <div className="flex-1 min-w-0" style={{ paddingBottom: 80 }}>
         {/* Hero */}
-        <div className="relative h-[280px] overflow-hidden">
+        <div className="relative h-[240px] overflow-hidden">
           {person.photo_url ? (
-            <img src={person.photo_url} alt="" className="w-full h-full object-cover" style={{ filter: 'brightness(0.65)' }} />
+            <img src={person.photo_url} alt="" className="w-full h-full object-cover" style={{ filter: 'brightness(0.78)' }} />
           ) : (
-            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--seal) 0%, var(--postmark) 100%)' }} />
+            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #526B5B 0%, #735A62 100%)' }} />
           )}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(36,31,26,0.75) 0%, transparent 60%)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(42,38,34,0.18) 0%, transparent 72%)' }} />
 
           <div className="absolute bottom-0 left-0 right-0 px-6 pb-6">
             {isPersonalDiary && <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--vellum)]/80 mb-1">My Diary</p>}
@@ -298,19 +322,39 @@ export default function PersonDetailPage() {
         </div>
 
         {/* Avatar overlap */}
-        <div className="px-6" style={{ marginTop: -36 }}>
+        <div className="relative z-10 px-6" style={{ marginTop: -36 }}>
           <div className="flex items-end justify-between">
-            <Avatar
-              name={person.name}
-              url={person.photo_url}
-              size={72}
-              className="border-[3px] border-[var(--vellum)]"                    />
+            <div className="relative">
+              <Avatar
+                name={person.name}
+                url={person.photo_url}
+                size={72}
+                className="border-[3px] border-[var(--bg)]"
+              />
+              <button
+                type="button"
+                onClick={() => profilePhotoInput.current?.click()}
+                disabled={uploadingPhoto}
+                className="profile-photo-button"
+                aria-label={uploadingPhoto ? 'Uploading profile photo' : 'Add or change profile photo'}
+                title={uploadingPhoto ? 'Uploading photo...' : 'Add or change profile photo'}
+              >
+                <Camera />
+              </button>
+              <input
+                ref={profilePhotoInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={handleProfilePhotoChange}
+              />
+            </div>
             <div className="flex gap-2 pb-1">
-              <Link to={memoryPath} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[var(--seal)] text-white text-[12px] font-medium hover:bg-[var(--seal-hover)] transition-colors no-underline">
-                <Plus size={14} />Add Entry
+              <Link to={memoryPath} className="diary-action diary-action--primary">
+                <Plus />Add Entry
               </Link>
-              <button onClick={handleGeneratePDF} className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-transparent text-[var(--seal)] border border-[var(--seal)] text-[12px] font-medium hover:bg-[rgba(63,93,70,0.08)] transition-colors">
-                <BookOpen size={14} />Bind Book
+              <button onClick={handleGeneratePDF} className="diary-action diary-action--secondary">
+                <BookOpen />Bind Book
               </button>
           </div>
         </div>
@@ -332,8 +376,8 @@ export default function PersonDetailPage() {
                 {memories.length} {memories.length === 1 ? 'letter' : 'letters'}
               </span>
             </div>
-            <Link to={memoryPath} className="px-4 py-1.5 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-colors" style={{ color: 'var(--page)', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
-              <Plus size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />New Entry
+            <Link to={memoryPath} className="diary-action diary-action--primary">
+              <Plus />New Entry
             </Link>
           </div>
 
@@ -345,8 +389,8 @@ export default function PersonDetailPage() {
               <p className="text-[var(--ink-light)] text-sm max-w-xs mx-auto mb-6 leading-relaxed">
                 Nothing has been written yet. Start {person.name}'s story with the first memory.
               </p>
-              <Link to={memoryPath} className="px-6 py-3 rounded-full bg-[var(--seal)] hover:bg-[var(--seal-hover)] transition-all shadow-[0_2px_8px_rgba(63,93,70,0.2)]" style={{ color: 'var(--page)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
-                <Plus size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />Write the First Entry
+              <Link to={memoryPath} className="diary-action diary-action--primary">
+                <Plus />Write the First Entry
               </Link>
             </div>
           ) : (

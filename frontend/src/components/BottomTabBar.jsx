@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Archive, Grid3X3, Search, Share2, MessageCircle, Settings, X, BookOpen, Route, CalendarDays } from 'lucide-react';
+import { Archive, Grid3X3, Search, GitBranch, MessageCircle, Settings, X, PenLine, Users, Map, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function BottomTabBar({ activeTab, familyId }) {
@@ -8,16 +8,16 @@ export default function BottomTabBar({ activeTab, familyId }) {
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'diary', label: 'My Diary', icon: BookOpen, path: '/my-diary' },
+    { id: 'diary', label: 'My Diary', icon: PenLine, path: '/my-diary' },
     { id: 'vault', label: 'Vault', icon: Archive, path: '/vault' },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { id: 'more', label: 'More', icon: Grid3X3, isMore: true },
   ];
 
   const moreItems = [
-    { id: 'journal', label: 'People', icon: BookOpen, path: familyId ? `/family/${familyId}` : '/family' },
-    { id: 'trips', label: 'Trips', icon: Route, path: '/trips' },
-    { id: 'tree', label: 'Tree', icon: Share2, path: familyId ? `/family/${familyId}/graph` : '/' },
+    { id: 'journal', label: 'People', icon: Users, path: familyId ? `/family/${familyId}` : '/family' },
+    { id: 'trips', label: 'Trips', icon: Map, path: '/trips' },
+    { id: 'tree', label: 'Tree', icon: GitBranch, path: familyId ? `/family/${familyId}/graph` : '/' },
     { id: 'search', label: 'Search', icon: Search, path: familyId ? `/family/${familyId}/search` : '/' },
     { id: 'assistant', label: 'Assistant', icon: MessageCircle, path: familyId ? `/family/${familyId}/assistant` : '/' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
@@ -30,7 +30,7 @@ export default function BottomTabBar({ activeTab, familyId }) {
 
   return (
     <>
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--vellum)] border-t border-[var(--border)] safe-area-bottom">
+      <div className="bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--vellum)] border-t border-[var(--border)] safe-area-bottom">
         <div className="flex items-center justify-around py-1">
           {tabs.map((tab) => {
             if (tab.isMore) {
@@ -42,7 +42,7 @@ export default function BottomTabBar({ activeTab, familyId }) {
                     showMore ? 'text-[var(--seal)]' : 'text-[var(--ink-muted)]'
                   }`}
                 >
-                  <Grid3X3 size={20} />
+                  <Grid3X3 />
                   <span className="text-[9px] font-mono tracking-[0.03em]">More</span>
                   {showMore && <div className="w-5 h-[3px] bg-[var(--seal)] rounded-full" />}
                 </button>
@@ -54,11 +54,11 @@ export default function BottomTabBar({ activeTab, familyId }) {
               <Link
                 key={tab.id}
                 to={tab.path}
-                className={`flex flex-col items-center gap-[2px] px-4 py-1.5 transition-colors no-underline relative ${
-                  isActive ? 'text-[var(--seal)]' : 'text-[var(--ink-muted)]'
+                className={`bottom-nav-link flex flex-col items-center gap-[2px] px-4 py-1.5 transition-colors no-underline relative ${
+                  isActive ? 'is-active text-[var(--seal)]' : 'text-[var(--ink-muted)]'
                 }`}
               >
-                <Icon size={20} />
+                <Icon />
                 <span className="text-[9px] font-mono tracking-[0.03em]">{tab.label}</span>
                 {isActive && (
                   <div className="w-5 h-[3px] bg-[var(--seal)] rounded-full" />
@@ -108,7 +108,7 @@ export default function BottomTabBar({ activeTab, familyId }) {
                           : 'text-[var(--ink-light)] hover:bg-[var(--seal-lighter)] hover:text-[var(--ink)]'
                       }`}
                     >
-                      <Icon size={20} className="opacity-70" />
+                      <Icon className="opacity-70" />
                       <span>{item.label}</span>
                     </button>
                   );

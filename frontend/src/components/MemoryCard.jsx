@@ -20,7 +20,7 @@ export default function MemoryCard({ memory, personName, compact = false, onEdit
               <h3 className="font-display text-[16px] text-[var(--ink)]">{memory.title}</h3>
             </div>
             {memory.memory_date && (
-              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(122,79,99,0.04)] flex-shrink-0 mt-0.5">
+              <div className="font-mono text-[11px] text-[var(--postmark)] border border-[var(--postmark)] rounded-[2px] px-2 py-[2px] bg-[rgba(140,47,57,0.04)] flex-shrink-0 mt-0.5">
                 <span>{formatDate(memory.memory_date)}</span>
               </div>
             )}
@@ -70,7 +70,7 @@ export default function MemoryCard({ memory, personName, compact = false, onEdit
 
           {/* Voice Note */}
           {memory.voice_note_url && (
-            <div className="mb-3 p-3 bg-[rgba(122,79,99,0.06)] border border-[rgba(122,79,99,0.15)] rounded-[6px]">
+            <div className="mb-3 p-3 bg-[rgba(140,47,57,0.06)] border border-[rgba(140,47,57,0.15)] rounded-[6px]">
               <audio controls className="w-full h-10">
                 <source src={memory.voice_note_url} />
               </audio>
@@ -83,8 +83,8 @@ export default function MemoryCard({ memory, personName, compact = false, onEdit
               {memory.contributor ? (
                 <>
                   <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-medium text-[var(--page)]"
-                    style={{ background: 'var(--seal)' }}
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-medium text-[var(--bg)]"
+                    style={{ background: 'var(--primary)' }}
                   >
                     {getInitials(memory.contributor.name)}
                   </div>
@@ -97,15 +97,15 @@ export default function MemoryCard({ memory, personName, compact = false, onEdit
               )}
             </div>
             {(onEdit || onDelete) && (
-              <div className="flex items-center gap-2">
+              <div className="diary-card-actions flex items-center gap-2">
                 {onEdit && (
-                  <button onClick={() => onEdit(memory)} className="flex items-center gap-1 text-[11px] text-[var(--ink-muted)] hover:text-[var(--seal)] transition-colors" aria-label={`Edit ${memory.title}`}>
-                    <Pencil size={13} />Edit
+                  <button onClick={() => onEdit(memory)} className="diary-action diary-action--ghost" aria-label={`Edit ${memory.title}`}>
+                    <Pencil />Edit
                   </button>
                 )}
                 {onDelete && (
-                  <button onClick={() => onDelete(memory)} className="flex items-center gap-1 text-[11px] text-[var(--ink-muted)] hover:text-[var(--danger)] transition-colors" aria-label={`Delete ${memory.title}`}>
-                    <Trash2 size={13} />Delete
+                  <button onClick={() => onDelete(memory)} className="diary-action diary-action--destructive" aria-label={`Delete ${memory.title}`}>
+                    <Trash2 />Delete
                   </button>
                 )}
               </div>
